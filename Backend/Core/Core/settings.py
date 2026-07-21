@@ -10,7 +10,10 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+from datetime import timedelta
+import os
 from pathlib import Path
+from urllib.parse import unquote, urlparse
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -19,13 +22,71 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-1$yk)5_*&60uuvr_60##^q4lw0llu^*k9ftx9$tv(ifh7__s39'
+def env_flag(name: str, default: bool = False) -> bool:
+    return os.environ.get(name, str(default)).lower() in {'1', 'true', 'yes', 'on'}
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
 
-ALLOWED_HOSTS = []
+def env_positive_int(name: str, default: int) -> int:
+    try:
+        value = int(os.environ.get(name, default))
+    except ValueError as exc:
+        raise RuntimeError(f'{name} must be a positive integer.') from exc
+    if value <= 0:
+        raise RuntimeError(f'{name} must be a positive integer.')
+    return value
+
+
+# A checkout with no environment is deliberately ready for local testing.
+# Production must explicitly disable debug and replace this checked-in key.
+DEVELOPMENT_SECRET_KEY = (
+    'django-insecure-kingdom-kids-local-development-only-2026-'
+    'replace-before-production'
+)
+DEBUG = env_flag('DJANGO_DEBUG', True)
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', DEVELOPMENT_SECRET_KEY)
+if not DEBUG and (
+    SECRET_KEY == DEVELOPMENT_SECRET_KEY
+    or SECRET_KEY.startswith('replace-with-')
+    or len(SECRET_KEY) < 50
+):
+    raise RuntimeError(
+        'DJANGO_SECRET_KEY must be a unique production value of at least 50 characters.'
+    )
+
+# Development devices may reach this machine through a changing LAN address.
+# The wildcard is never used after DJANGO_DEBUG is explicitly set to false.
+DEFAULT_DEVELOPMENT_HOSTS = '*'
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.environ.get(
+        'DJANGO_ALLOWED_HOSTS',
+        DEFAULT_DEVELOPMENT_HOSTS if DEBUG else '',
+    ).split(',')
+    if host.strip()
+]
+
+if not DEBUG:
+    if not ALLOWED_HOSTS:
+        raise RuntimeError('DJANGO_ALLOWED_HOSTS must be set when DJANGO_DEBUG is false.')
+
+    # JWTs are bearer credentials, so production traffic must use HTTPS. These
+    # also protect Django admin/session traffic that shares this deployment.
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_REFERRER_POLICY = 'same-origin'
+    X_FRAME_OPTIONS = 'DENY'
+    SECURE_HSTS_SECONDS = 31_536_000
+    # Subdomain HSTS and preload are opt-ins because enabling either before all
+    # current and future subdomains support HTTPS can create an outage.
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = env_flag('DJANGO_HSTS_INCLUDE_SUBDOMAINS')
+    SECURE_HSTS_PRELOAD = env_flag('DJANGO_HSTS_PRELOAD')
+
+    # Only trust this header when the deployment's reverse proxy is configured
+    # to strip client-supplied copies and set its own value.
+    if env_flag('DJANGO_TRUST_X_FORWARDED_PROTO'):
+        SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 
 # Application definition
@@ -37,6 +98,14 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
+    'rest_framework_simplejwt.token_blacklist',
+    'apps.accounts.apps.AccountsConfig',
+    'apps.stories.apps.StoriesConfig',
+    'apps.videos.apps.VideosConfig',
+    'apps.games.apps.GamesConfig',
+    'apps.progress.apps.ProgressConfig',
+    'apps.bible.apps.BibleConfig',
 ]
 
 MIDDLEWARE = [
@@ -69,15 +138,47 @@ TEMPLATES = [
 WSGI_APPLICATION = 'Core.wsgi.application'
 
 
-# Database
+# Database. SQLite remains convenient for local development, but production
+# verification transitions require real row-level locks.
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+DATABASE_URL = os.environ.get('DJANGO_DATABASE_URL')
+if DATABASE_URL:
+    parsed_database_url = urlparse(DATABASE_URL)
+    if parsed_database_url.scheme not in {'postgres', 'postgresql'}:
+        raise RuntimeError('DJANGO_DATABASE_URL must use PostgreSQL.')
+    database_name = unquote(parsed_database_url.path.lstrip('/'))
+    if not database_name or not parsed_database_url.hostname:
+        raise RuntimeError('DJANGO_DATABASE_URL must include a database name and host.')
+
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': database_name,
+            'USER': unquote(parsed_database_url.username or ''),
+            'PASSWORD': unquote(parsed_database_url.password or ''),
+            'HOST': parsed_database_url.hostname,
+            'PORT': parsed_database_url.port or 5432,
+            'CONN_MAX_AGE': env_positive_int('DJANGO_DB_CONN_MAX_AGE_SECONDS', 60),
+            'OPTIONS': {
+                'sslmode': os.environ.get(
+                    'DJANGO_DB_SSLMODE',
+                    'prefer' if DEBUG else 'require',
+                ),
+            },
+        }
     }
-}
+elif DEBUG:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+else:
+    raise RuntimeError(
+        'DJANGO_DATABASE_URL must be set to PostgreSQL when DJANGO_DEBUG is false.'
+    )
 
 
 # Password validation
@@ -115,3 +216,102 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+# The audition generator and Django deliberately share this directory. Django
+# serves it only in DEBUG; production deployments must let their web server or
+# configured storage backend serve uploaded media.
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR.parent / 'media'
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# This must be set before the first migration because accounts.User is the
+# application user model. Parent accounts authenticate with their email address.
+AUTH_USER_MODEL = 'accounts.User'
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'apps.accounts.authentication.VerifiedEmailJWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+    # Used by the explicit ScopedRateThrottle on registration and login.
+    'DEFAULT_THROTTLE_RATES': {
+        'auth': '20/minute',
+        'token_refresh': '60/minute',
+        'verification_confirm': '20/minute',
+        'verification_resend': '10/hour',
+    },
+}
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': True,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+}
+
+# Registration verification. Production requires an independent pepper so a
+# database disclosure alone cannot be used to recover a live six-digit code.
+EMAIL_VERIFICATION_PEPPER = os.environ.get('EMAIL_VERIFICATION_PEPPER')
+if not EMAIL_VERIFICATION_PEPPER:
+    if DEBUG:
+        EMAIL_VERIFICATION_PEPPER = f'local-email-verification:{SECRET_KEY}'
+    else:
+        raise RuntimeError(
+            'EMAIL_VERIFICATION_PEPPER must be set when DJANGO_DEBUG is false.'
+        )
+elif not DEBUG and len(EMAIL_VERIFICATION_PEPPER) < 32:
+    raise RuntimeError(
+        'EMAIL_VERIFICATION_PEPPER must be a unique value of at least 32 characters.'
+    )
+
+EMAIL_VERIFICATION_TTL = timedelta(
+    seconds=env_positive_int('EMAIL_VERIFICATION_TTL_SECONDS', 600)
+)
+EMAIL_VERIFICATION_RESEND_COOLDOWN = timedelta(
+    seconds=env_positive_int('EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS', 60)
+)
+EMAIL_VERIFICATION_MAX_ATTEMPTS = env_positive_int(
+    'EMAIL_VERIFICATION_MAX_ATTEMPTS', 5
+)
+EMAIL_VERIFICATION_ATTEMPT_WINDOW = timedelta(
+    seconds=env_positive_int('EMAIL_VERIFICATION_ATTEMPT_WINDOW_SECONDS', 600)
+)
+EMAIL_VERIFICATION_LOCKOUT = timedelta(
+    seconds=env_positive_int('EMAIL_VERIFICATION_LOCKOUT_SECONDS', 900)
+)
+
+EMAIL_BACKEND = os.environ.get('DJANGO_EMAIL_BACKEND')
+DEFAULT_FROM_EMAIL = os.environ.get(
+    'DJANGO_DEFAULT_FROM_EMAIL', 'Kingdom Kids <no-reply@localhost>'
+)
+if not EMAIL_BACKEND:
+    if DEBUG:
+        EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+    else:
+        raise RuntimeError('DJANGO_EMAIL_BACKEND must be set when DJANGO_DEBUG is false.')
+if not DEBUG and EMAIL_BACKEND in {
+    'django.core.mail.backends.console.EmailBackend',
+    'django.core.mail.backends.locmem.EmailBackend',
+    'django.core.mail.backends.dummy.EmailBackend',
+}:
+    raise RuntimeError(
+        'DJANGO_EMAIL_BACKEND must deliver real email when DJANGO_DEBUG is false.'
+    )
+if not DEBUG and 'no-reply@localhost' in DEFAULT_FROM_EMAIL:
+    raise RuntimeError(
+        'DJANGO_DEFAULT_FROM_EMAIL must be set when DJANGO_DEBUG is false.'
+    )
+
+# These settings support Django's built-in SMTP backend. A custom email backend
+# may ignore them.
+EMAIL_HOST = os.environ.get('DJANGO_EMAIL_HOST', 'localhost')
+EMAIL_PORT = env_positive_int('DJANGO_EMAIL_PORT', 587)
+EMAIL_HOST_USER = os.environ.get('DJANGO_EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('DJANGO_EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = env_flag('DJANGO_EMAIL_USE_TLS', True)
+EMAIL_TIMEOUT = env_positive_int('DJANGO_EMAIL_TIMEOUT_SECONDS', 10)

@@ -9,6 +9,7 @@ ENV/
 
 .env
 .env.*
+!.env.example
 
 *.log
 local_settings.py
