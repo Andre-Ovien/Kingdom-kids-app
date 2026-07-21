@@ -4,229 +4,211 @@ import 'package:flutter/material.dart';
 
 import '../../../app/router.dart';
 import '../../../shared/widgets/floating_liquid_nav.dart';
+import '../../auth/data/auth_repository.dart';
+import '../../auth/domain/kid_profile.dart';
+import '../../auth/presentation/kid_profile_avatar.dart';
+import '../../stories/data/story_repository.dart';
 import '../../stories/domain/story_detail.dart';
+import '../../stories/presentation/story_cover_image.dart';
 
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+const _homeInk = Color(0xFF171421);
+const _homePaper = Color(0xFFFFFCF6);
+const _homePurple = Color(0xFFB7A5FF);
+const _homePink = Color(0xFFFF9DCF);
+const _homeYellow = Color(0xFFFFD34E);
+const _homeBlue = Color(0xFF65C8F5);
+const _homeGreen = Color(0xFF6FDB9A);
+const _homeCoral = Color(0xFFFF795F);
 
-  static const _continueStories = [
-    _ContinueStory(
-      subtitle: '60% complete  •  4 min left',
-      progress: 0.6,
-      detail: StoryDetail(
-        title: 'Noah Builds the Ark',
-        author: 'Kingdom Kids',
-        category: 'Faith',
-        imageAsset: 'assets/images/noahs_ark.png',
-        imageAlignment: Alignment(-0.4, 0),
-        rating: '4.7',
-        reviewCount: '1.8k',
-        description:
-            'Noah loved God and listened carefully, even when the job seemed '
-            'too big. God told Noah to build an ark because a great flood was '
-            'coming, and Noah obeyed one step at a time.\n\n'
-            'This story helps kids see that obedience matters. Noah trusted '
-            'God, cared for his family, and welcomed the animals safely into '
-            'the ark.\n\n'
-            'After the rain, God placed a rainbow in the sky as a promise. '
-            'Kids can remember that God keeps His word and watches over every '
-            'family that trusts Him.\n\n'
-            'At the end, Noah and his family stepped into a fresh new world. '
-            'They praised God together and began again with thankful hearts.',
-      ),
-    ),
-    _ContinueStory(
-      subtitle: '40% complete  •  5 min left',
-      progress: 0.4,
-      detail: StoryDetail(
-        title: 'Creation Week',
-        author: 'Kingdom Kids',
-        category: 'Wonder',
-        imageAsset: 'assets/images/creation_week.jpg',
-        rating: '4.9',
-        reviewCount: '2.4k',
-        description:
-            'In the beginning, God made the heavens and the earth. Day by day, '
-            'He filled the world with light, sky, land, seas, plants, stars, '
-            'animals, and people.\n\n'
-            'Creation Week invites kids to slow down and notice God\'s good '
-            'world with wonder, gratitude, and joy.\n\n'
-            'Every flower, ocean, animal, and star points back to God\'s care. '
-            'Children can learn to thank Him for the beautiful things they see '
-            'each day.\n\n'
-            'The story ends with rest, showing that God\'s work was good. It '
-            'gives kids a gentle rhythm for wonder, work, worship, and peace.',
-      ),
-    ),
-  ];
+Color _homeBackground(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark
+    ? const Color(0xFF473B19)
+    : const Color(0xFFF5C84C);
 
-  static const _newStories = [
-    _StoryTile(
-      category: 'Courage',
-      detail: StoryDetail(
-        title: 'Daniel',
-        author: 'Kingdom Kids',
-        category: 'Courage',
-        imageAsset: 'assets/images/daniel.jpeg',
-        imageAlignment: Alignment(0, -0.12),
-        description:
-            'Daniel kept praying to God even when it became dangerous. When he '
-            'was thrown into the lions\' den, God protected him through the '
-            'night.\n\n'
-            'This story shows kids that faith can stay strong in hard places, '
-            'and that God is near when we choose what is right.\n\n'
-            'Daniel did not have to be loud to be brave. His quiet trust '
-            'teaches children that prayer can give courage even when everyone '
-            'else is afraid.\n\n'
-            'When morning came, Daniel was safe. The king saw that Daniel\'s '
-            'God was powerful, faithful, and worthy of praise.',
-      ),
-    ),
-    _StoryTile(
-      category: 'Adventure',
-      detail: StoryDetail(
-        title: 'Moses',
-        author: 'Kingdom Kids',
-        category: 'Adventure',
-        imageAsset: 'assets/images/moses2.jpeg',
-        description:
-            'Moses learned that God can use ordinary people for brave work. '
-            'From the burning bush to leading God\'s people, Moses had to trust '
-            'God one step at a time.\n\n'
-            'Kids will follow Moses as he listens, obeys, and discovers that '
-            'God gives courage for the journey.\n\n'
-            'Moses did not always feel ready, but God stayed with him. This '
-            'helps children see that they can ask for help and still take the '
-            'next brave step.\n\n'
-            'Through each challenge, Moses learned to listen for God\'s voice. '
-            'His story reminds kids that leadership starts with obedience.',
-      ),
-    ),
-    _StoryTile(
-      category: 'Bravery',
-      detail: StoryDetail(
-        title: 'Esther',
-        author: 'Kingdom Kids',
-        category: 'Bravery',
-        imageAsset: 'assets/images/esther.jpeg',
-        description:
-            'Esther became queen at a time when her people needed help. With '
-            'wisdom and courage, she spoke up even though it was scary.\n\n'
-            'Her story reminds kids that God can place us right where we are '
-            'needed, and bravery can begin with one honest choice.\n\n'
-            'Esther listened, waited, and chose the right moment to speak. '
-            'Kids can learn that courage and wisdom often work together.\n\n'
-            'Because Esther cared for others, her brave choice helped save '
-            'many lives. Her story makes kindness feel strong.',
-      ),
-    ),
-  ];
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key, this.authRepository, this.storyRepository});
 
-  static const _categories = ['All', 'Heroes', 'Jesus', 'Miracles'];
+  final AuthRepository? authRepository;
+  final StoryRepository? storyRepository;
 
-  static const _heroStories = [
-    _HeroStory(
-      badge: 'Bible story',
-      subtitle: 'A brave story about trusting God',
-      buttonLabel: 'Start Reading',
-      detail: StoryDetail.fallback,
-    ),
-    _HeroStory(
-      badge: 'Ocean story',
-      subtitle: 'A second chance after a storm',
-      buttonLabel: 'Read Story',
-      detail: StoryDetail(
-        title: 'Jonah and the Big Fish',
-        author: 'Kingdom Kids',
-        category: 'Mercy',
-        imageAsset: 'assets/images/jonah.jpg',
-        rating: '4.6',
-        reviewCount: '1.5k',
-        description:
-            'Jonah tried to run away from what God asked him to do. A storm, '
-            'a great fish, and three quiet days helped Jonah learn that God\'s '
-            'mercy is bigger than fear.\n\n'
-            'This story helps kids talk about second chances, listening to '
-            'God, and choosing kindness even when it is hard.\n\n'
-            'Jonah learned that God cares for people we may not understand. '
-            'Children can see that mercy is wide, patient, and full of hope.\n\n'
-            'By the end, Jonah had to learn that God\'s love reaches farther '
-            'than his own plans. That lesson is still good for every heart.',
-      ),
-    ),
-    _HeroStory(
-      badge: 'Miracle story',
-      subtitle: 'God makes a way forward',
-      buttonLabel: 'Read Story',
-      detail: StoryDetail(
-        title: 'Crossing the Red Sea',
-        author: 'Kingdom Kids',
-        category: 'Miracle',
-        imageAsset: 'assets/images/crossing_red_sea.webp',
-        imageAlignment: Alignment(-0.38, 0),
-        rating: '4.9',
-        reviewCount: '3k',
-        description:
-            'The Israelites stood at the edge of the sea with danger behind '
-            'them and no road ahead. God told Moses to lift his staff, and the '
-            'water opened into a dry path.\n\n'
-            'Kids will see that God can make a way when things feel impossible '
-            'and that trusting Him can move us forward.\n\n'
-            'Step by step, the people crossed safely. This story reminds kids '
-            'that faith can begin with one small step on the path God opens.\n\n'
-            'When they reached the other side, the people sang and celebrated. '
-            'They remembered that God had rescued them with mighty love.',
-      ),
-    ),
-  ];
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  late final AuthRepository _authRepository;
+  late final StoryRepository _storyRepository;
+  KidProfile? _activeProfile;
+  List<StoryDetail> _stories = const [];
+  Object? _storiesError;
+  bool _isLoadingStories = true;
+  String _selectedCategory = 'All';
+
+  @override
+  void initState() {
+    super.initState();
+    _authRepository = widget.authRepository ?? AuthRepository();
+    _storyRepository =
+        widget.storyRepository ??
+        RemoteStoryRepository(authRepository: _authRepository);
+    _loadActiveProfile();
+    _loadStories();
+  }
+
+  Future<void> _loadActiveProfile() async {
+    try {
+      final profile = await _authRepository.currentKid();
+      if (mounted) setState(() => _activeProfile = profile);
+    } catch (_) {
+      // The story catalogue remains usable without an active child profile.
+    }
+  }
+
+  Future<void> _loadStories() async {
+    setState(() {
+      _isLoadingStories = true;
+      _storiesError = null;
+    });
+
+    try {
+      final stories = await _storyRepository.fetchStories();
+      if (!mounted) return;
+      final availableCategories = stories
+          .where((story) => !story.isFeatured)
+          .map((story) => story.category.trim())
+          .where((category) => category.isNotEmpty)
+          .toSet();
+      setState(() {
+        _stories = stories;
+        _isLoadingStories = false;
+        if (_selectedCategory != 'All' &&
+            !availableCategories.contains(_selectedCategory)) {
+          _selectedCategory = 'All';
+        }
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _storiesError = error;
+        _isLoadingStories = false;
+      });
+    }
+  }
+
+  List<StoryDetail> get _featuredStories =>
+      _stories.where((story) => story.isFeatured).toList(growable: false);
+
+  List<StoryDetail> get _catalogueStories =>
+      _stories.where((story) => !story.isFeatured).toList(growable: false);
+
+  List<String> get _categories {
+    final categories =
+        _catalogueStories
+            .map((story) => story.category.trim())
+            .where((category) => category.isNotEmpty)
+            .toSet()
+            .toList(growable: false)
+          ..sort(
+            (left, right) => left.toLowerCase().compareTo(right.toLowerCase()),
+          );
+    return ['All', ...categories];
+  }
+
+  List<StoryDetail> get _filteredStories => _selectedCategory == 'All'
+      ? _catalogueStories
+      : _catalogueStories
+            .where((story) => story.category == _selectedCategory)
+            .toList(growable: false);
+
+  List<StoryDetail> get _storyPicks => _filteredStories.take(2).toList();
+
+  List<StoryDetail> get _moreStories => _filteredStories.skip(2).toList();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: _homeBackground(context),
       body: SafeArea(
         child: Stack(
           children: [
             CustomScrollView(
+              key: const Key('home-scroll'),
               slivers: [
                 SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(22, 4, 22, 28),
+                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
                   sliver: SliverList.list(
                     children: [
-                      const _HomeHeader(),
-                      const SizedBox(height: 8),
-                      const _HeroCarousel(stories: _heroStories),
-                      const SizedBox(height: 10),
-                      _SectionTitle(
-                        title: 'Continue reading',
-                        onSeeAll: () =>
-                            Navigator.of(context).pushNamed(AppRoutes.stories),
-                      ),
-                      const SizedBox(height: 10),
-                      for (final story in _continueStories) ...[
-                        _ContinueStoryRow(story: story),
-                        const SizedBox(height: 14),
-                      ],
-                      const SizedBox(height: 4),
-                      _SectionTitle(
-                        title: 'New stories',
-                        onSeeAll: () =>
-                            Navigator.of(context).pushNamed(AppRoutes.stories),
-                      ),
+                      _HomeHeader(profile: _activeProfile),
+                      const SizedBox(height: 22),
+                      const _SectionHeading(title: 'Pick your adventure'),
                       const SizedBox(height: 12),
-                      const _CategoryChips(categories: _categories),
-                      const SizedBox(height: 14),
-                      _NewStoryShelf(stories: _newStories),
+                      const _AdventureLauncher(),
+                      const SizedBox(height: 27),
+                      if (_isLoadingStories)
+                        const _StoriesLoadingState()
+                      else if (_storiesError != null)
+                        _StoriesErrorState(onRetry: _loadStories)
+                      else if (_stories.isEmpty)
+                        const _StoriesEmptyState()
+                      else ...[
+                        if (_featuredStories.isNotEmpty) ...[
+                          const _SectionHeading(title: 'Ready, set, read!'),
+                          const SizedBox(height: 12),
+                          _HeroCarousel(stories: _featuredStories),
+                          const SizedBox(height: 30),
+                        ],
+                        _SectionHeading(
+                          title: 'Explore stories',
+                          actionLabel: 'SEE ALL',
+                          onAction: () => _openTab(context, AppRoutes.stories),
+                        ),
+                        const SizedBox(height: 13),
+                        _CategoryChips(
+                          categories: _categories,
+                          selectedCategory: _selectedCategory,
+                          onSelected: (category) {
+                            setState(() => _selectedCategory = category);
+                          },
+                        ),
+                        const SizedBox(height: 18),
+                        if (_filteredStories.isEmpty)
+                          const _FilteredStoriesEmptyState()
+                        else ...[
+                          const _SubsectionTitle(title: 'Story picks'),
+                          const SizedBox(height: 12),
+                          for (
+                            var index = 0;
+                            index < _storyPicks.length;
+                            index++
+                          ) ...[
+                            _StoryPickCard(
+                              story: _storyPicks[index],
+                              paletteIndex: index,
+                            ),
+                            const SizedBox(height: 15),
+                          ],
+                          if (_moreStories.isNotEmpty) ...[
+                            const SizedBox(height: 10),
+                            const _SubsectionTitle(title: 'More stories'),
+                            const SizedBox(height: 12),
+                            _StoryShelf(stories: _moreStories),
+                          ],
+                        ],
+                      ],
+                      const SizedBox(height: 110),
                     ],
                   ),
                 ),
               ],
             ),
-            const Positioned(
+            Positioned(
               left: 0,
               right: 0,
               bottom: 0,
-              child: FloatingLiquidNav(selectedRoute: AppRoutes.home),
+              child: FloatingLiquidNav(
+                selectedRoute: AppRoutes.home,
+                activeProfile: _activeProfile,
+              ),
             ),
           ],
         ),
@@ -239,66 +221,296 @@ void _openStoryDetail(BuildContext context, StoryDetail story) {
   Navigator.of(context).pushNamed(AppRoutes.storyDetail, arguments: story);
 }
 
+void _openTab(BuildContext context, String route) {
+  Navigator.of(context).pushReplacementNamed(
+    route,
+    arguments: const TabRouteTransition(fromRoute: AppRoutes.home),
+  );
+}
+
+String _storyMetadata(StoryDetail story) {
+  final parts = <String>[];
+  if (story.category.trim().isNotEmpty) parts.add(story.category.trim());
+  if (story.estimatedReadSeconds > 0) {
+    parts.add('${(story.estimatedReadSeconds / 60).ceil()} min');
+  }
+  if (parts.isEmpty && story.author.trim().isNotEmpty) {
+    parts.add(story.author.trim());
+  }
+  return parts.join('  •  ');
+}
+
+Color _ink(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark
+    ? const Color(0xFFFFFCF6)
+    : _homeInk;
+
+Color _paper(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark
+    ? const Color(0xFF181B1A)
+    : _homePaper;
+
+Color _adaptiveColor(BuildContext context, Color color) {
+  if (Theme.of(context).brightness != Brightness.dark) return color;
+  return Color.alphaBlend(Colors.black.withValues(alpha: 0.52), color);
+}
+
 class _HomeHeader extends StatelessWidget {
-  const _HomeHeader();
+  const _HomeHeader({this.profile});
+
+  final KidProfile? profile;
 
   @override
   Widget build(BuildContext context) {
+    final ink = _ink(context);
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Hello, Ethan',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontSize: 27,
-                  fontWeight: FontWeight.w400,
-                  height: 1.08,
+                profile == null
+                    ? 'Hey, explorer!'
+                    : 'Hey, ${profile!.displayName}!',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  color: ink,
+                  fontSize: 34,
+                  height: 0.98,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -1.1,
                 ),
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 7),
               Text(
-                'Good morning',
+                'What will we discover today?',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: const Color(0xFFB3A8A8),
-                  fontSize: 13,
+                  color: ink.withValues(alpha: 0.7),
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(width: 12),
-        const _KidAvatar(),
+        const SizedBox(width: 14),
+        _KidAvatar(profile: profile),
       ],
     );
   }
 }
 
 class _KidAvatar extends StatelessWidget {
-  const _KidAvatar();
+  const _KidAvatar({this.profile});
+
+  final KidProfile? profile;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(21),
-      onTap: () => Navigator.of(context).pushNamed(AppRoutes.profile),
-      child: Ink(
-        width: 42,
-        height: 42,
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFE3EA),
-          borderRadius: BorderRadius.circular(21),
+    final ink = _ink(context);
+    void openProfile() => _openTab(context, AppRoutes.profile);
+    return Semantics(
+      container: true,
+      button: true,
+      label: 'Open my profile',
+      onTap: openProfile,
+      excludeSemantics: true,
+      child: Material(
+        color: _paper(context),
+        shape: CircleBorder(side: BorderSide(color: ink, width: 2.2)),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          key: const Key('home-profile-avatar'),
+          excludeFromSemantics: true,
+          onTap: openProfile,
+          child: SizedBox.square(
+            dimension: 59,
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: profile == null
+                  ? ClipOval(
+                      child: Image.asset(
+                        'assets/images/characters/kai-avatar.png',
+                        fit: BoxFit.cover,
+                      ),
+                    )
+                  : KidProfileAvatar(profile: profile!, size: 51),
+            ),
+          ),
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(3),
-          child: ClipOval(
-            child: Image.asset(
-              'assets/images/profile_avatar.png',
-              fit: BoxFit.cover,
-              alignment: Alignment.center,
+      ),
+    );
+  }
+}
+
+class _SectionHeading extends StatelessWidget {
+  const _SectionHeading({required this.title, this.actionLabel, this.onAction});
+
+  final String title;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final ink = _ink(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: ink,
+                  fontSize: 25,
+                  height: 1,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.7,
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (actionLabel != null && onAction != null) ...[
+          const SizedBox(width: 10),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: onAction,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 7),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      actionLabel!,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: ink,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(Icons.arrow_forward_rounded, color: ink, size: 18),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _AdventureLauncher extends StatelessWidget {
+  const _AdventureLauncher();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _AdventureDoor(
+            key: const Key('home-adventure-read'),
+            label: 'READ',
+            icon: Icons.menu_book_rounded,
+            color: _homePurple,
+            onTap: () => _openTab(context, AppRoutes.stories),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _AdventureDoor(
+            key: const Key('home-adventure-watch'),
+            label: 'WATCH',
+            icon: Icons.play_arrow_rounded,
+            color: _homeBlue,
+            onTap: () => _openTab(context, AppRoutes.videos),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _AdventureDoor(
+            key: const Key('home-adventure-play'),
+            label: 'PLAY',
+            icon: Icons.sports_esports_rounded,
+            color: _homeCoral,
+            onTap: () => _openTab(context, AppRoutes.games),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AdventureDoor extends StatelessWidget {
+  const _AdventureDoor({
+    required super.key,
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final ink = _ink(context);
+    return Semantics(
+      button: true,
+      label: '$label adventures',
+      onTap: onTap,
+      excludeSemantics: true,
+      child: Container(
+        height: 92,
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(18)),
+        child: Material(
+          color: _adaptiveColor(context, color),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+            side: BorderSide(color: ink, width: 2.2),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            excludeFromSemantics: true,
+            onTap: onTap,
+            child: Stack(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 10, 8, 9),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Icon(icon, color: ink, size: 29),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          label,
+                          maxLines: 1,
+                          style: Theme.of(context).textTheme.labelLarge
+                              ?.copyWith(
+                                color: ink,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.7,
+                              ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -310,7 +522,7 @@ class _KidAvatar extends StatelessWidget {
 class _HeroCarousel extends StatefulWidget {
   const _HeroCarousel({required this.stories});
 
-  final List<_HeroStory> stories;
+  final List<StoryDetail> stories;
 
   @override
   State<_HeroCarousel> createState() => _HeroCarouselState();
@@ -320,20 +532,42 @@ class _HeroCarouselState extends State<_HeroCarousel> {
   late final PageController _pageController;
   Timer? _slideTimer;
   int _currentIndex = 0;
+  bool? _motionEnabled;
 
   @override
   void initState() {
     super.initState();
-    _pageController = PageController();
-    _slideTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (!_pageController.hasClients || widget.stories.isEmpty) {
-        return;
-      }
+    _pageController = PageController(viewportFraction: 0.96);
+  }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final media = MediaQuery.of(context);
+    final motionEnabled =
+        !media.disableAnimations && !media.accessibleNavigation;
+    if (_motionEnabled == motionEnabled) return;
+    _motionEnabled = motionEnabled;
+    _configureTimer();
+  }
+
+  @override
+  void didUpdateWidget(covariant _HeroCarousel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_currentIndex >= widget.stories.length) _currentIndex = 0;
+    if (oldWidget.stories.length != widget.stories.length) _configureTimer();
+  }
+
+  void _configureTimer() {
+    _slideTimer?.cancel();
+    _slideTimer = null;
+    if (_motionEnabled != true || widget.stories.length < 2) return;
+    _slideTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (!_pageController.hasClients || widget.stories.isEmpty) return;
       final nextIndex = (_currentIndex + 1) % widget.stories.length;
       _pageController.animateToPage(
         nextIndex,
-        duration: const Duration(milliseconds: 420),
+        duration: const Duration(milliseconds: 520),
         curve: Curves.easeOutCubic,
       );
     });
@@ -348,111 +582,184 @@ class _HeroCarouselState extends State<_HeroCarousel> {
 
   @override
   Widget build(BuildContext context) {
+    final textScale = MediaQuery.textScalerOf(
+      context,
+    ).scale(1).clamp(1, 3).toDouble();
+    final heroHeight = 315 + ((textScale - 1) * 160);
     return Column(
       children: [
         SizedBox(
-          height: 190,
+          key: const Key('home-featured-carousel'),
+          height: heroHeight,
           child: PageView.builder(
             controller: _pageController,
+            clipBehavior: Clip.hardEdge,
             itemCount: widget.stories.length,
-            onPageChanged: (index) {
-              setState(() => _currentIndex = index);
-            },
-            itemBuilder: (context, index) {
-              return _HeroStoryCard(story: widget.stories[index]);
-            },
+            onPageChanged: (index) => setState(() => _currentIndex = index),
+            itemBuilder: (context, index) => Padding(
+              padding: const EdgeInsets.only(right: 10),
+              child: _HeroStoryCard(
+                story: widget.stories[index],
+                paletteIndex: index,
+              ),
+            ),
           ),
         ),
-        const SizedBox(height: 8),
-        _HeroDots(count: widget.stories.length, currentIndex: _currentIndex),
+        if (widget.stories.length > 1) ...[
+          const SizedBox(height: 9),
+          _HeroDots(count: widget.stories.length, currentIndex: _currentIndex),
+        ],
       ],
     );
   }
 }
 
 class _HeroStoryCard extends StatelessWidget {
-  const _HeroStoryCard({required this.story});
+  const _HeroStoryCard({required this.story, required this.paletteIndex});
 
-  final _HeroStory story;
+  final StoryDetail story;
+  final int paletteIndex;
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(15),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => _openStoryDetail(context, story.detail),
-          child: SizedBox(
-            height: 190,
-            child: Stack(
-              fit: StackFit.expand,
+    final ink = _ink(context);
+    final palette = [_homePurple, _homePink, _homeGreen, _homeYellow];
+    final color = _adaptiveColor(
+      context,
+      palette[paletteIndex % palette.length],
+    );
+    return Semantics(
+      button: true,
+      label: 'Open ${story.title} story',
+      child: Container(
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(24)),
+        child: Material(
+          color: color,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+            side: BorderSide(color: ink, width: 2.2),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: () => _openStoryDetail(context, story),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Image.asset(
-                  story.detail.imageAsset,
-                  fit: BoxFit.cover,
-                  alignment: story.detail.imageAlignment,
-                ),
-                const DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                      colors: [
-                        Color(0xC9000000),
-                        Color(0x78000000),
-                        Color(0x00000000),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(17, 15, 15, 14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              child: _OutlinedLabel(
+                                label: story.category.isEmpty
+                                    ? 'BIBLE STORY'
+                                    : story.category.toUpperCase(),
+                              ),
+                            ),
+                            const Spacer(),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          story.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(
+                                color: ink,
+                                fontSize: 28,
+                                height: 0.95,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -1,
+                              ),
+                        ),
+                        const SizedBox(height: 7),
+                        Text(
+                          story.summary,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: ink.withValues(alpha: 0.77),
+                                fontWeight: FontWeight.w600,
+                                height: 1.2,
+                              ),
+                        ),
+                        const Spacer(),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                _storyMetadata(story),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.labelSmall
+                                    ?.copyWith(
+                                      color: ink,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: ink,
+                                borderRadius: BorderRadius.circular(99),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  MediaQuery.withClampedTextScaling(
+                                    maxScaleFactor: 1.25,
+                                    child: Text(
+                                      'READ NOW',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelSmall
+                                          ?.copyWith(
+                                            color:
+                                                Theme.of(context).brightness ==
+                                                    Brightness.dark
+                                                ? _homeInk
+                                                : Colors.white,
+                                            fontWeight: FontWeight.w900,
+                                            letterSpacing: 0.5,
+                                          ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Icon(
+                                    Icons.arrow_forward_rounded,
+                                    color:
+                                        Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? _homeInk
+                                        : Colors.white,
+                                    size: 16,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(10),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _StoryBadge(label: story.badge),
-                      const Spacer(),
-                      Text(
-                        story.detail.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: Colors.white,
-                          fontSize: 21,
-                          fontWeight: FontWeight.w500,
-                          height: 1.02,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        story.subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.white.withValues(alpha: 0.86),
-                          fontSize: 10,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      FilledButton(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFFFF7043),
-                          foregroundColor: Colors.white,
-                          minimumSize: const Size(100, 32),
-                          padding: const EdgeInsets.symmetric(horizontal: 14),
-                          textStyle: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        onPressed: () =>
-                            _openStoryDetail(context, story.detail),
-                        child: Text(story.buttonLabel),
-                      ),
-                    ],
+                Container(
+                  height: 127,
+                  decoration: BoxDecoration(
+                    border: Border(top: BorderSide(color: ink, width: 2.2)),
                   ),
+                  child: StoryCoverImage(story: story),
                 ),
               ],
             ),
@@ -463,27 +770,30 @@ class _HeroStoryCard extends StatelessWidget {
   }
 }
 
-class _StoryBadge extends StatelessWidget {
-  const _StoryBadge({required this.label});
+class _OutlinedLabel extends StatelessWidget {
+  const _OutlinedLabel({required this.label});
 
   final String label;
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
+    final ink = _ink(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(999),
+        color: _paper(context),
+        borderRadius: BorderRadius.circular(99),
+        border: Border.all(color: ink, width: 2),
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        child: Text(
-          label,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: const Color(0xFFFF7043),
-            fontSize: 9,
-            fontWeight: FontWeight.w500,
-          ),
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: ink,
+          fontSize: 9.5,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 0.7,
         ),
       ),
     );
@@ -498,148 +808,110 @@ class _HeroDots extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(count, (index) {
-        final selected = index == currentIndex;
-
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          margin: const EdgeInsets.symmetric(horizontal: 3),
-          width: selected ? 16 : 6,
-          height: 6,
-          decoration: BoxDecoration(
-            color: selected ? const Color(0xFFFF7043) : const Color(0xFFE9DCDC),
-            borderRadius: BorderRadius.circular(999),
-          ),
-        );
-      }),
+    final ink = _ink(context);
+    return Semantics(
+      label: 'Featured story ${currentIndex + 1} of $count',
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(count, (index) {
+          final selected = index == currentIndex;
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            margin: const EdgeInsets.symmetric(horizontal: 3),
+            width: selected ? 27 : 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: selected
+                  ? _adaptiveColor(context, _homeCoral)
+                  : ink.withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(99),
+              border: selected ? Border.all(color: ink, width: 1.5) : null,
+            ),
+          );
+        }),
+      ),
     );
   }
 }
 
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({required this.title, required this.onSeeAll});
+class _SubsectionTitle extends StatelessWidget {
+  const _SubsectionTitle({required this.title});
 
   final String title;
-  final VoidCallback onSeeAll;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            title,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontSize: 17,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-        TextButton(onPressed: onSeeAll, child: const Text('See all')),
-      ],
-    );
-  }
-}
-
-class _ContinueStoryRow extends StatelessWidget {
-  const _ContinueStoryRow({required this.story});
-
-  final _ContinueStory story;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        _StoryImageThumb(
-          imageAsset: story.detail.imageAsset,
-          alignment: story.detail.imageAlignment,
-          size: 62,
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                story.detail.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 8),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(999),
-                child: LinearProgressIndicator(
-                  value: story.progress,
-                  minHeight: 5,
-                  backgroundColor: const Color(0xFFF1E7E5),
-                  valueColor: const AlwaysStoppedAnimation(Color(0xFFFF7043)),
-                ),
-              ),
-              const SizedBox(height: 5),
-              Text(
-                story.subtitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: const Color(0xFFB3A8A8),
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 12),
-        FilledButton(
-          style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xFFFF7043),
-            foregroundColor: Colors.white,
-            minimumSize: const Size(68, 38),
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-          ),
-          onPressed: () => _openStoryDetail(context, story.detail),
-          child: const Text('Read'),
-        ),
-      ],
+    final ink = _ink(context);
+    return Text(
+      title,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+        color: ink,
+        fontSize: 21,
+        fontWeight: FontWeight.w900,
+        letterSpacing: -0.5,
+      ),
     );
   }
 }
 
 class _CategoryChips extends StatelessWidget {
-  const _CategoryChips({required this.categories});
+  const _CategoryChips({
+    required this.categories,
+    required this.selectedCategory,
+    required this.onSelected,
+  });
 
   final List<String> categories;
+  final String selectedCategory;
+  final ValueChanged<String> onSelected;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 40,
+      height: 47,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
+        clipBehavior: Clip.none,
         itemCount: categories.length,
         separatorBuilder: (_, _) => const SizedBox(width: 10),
         itemBuilder: (context, index) {
-          final selected = index == 0;
-
-          return ChoiceChip(
+          final category = categories[index];
+          final selected = category == selectedCategory;
+          final ink = _ink(context);
+          return Semantics(
             selected: selected,
-            showCheckmark: false,
-            label: Text(categories[index]),
-            selectedColor: const Color(0xFFFFD26A),
-            backgroundColor: Colors.transparent,
-            side: BorderSide.none,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(999),
+            button: true,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(99),
+              ),
+              child: Material(
+                color: selected
+                    ? _adaptiveColor(context, _homePurple)
+                    : _paper(context),
+                shape: StadiumBorder(side: BorderSide(color: ink, width: 2)),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  key: ValueKey('home-category-$category'),
+                  onTap: () => onSelected(category),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 15,
+                      vertical: 9,
+                    ),
+                    child: Text(
+                      category,
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: ink,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
-            labelStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: selected ? Colors.white : const Color(0xFF6B5F5F),
-              fontWeight: FontWeight.w600,
-            ),
-            onSelected: (_) {},
           );
         },
       ),
@@ -647,69 +919,405 @@ class _CategoryChips extends StatelessWidget {
   }
 }
 
-class _NewStoryShelf extends StatelessWidget {
-  const _NewStoryShelf({required this.stories});
+class _StoryPickCard extends StatelessWidget {
+  const _StoryPickCard({required this.story, required this.paletteIndex});
 
-  final List<_StoryTile> stories;
+  final StoryDetail story;
+  final int paletteIndex;
 
   @override
   Widget build(BuildContext context) {
+    final ink = _ink(context);
+    final colors = [_homeGreen, _homePink, _homeBlue, _homeYellow];
+    final color = _adaptiveColor(context, colors[paletteIndex % colors.length]);
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final vertical = constraints.maxWidth < 335 || textScale > 1.15;
+        final cover = SizedBox(
+          height: vertical ? 150 : double.infinity,
+          width: vertical ? double.infinity : 116,
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border(
+                right: vertical
+                    ? BorderSide.none
+                    : BorderSide(color: ink, width: 2.2),
+                bottom: vertical
+                    ? BorderSide(color: ink, width: 2.2)
+                    : BorderSide.none,
+              ),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: StoryCoverImage(story: story),
+          ),
+        );
+        final details = Padding(
+          padding: const EdgeInsets.fromLTRB(14, 13, 12, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                story.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: ink,
+                  fontSize: 19,
+                  height: 1,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.45,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                story.summary,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: ink.withValues(alpha: 0.72),
+                  fontWeight: FontWeight.w600,
+                  height: 1.2,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _storyMetadata(story),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: ink,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    width: 37,
+                    height: 37,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: ink, width: 2),
+                    ),
+                    child: Icon(
+                      Icons.arrow_forward_rounded,
+                      color: ink,
+                      size: 21,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+        return Semantics(
+          button: true,
+          label: 'Read ${story.title}',
+          child: Container(
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(20)),
+            child: Material(
+              color: _paper(context),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: BorderSide(color: ink, width: 2.2),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: () => _openStoryDetail(context, story),
+                child: vertical
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [cover, details],
+                      )
+                    : SizedBox(
+                        height: 166,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            cover,
+                            Expanded(child: details),
+                          ],
+                        ),
+                      ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _StoryShelf extends StatelessWidget {
+  const _StoryShelf({required this.stories});
+
+  final List<StoryDetail> stories;
+
+  @override
+  Widget build(BuildContext context) {
+    final scale = MediaQuery.textScalerOf(
+      context,
+    ).scale(1).clamp(1, 2).toDouble();
     return SizedBox(
-      height: 188,
+      height: 236 + ((scale - 1) * 42),
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
+        clipBehavior: Clip.none,
         itemCount: stories.length,
         separatorBuilder: (_, _) => const SizedBox(width: 14),
-        itemBuilder: (context, index) {
-          return _NewStoryCard(story: stories[index]);
-        },
+        itemBuilder: (context, index) =>
+            _StoryCard(story: stories[index], paletteIndex: index),
       ),
     );
   }
 }
 
-class _NewStoryCard extends StatelessWidget {
-  const _NewStoryCard({required this.story});
+class _StoryCard extends StatelessWidget {
+  const _StoryCard({required this.story, required this.paletteIndex});
 
-  final _StoryTile story;
+  final StoryDetail story;
+  final int paletteIndex;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 132,
+    final ink = _ink(context);
+    final colors = [_homeYellow, _homePurple, _homeCoral, _homeGreen];
+    final color = _adaptiveColor(context, colors[paletteIndex % colors.length]);
+    return Semantics(
+      button: true,
+      label: 'Read ${story.title}',
+      child: Container(
+        width: 169,
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(18)),
+        child: Material(
+          color: _paper(context),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+            side: BorderSide(color: ink, width: 2.2),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: () => _openStoryDetail(context, story),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(color: ink, width: 2.2),
+                      ),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: StoryCoverImage(story: story),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(11, 9, 10, 9),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              story.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.titleSmall
+                                  ?.copyWith(
+                                    color: ink,
+                                    height: 1.05,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              _storyMetadata(story),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(
+                                    color: ink.withValues(alpha: 0.68),
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      Container(
+                        width: 29,
+                        height: 29,
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: ink, width: 1.7),
+                        ),
+                        child: Icon(
+                          Icons.arrow_outward_rounded,
+                          color: ink,
+                          size: 17,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StoriesLoadingState extends StatelessWidget {
+  const _StoriesLoadingState();
+
+  @override
+  Widget build(BuildContext context) {
+    return _HomeStateCard(
+      key: const Key('home-stories-loading'),
+      color: _homePurple,
+      icon: Icons.rocket_launch_rounded,
+      title: 'Gathering adventures…',
+      message: 'The story shelf is getting ready for you.',
+      footer: SizedBox.square(
+        dimension: 28,
+        child: CircularProgressIndicator(strokeWidth: 4, color: _ink(context)),
+      ),
+    );
+  }
+}
+
+class _StoriesErrorState extends StatelessWidget {
+  const _StoriesErrorState({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return _HomeStateCard(
+      key: const Key('home-stories-error'),
+      color: _homeCoral,
+      icon: Icons.cloud_off_rounded,
+      title: 'Stories couldn\'t load',
+      message: 'The cloud took a nap. Check your connection and wake it up!',
+      footer: _StateActionButton(
+        key: const Key('home-stories-retry'),
+        label: 'TRY AGAIN',
+        icon: Icons.refresh_rounded,
+        onPressed: onRetry,
+      ),
+    );
+  }
+}
+
+class _StoriesEmptyState extends StatelessWidget {
+  const _StoriesEmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    return const _HomeStateCard(
+      key: Key('home-stories-empty'),
+      color: _homeGreen,
+      icon: Icons.auto_stories_rounded,
+      title: 'New stories are coming soon',
+      message: 'Our storytellers are filling the shelf with something amazing.',
+    );
+  }
+}
+
+class _FilteredStoriesEmptyState extends StatelessWidget {
+  const _FilteredStoriesEmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    return _HomeStateCard(
+      color: _homePink,
+      icon: Icons.search_rounded,
+      title: 'Nothing hiding here yet!',
+      message: 'No stories in this category yet. Try another colorful tab.',
+      compact: true,
+    );
+  }
+}
+
+class _HomeStateCard extends StatelessWidget {
+  const _HomeStateCard({
+    required this.color,
+    required this.icon,
+    required this.title,
+    required this.message,
+    this.footer,
+    this.compact = false,
+    super.key,
+  });
+
+  final Color color;
+  final IconData icon;
+  final String title;
+  final String message;
+  final Widget? footer;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final ink = _ink(context);
+    return Container(
+      constraints: BoxConstraints(minHeight: compact ? 190 : 276),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(23)),
       child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: () => _openStoryDetail(context, story.detail),
+        color: _adaptiveColor(context, color),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(23),
+          side: BorderSide(color: ink, width: 2.2),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Padding(
+          padding: EdgeInsets.all(compact ? 19 : 24),
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _StoryImageThumb(
-                imageAsset: story.detail.imageAsset,
-                alignment: story.detail.imageAlignment,
-                size: 132,
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: _paper(context),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: ink, width: 2.5),
+                ),
+                child: Icon(icon, color: ink, size: 28),
+              ),
+              const SizedBox(height: 17),
+              Text(
+                title,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: ink,
+                  fontSize: compact ? 23 : 27,
+                  height: 1,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.8,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
-                story.detail.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                story.category,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                message,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: const Color(0xFFB3A8A8),
-                  fontSize: 12,
-                  height: 1.1,
+                  color: ink.withValues(alpha: 0.74),
+                  fontWeight: FontWeight.w600,
+                  height: 1.25,
                 ),
               ),
+              if (footer != null) ...[const SizedBox(height: 19), footer!],
             ],
           ),
         ),
@@ -718,61 +1326,36 @@ class _NewStoryCard extends StatelessWidget {
   }
 }
 
-class _StoryImageThumb extends StatelessWidget {
-  const _StoryImageThumb({
-    required this.imageAsset,
-    required this.alignment,
-    required this.size,
+class _StateActionButton extends StatelessWidget {
+  const _StateActionButton({
+    required super.key,
+    required this.label,
+    required this.icon,
+    required this.onPressed,
   });
 
-  final String imageAsset;
-  final Alignment alignment;
-  final double size;
+  final String label;
+  final IconData icon;
+  final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF4ECE9),
-        borderRadius: BorderRadius.circular(14),
+    final ink = _ink(context);
+    return FilledButton.icon(
+      onPressed: onPressed,
+      style: FilledButton.styleFrom(
+        backgroundColor: ink,
+        foregroundColor: Theme.of(context).brightness == Brightness.dark
+            ? _homeInk
+            : Colors.white,
+        minimumSize: const Size(145, 47),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(99)),
       ),
-      child: Image.asset(imageAsset, fit: BoxFit.cover, alignment: alignment),
+      icon: Icon(icon, size: 19),
+      label: Text(
+        label,
+        style: const TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.6),
+      ),
     );
   }
-}
-
-class _ContinueStory {
-  const _ContinueStory({
-    required this.subtitle,
-    required this.progress,
-    required this.detail,
-  });
-
-  final String subtitle;
-  final double progress;
-  final StoryDetail detail;
-}
-
-class _StoryTile {
-  const _StoryTile({required this.category, required this.detail});
-
-  final String category;
-  final StoryDetail detail;
-}
-
-class _HeroStory {
-  const _HeroStory({
-    required this.badge,
-    required this.subtitle,
-    required this.buttonLabel,
-    required this.detail,
-  });
-
-  final String badge;
-  final String subtitle;
-  final String buttonLabel;
-  final StoryDetail detail;
 }

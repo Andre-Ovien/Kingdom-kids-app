@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../features/auth/presentation/auth_screen.dart';
+import '../features/auth/domain/email_verification.dart';
+import '../features/auth/domain/kid_profile.dart';
+import '../features/auth/presentation/email_verification_screen.dart';
+import '../features/auth/presentation/kid_profile_setup_screen.dart';
+import '../features/auth/presentation/profile_picker_screen.dart';
 import '../features/games/domain/mini_game.dart';
 import '../features/games/presentation/game_detail_screen.dart';
 import '../features/bible/presentation/bible_screen.dart';
@@ -11,6 +16,7 @@ import '../features/parental_controls/presentation/parental_controls_screen.dart
 import '../features/profile/presentation/profile_screen.dart';
 import '../features/streak/presentation/streak_screen.dart';
 import '../features/stories/domain/story_detail.dart';
+import '../features/stories/presentation/read_along_screen.dart';
 import '../features/stories/presentation/story_detail_screen.dart';
 import '../features/stories/presentation/stories_screen.dart';
 import '../features/videos/domain/video_story.dart';
@@ -30,7 +36,13 @@ class AppRoutes {
   static const gameDetail = '/games/detail';
   static const bible = '/bible';
   static const storyDetail = '/stories/detail';
+  static const storyReadAlong = '/stories/read-along';
   static const auth = '/auth';
+  static const login = '/auth/login';
+  static const register = '/auth/register';
+  static const emailVerification = '/auth/verify-email';
+  static const kidProfileSetup = '/auth/kid-profile';
+  static const profilePicker = '/auth/profiles';
   static const profile = '/profile';
   static const parentalControls = '/parental-controls';
 
@@ -70,29 +82,45 @@ class AppRouter {
             : VideoStory.fallback,
       ),
       AppRoutes.games => const GamesScreen(),
-      AppRoutes.gameDetail => GameDetailScreen(
-        game: settings.arguments is MiniGame
-            ? settings.arguments! as MiniGame
-            : MiniGame.fallback,
-      ),
+      AppRoutes.gameDetail =>
+        settings.arguments is MiniGame
+            ? GameDetailScreen(game: settings.arguments! as MiniGame)
+            : const GamesScreen(),
       AppRoutes.bible => const BibleScreen(),
       AppRoutes.storyDetail => StoryDetailScreen(
         story: settings.arguments is StoryDetail
             ? settings.arguments! as StoryDetail
             : StoryDetail.fallback,
       ),
+      AppRoutes.storyReadAlong => ReadAlongScreen(
+        story: settings.arguments is StoryDetail
+            ? settings.arguments! as StoryDetail
+            : StoryDetail.unavailable,
+      ),
       AppRoutes.auth => const AuthScreen(),
+      AppRoutes.login => const AuthScreen(initialMode: AuthScreenMode.login),
+      AppRoutes.register => const AuthScreen(
+        initialMode: AuthScreenMode.register,
+      ),
+      AppRoutes.emailVerification =>
+        settings.arguments is PendingEmailVerification
+            ? EmailVerificationScreen(
+                pending: settings.arguments! as PendingEmailVerification,
+              )
+            : const AuthScreen(initialMode: AuthScreenMode.register),
+      AppRoutes.kidProfileSetup => KidProfileSetupScreen(
+        existingProfiles: _profileArguments(settings.arguments),
+      ),
+      AppRoutes.profilePicker => ProfilePickerScreen(
+        initialProfiles: _profileArguments(settings.arguments),
+      ),
       AppRoutes.profile => const ProfileScreen(),
       AppRoutes.parentalControls => const ParentalControlsScreen(),
       _ => const HomeScreen(),
     };
 
     if (tabTransition != null && AppRoutes.isTabRoute(settings.name)) {
-      return _tabRoute(
-        screen: screen,
-        settings: settings,
-        transition: tabTransition,
-      );
+      return _tabRoute(screen: screen, settings: settings);
     }
 
     return MaterialPageRoute<void>(builder: (_) => screen, settings: settings);
@@ -101,32 +129,23 @@ class AppRouter {
   static Route<dynamic> _tabRoute({
     required Widget screen,
     required RouteSettings settings,
-    required TabRouteTransition transition,
   }) {
-    final fromIndex = AppRoutes.tabIndex(transition.fromRoute);
-    final toIndex = AppRoutes.tabIndex(settings.name ?? AppRoutes.home);
-    final entersFromLeft =
-        fromIndex != -1 && toIndex != -1 && toIndex < fromIndex;
-    final beginOffset = Offset(entersFromLeft ? -1 : 1, 0);
-
     return PageRouteBuilder<void>(
       settings: settings,
-      transitionDuration: const Duration(milliseconds: 280),
-      reverseTransitionDuration: const Duration(milliseconds: 220),
+      transitionDuration: Duration.zero,
+      reverseTransitionDuration: Duration.zero,
       pageBuilder: (_, _, _) => screen,
-      transitionsBuilder: (context, animation, _, child) {
-        final curved = animation.drive(CurveTween(curve: Curves.easeOutCubic));
-        final slide = Tween<Offset>(
-          begin: beginOffset,
-          end: Offset.zero,
-        ).animate(curved);
-        final fade = Tween<double>(begin: 0.94, end: 1).animate(curved);
-
-        return SlideTransition(
-          position: slide,
-          child: FadeTransition(opacity: fade, child: child),
-        );
-      },
+      transitionsBuilder: (_, _, _, child) => child,
     );
+  }
+
+  static List<KidProfile> _profileArguments(Object? arguments) {
+    if (arguments is List<KidProfile>) {
+      return arguments;
+    }
+    if (arguments is List) {
+      return arguments.whereType<KidProfile>().toList(growable: false);
+    }
+    return const [];
   }
 }

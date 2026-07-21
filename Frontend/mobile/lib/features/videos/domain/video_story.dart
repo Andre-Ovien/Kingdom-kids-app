@@ -28,11 +28,10 @@ class VideoStory {
     title: 'David & Goliath',
     category: 'Courage',
     duration: '5 min',
-    imageAsset: 'assets/images/david_and_goliath.png',
+    imageAsset: 'assets/images/stories/david-and-goliath-v2.webp',
     description:
         'Watch David trust God with a brave heart. This short Bible video helps '
         'kids see that courage can start small when God is with them.',
     videoUrl: 'local://david-and-goliath',
-    imageAlignment: Alignment(0.35, 0),
   );
 }

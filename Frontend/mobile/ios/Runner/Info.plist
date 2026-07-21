@@ -32,6 +32,13 @@
 	</array>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Kingdom Kids needs local network access while developing so Flutter can connect to the app on this device.</string>
+	<!-- Local HTTP is used only by debug builds pointed at a LAN Django server.
+	     Production voice sample URLs must use HTTPS. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

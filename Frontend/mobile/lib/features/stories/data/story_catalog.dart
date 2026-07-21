@@ -1,5 +1,3 @@
-import 'package:flutter/widgets.dart';
-
 import '../domain/story_detail.dart';
 
 class StoryCatalog {
@@ -8,10 +6,11 @@ class StoryCatalog {
   static const items = [
     StoryDetail.fallback,
     StoryDetail(
+      slug: 'jonah-and-the-big-fish',
       title: 'Jonah and the Big Fish',
       author: 'Kingdom Kids',
       category: 'Mercy',
-      imageAsset: 'assets/images/jonah.jpg',
+      imageAsset: 'assets/images/stories/jonah-and-the-big-fish-v2.webp',
       rating: '4.6',
       reviewCount: '1.5k',
       description:
@@ -24,11 +23,11 @@ class StoryCatalog {
           'Children can see that mercy is wide, patient, and full of hope.',
     ),
     StoryDetail(
+      slug: 'crossing-the-red-sea',
       title: 'Crossing the Red Sea',
       author: 'Kingdom Kids',
       category: 'Miracle',
-      imageAsset: 'assets/images/crossing_red_sea.webp',
-      imageAlignment: Alignment(-0.38, 0),
+      imageAsset: 'assets/images/stories/crossing-the-red-sea-v2.webp',
       rating: '4.9',
       reviewCount: '3k',
       description:
@@ -41,11 +40,11 @@ class StoryCatalog {
           'They remembered that God had rescued them with mighty love.',
     ),
     StoryDetail(
+      slug: 'noah-builds-the-ark',
       title: 'Noah Builds the Ark',
       author: 'Kingdom Kids',
       category: 'Faith',
-      imageAsset: 'assets/images/noahs_ark.png',
-      imageAlignment: Alignment(-0.4, 0),
+      imageAsset: 'assets/images/stories/noah-builds-the-ark-v2.webp',
       rating: '4.7',
       reviewCount: '1.8k',
       description:
@@ -57,10 +56,11 @@ class StoryCatalog {
           'After the rain, God placed a rainbow in the sky as a promise.',
     ),
     StoryDetail(
+      slug: 'creation-week',
       title: 'Creation Week',
       author: 'Kingdom Kids',
       category: 'Wonder',
-      imageAsset: 'assets/images/creation_week.jpg',
+      imageAsset: 'assets/images/stories/creation-week-v2.webp',
       rating: '4.9',
       reviewCount: '2.4k',
       description:
@@ -72,11 +72,11 @@ class StoryCatalog {
           'Every flower, ocean, animal, and star points back to God\'s care.',
     ),
     StoryDetail(
+      slug: 'daniel-in-the-lions-den',
       title: 'Daniel',
       author: 'Kingdom Kids',
       category: 'Courage',
-      imageAsset: 'assets/images/daniel.jpeg',
-      imageAlignment: Alignment(0, -0.12),
+      imageAsset: 'assets/images/stories/daniel-in-the-lions-den-v2.webp',
       description:
           'Daniel kept praying to God even when it became dangerous. When he was '
           'thrown into the lions\' den, God protected him through the night.\n\n'
@@ -84,10 +84,11 @@ class StoryCatalog {
           'children that prayer can give courage even when everyone else is afraid.',
     ),
     StoryDetail(
+      slug: 'moses-follows-god',
       title: 'Moses',
       author: 'Kingdom Kids',
       category: 'Adventure',
-      imageAsset: 'assets/images/moses2.jpeg',
+      imageAsset: 'assets/images/stories/moses-follows-god-v2.webp',
       description:
           'Moses learned that God can use ordinary people for brave work. From '
           'the burning bush to leading God\'s people, Moses had to trust God one '
@@ -96,10 +97,11 @@ class StoryCatalog {
           'story reminds kids that leadership starts with obedience.',
     ),
     StoryDetail(
+      slug: 'esther-speaks-up',
       title: 'Esther',
       author: 'Kingdom Kids',
       category: 'Bravery',
-      imageAsset: 'assets/images/esther.jpeg',
+      imageAsset: 'assets/images/stories/esther-speaks-up-v2.webp',
       description:
           'Esther became queen at a time when her people needed help. With '
           'wisdom and courage, she spoke up even though it was scary.\n\n'

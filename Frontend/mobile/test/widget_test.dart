@@ -1,20 +1,47 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mobile/app/app.dart';
+import 'package:mobile/app/router.dart';
 
 void main() {
+  test('tab routes jump instantly while detail routes keep transitions', () {
+    final tabRoute = AppRouter.onGenerateRoute(
+      const RouteSettings(
+        name: AppRoutes.stories,
+        arguments: TabRouteTransition(fromRoute: AppRoutes.home),
+      ),
+    );
+    final detailRoute = AppRouter.onGenerateRoute(
+      const RouteSettings(name: AppRoutes.storyDetail),
+    );
+    final readAlongRoute = AppRouter.onGenerateRoute(
+      const RouteSettings(name: AppRoutes.storyReadAlong),
+    );
+
+    final tabTransition = tabRoute as TransitionRoute<dynamic>;
+    expect(tabTransition.transitionDuration, Duration.zero);
+    expect(tabTransition.reverseTransitionDuration, Duration.zero);
+    expect(detailRoute, isA<MaterialPageRoute<void>>());
+    expect(readAlongRoute, isA<MaterialPageRoute<void>>());
+  });
+
   Future<void> enterHome(WidgetTester tester) async {
-    await tester.pumpWidget(const KingdomKidsApp());
+    await tester.pumpWidget(
+      const KingdomKidsApp(initialRoute: AppRoutes.streak),
+    );
     await tester.pump(const Duration(milliseconds: 2000));
     await tester.tap(find.byKey(const Key('streak-close-button')));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
   }
 
   testWidgets('shows the app open streak celebration before entering home', (
     tester,
   ) async {
-    await tester.pumpWidget(const KingdomKidsApp());
+    await tester.pumpWidget(
+      const KingdomKidsApp(initialRoute: AppRoutes.streak),
+    );
     await tester.pump(const Duration(milliseconds: 2000));
 
     expect(find.text('5 day streak!'), findsOneWidget);
@@ -22,63 +49,32 @@ void main() {
     expect(find.byKey(const Key('streak-close-button')), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('streak-close-button')));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.text('Hello, Ethan'), findsOneWidget);
+    expect(find.text('Hey, explorer!'), findsOneWidget);
   });
 
   testWidgets('shows the Kingdom Kids home shell', (tester) async {
     await enterHome(tester);
 
-    expect(find.text('Hello, Ethan'), findsOneWidget);
-    expect(find.text('Good morning'), findsOneWidget);
-    expect(find.text('David & Goliath'), findsOneWidget);
-    expect(find.text('Start Reading'), findsOneWidget);
-    expect(find.text('Continue reading'), findsOneWidget);
+    expect(find.text('Hey, explorer!'), findsOneWidget);
+    expect(find.text('Pick your adventure'), findsOneWidget);
     expect(find.text('Stories'), findsWidgets);
     expect(find.text('Watch'), findsWidgets);
     expect(find.text('Games'), findsWidgets);
-
-    await tester.scrollUntilVisible(
-      find.text('New stories'),
-      220,
-      scrollable: find.byType(Scrollable).first,
-    );
-
-    expect(find.text('New stories'), findsOneWidget);
   });
 
-  testWidgets('opens story detail from the home hero button', (tester) async {
-    await enterHome(tester);
-
-    await tester.tap(find.text('Start Reading').first);
-    await tester.pumpAndSettle();
-
-    expect(find.text('David & Goliath'), findsOneWidget);
-    expect(find.text('Kingdom Kids'), findsOneWidget);
-    expect(find.text('Description'), findsOneWidget);
-  });
-
-  testWidgets('opens a local game detail without backend', (tester) async {
+  testWidgets('opens the backend-driven game room shell', (tester) async {
     await enterHome(tester);
 
     await tester.tap(find.text('Games').last);
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
 
-    expect(find.text('TODAY\'S QUEST'), findsOneWidget);
-    expect(find.text('Quick Bible Games'), findsOneWidget);
-
-    await tester.tap(find.text('Play').first);
-    await tester.pumpAndSettle();
-
-    expect(find.text('Match the Ark Animals'), findsWidgets);
-    expect(find.text('Resume Game'), findsOneWidget);
-
-    await tester.drag(find.byType(Scrollable).last, const Offset(0, -420));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Resume Game'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Ready'), findsOneWidget);
+    expect(find.text('Ready to play?'), findsOneWidget);
+    expect(find.byKey(const Key('games-header-icon')), findsOneWidget);
+    expect(find.byKey(const Key('game-search-field')), findsOneWidget);
+    expect(find.text('Quick Bible Games'), findsNothing);
   });
 }

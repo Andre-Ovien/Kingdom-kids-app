@@ -6,7 +6,9 @@ import 'theme.dart';
 import 'theme_controller.dart';
 
 class KingdomKidsApp extends StatelessWidget {
-  const KingdomKidsApp({super.key});
+  const KingdomKidsApp({super.key, this.initialRoute = AppRoutes.onboarding});
+
+  final String initialRoute;
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +21,7 @@ class KingdomKidsApp extends StatelessWidget {
           theme: buildKingdomKidsTheme(),
           darkTheme: buildKingdomKidsTheme(brightness: Brightness.dark),
           themeMode: themeMode,
-          initialRoute: AppRoutes.streak,
+          initialRoute: initialRoute,
           onGenerateRoute: AppRouter.onGenerateRoute,
         );
       },

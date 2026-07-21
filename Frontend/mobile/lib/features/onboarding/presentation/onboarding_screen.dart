@@ -3,7 +3,10 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../app/router.dart';
+import '../../auth/data/auth_repository.dart';
 
+/// A playful, image-first introduction that hands users to the parent account
+/// flow instead of dropping them into the child experience unauthenticated.
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -15,35 +18,50 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     with SingleTickerProviderStateMixin {
   late final PageController _pageController;
   late final AnimationController _motionController;
+  late final AuthRepository _authRepository;
+  bool _reduceMotion = false;
+  bool? _lastReduceMotionPreference;
   int _currentIndex = 0;
 
   static const _pages = [
     _OnboardingPageData(
-      eyebrow: 'WELCOME',
-      title: 'Bible stories made for little hearts',
+      background: Color(0xFF3F61D6),
+      accent: Color(0xFFFFD269),
+      foreground: Colors.white,
+      actionBackground: Colors.white,
+      actionForeground: Color(0xFF27315F),
+      eyebrow: 'WELCOME TO KINGDOM KIDS',
+      title: 'Big Bible adventures begin here',
       body:
-          'Step into a warm world of faith-filled stories kids can understand, love, and remember.',
-      imageAsset: 'assets/images/david_and_goliath.png',
-      accent: Color(0xFFFF7043),
-      visual: _OnboardingVisual.storyWorld,
+          'Discover brave stories, joyful songs, and faith-filled fun made for little hearts.',
+      imageAsset: 'assets/images/onboarding/story-explorer-v2.png',
+      imageDescription: 'A child reading a Bible beneath a dove and rainbow',
     ),
     _OnboardingPageData(
-      eyebrow: 'DISCOVER',
-      title: 'Read, watch, and play',
+      background: Color(0xFFFFAF43),
+      accent: Color(0xFF5E3B91),
+      foreground: Color(0xFF3A214F),
+      actionBackground: Color(0xFF3A214F),
+      actionForeground: Colors.white,
+      eyebrow: 'STEP INTO THE STORY',
+      title: 'Watch wonder unfold',
       body:
-          'Stories, Bible videos, and gentle games come together in one joyful place.',
-      imageAsset: 'assets/images/crossing_red_sea.webp',
-      accent: Color(0xFF4A8EDB),
-      visual: _OnboardingVisual.activityCards,
+          'Explore stories, videos, and gentle games that help kids see God\'s love in action.',
+      imageAsset: 'assets/images/onboarding/noahs-ark-v2.png',
+      imageDescription: 'Noah\'s ark with friendly animals and a dove',
     ),
     _OnboardingPageData(
-      eyebrow: 'GROW',
-      title: 'Grow a little every day',
+      background: Color(0xFFFF7862),
+      accent: Color(0xFF4D2C68),
+      foreground: Color(0xFF3A214F),
+      actionBackground: Color(0xFF3A214F),
+      actionForeground: Colors.white,
+      eyebrow: 'A LITTLE WONDER EVERY DAY',
+      title: 'Grow, play, and shine',
       body:
-          'Build streaks, earn badges, and celebrate every Bible adventure along the way.',
-      imageAsset: 'assets/images/noahs_ark.png',
-      accent: Color(0xFFE45B4D),
-      visual: _OnboardingVisual.progress,
+          'Build happy habits, celebrate brave moments, and make every day an adventure.',
+      imageAsset: 'assets/images/onboarding/story-celebration-v2.png',
+      imageDescription: 'A child celebrating with story cards and stars',
     ),
   ];
 
@@ -51,10 +69,31 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   void initState() {
     super.initState();
     _pageController = PageController();
+    _authRepository = AuthRepository();
     _motionController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2600),
-    )..repeat(reverse: true);
+      duration: const Duration(milliseconds: 4200),
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _resumeExistingFamilySession();
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final reduceMotion = MediaQuery.of(context).disableAnimations;
+    if (_lastReduceMotionPreference == reduceMotion) {
+      return;
+    }
+
+    _lastReduceMotionPreference = reduceMotion;
+    _reduceMotion = reduceMotion;
+    if (reduceMotion) {
+      _motionController.stop();
+    } else {
+      _motionController.repeat(reverse: true);
+    }
   }
 
   @override
@@ -64,107 +103,71 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     super.dispose();
   }
 
-  void _next() {
+  void _advance() {
     if (_currentIndex == _pages.length - 1) {
-      _finish();
+      _openAccountFlow();
       return;
     }
 
     _pageController.nextPage(
-      duration: const Duration(milliseconds: 460),
+      duration: const Duration(milliseconds: 520),
       curve: Curves.easeOutCubic,
     );
   }
 
-  void _finish() {
-    Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.home, (_) => false);
+  void _openAccountFlow() {
+    Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.auth, (_) => false);
+  }
+
+  Future<void> _resumeExistingFamilySession() async {
+    try {
+      final storedSession = await _authRepository.restoreSession();
+      if (!mounted || storedSession == null) {
+        return;
+      }
+
+      final session = await _authRepository.refreshSession();
+      if (!mounted) {
+        return;
+      }
+
+      final activeKid = await _authRepository.currentKid();
+      if (!mounted) {
+        return;
+      }
+
+      final destination = activeKid != null
+          ? AppRoutes.home
+          : session.hasProfiles
+          ? AppRoutes.profilePicker
+          : AppRoutes.kidProfileSetup;
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        destination,
+        (_) => false,
+        arguments: session.profiles,
+      );
+    } catch (_) {
+      // If secure storage is unavailable or a previous session is malformed,
+      // let the family begin from the friendly onboarding flow instead.
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final page = _pages[_currentIndex];
-
     return Scaffold(
-      backgroundColor: _pageBackground(context),
-      body: SafeArea(
-        child: Stack(
-          children: [
-            PageView.builder(
-              controller: _pageController,
-              itemCount: _pages.length,
-              onPageChanged: (index) => setState(() => _currentIndex = index),
-              itemBuilder: (context, index) {
-                return AnimatedBuilder(
-                  animation: _motionController,
-                  builder: (context, _) {
-                    return _OnboardingPage(
-                      page: _pages[index],
-                      loopValue: _motionController.value,
-                    );
-                  },
-                );
-              },
-            ),
-            Positioned(
-              top: 8,
-              right: 20,
-              child: TextButton(
-                onPressed: _finish,
-                child: Text(
-                  'Skip',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: _mutedText(context),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: 0,
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              left: 24,
-              right: 24,
-              bottom: 18,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _OnboardingDots(
-                    count: _pages.length,
-                    index: _currentIndex,
-                    accent: page.accent,
-                  ),
-                  const SizedBox(height: 18),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: FilledButton(
-                          style: FilledButton.styleFrom(
-                            backgroundColor: page.accent,
-                            foregroundColor: Colors.white,
-                            minimumSize: const Size.fromHeight(52),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(18),
-                            ),
-                            textStyle: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0,
-                            ),
-                          ),
-                          onPressed: _next,
-                          child: Text(
-                            _currentIndex == _pages.length - 1
-                                ? 'Get Started'
-                                : 'Next',
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
+      body: PageView.builder(
+        controller: _pageController,
+        itemCount: _pages.length,
+        onPageChanged: (index) => setState(() => _currentIndex = index),
+        itemBuilder: (context, index) => _OnboardingPage(
+          data: _pages[index],
+          index: index,
+          pageCount: _pages.length,
+          isLast: index == _pages.length - 1,
+          motion: _motionController,
+          reduceMotion: _reduceMotion,
+          onAdvance: _advance,
+          onOpenAccountFlow: _openAccountFlow,
         ),
       ),
     );
@@ -172,420 +175,313 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 }
 
 class _OnboardingPage extends StatelessWidget {
-  const _OnboardingPage({required this.page, required this.loopValue});
-
-  final _OnboardingPageData page;
-  final double loopValue;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 54, 24, 112),
-      child: Column(
-        children: [
-          Expanded(
-            child: _OnboardingVisualStage(page: page, loopValue: loopValue),
-          ),
-          const SizedBox(height: 28),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              page.eyebrow,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: page.accent,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0,
-              ),
-            ),
-          ),
-          const SizedBox(height: 9),
-          Text(
-            page.title,
-            textAlign: TextAlign.left,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: _primaryText(context),
-              fontSize: 34,
-              fontWeight: FontWeight.w600,
-              height: 1.04,
-              letterSpacing: 0,
-            ),
-          ),
-          const SizedBox(height: 13),
-          Text(
-            page.body,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: _secondaryText(context),
-              fontSize: 15,
-              fontWeight: FontWeight.w400,
-              height: 1.42,
-              letterSpacing: 0,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _OnboardingVisualStage extends StatelessWidget {
-  const _OnboardingVisualStage({required this.page, required this.loopValue});
-
-  final _OnboardingPageData page;
-  final double loopValue;
-
-  @override
-  Widget build(BuildContext context) {
-    final wave = math.sin(loopValue * math.pi * 2);
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(32),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          Image.asset(
-            page.imageAsset,
-            fit: BoxFit.cover,
-            alignment: Alignment.center,
-          ),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.white.withValues(alpha: 0.02),
-                  Colors.black.withValues(alpha: 0.24),
-                  Colors.black.withValues(alpha: 0.58),
-                ],
-              ),
-            ),
-          ),
-          if (page.visual == _OnboardingVisual.storyWorld)
-            _StoryWorldMotion(accent: page.accent, wave: wave),
-          if (page.visual == _OnboardingVisual.activityCards)
-            _ActivityCardsMotion(wave: wave),
-          if (page.visual == _OnboardingVisual.progress)
-            _ProgressMotion(accent: page.accent, wave: wave),
-        ],
-      ),
-    );
-  }
-}
-
-class _StoryWorldMotion extends StatelessWidget {
-  const _StoryWorldMotion({required this.accent, required this.wave});
-
-  final Color accent;
-  final double wave;
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Positioned(
-          top: 24 + wave * 4,
-          right: 24,
-          child: _SunMark(color: accent),
-        ),
-        Positioned(
-          left: 24,
-          bottom: 24 - wave * 3,
-          child: _GlassBadge(
-            icon: Icons.auto_stories_rounded,
-            label: 'Story time',
-            color: accent,
-          ),
-        ),
-        Positioned(
-          top: 38 - wave * 4,
-          left: 26,
-          child: _CloudMark(opacity: 0.84),
-        ),
-      ],
-    );
-  }
-}
-
-class _ActivityCardsMotion extends StatelessWidget {
-  const _ActivityCardsMotion({required this.wave});
-
-  final double wave;
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Positioned(
-          left: 22,
-          bottom: 34 + wave * 4,
-          child: _MiniActivityCard(
-            icon: Icons.auto_stories_rounded,
-            label: 'Read',
-            color: const Color(0xFF4A8EDB),
-          ),
-        ),
-        Positioned(
-          right: 24,
-          bottom: 86 - wave * 5,
-          child: _MiniActivityCard(
-            icon: Icons.play_circle_rounded,
-            label: 'Watch',
-            color: const Color(0xFFFF7043),
-          ),
-        ),
-        Positioned(
-          left: 70,
-          top: 36 + wave * 3,
-          child: _MiniActivityCard(
-            icon: Icons.extension_rounded,
-            label: 'Play',
-            color: const Color(0xFFFFD26A),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ProgressMotion extends StatelessWidget {
-  const _ProgressMotion({required this.accent, required this.wave});
-
-  final Color accent;
-  final double wave;
-
-  @override
-  Widget build(BuildContext context) {
-    final heights = [54.0, 84.0, 42.0, 102.0];
-
-    return Stack(
-      children: [
-        Positioned(
-          left: 24,
-          right: 24,
-          bottom: 24,
-          child: Container(
-            height: 126,
-            padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.18),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                for (var index = 0; index < heights.length; index++)
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 420),
-                    width: 34,
-                    height:
-                        heights[index] + (index.isEven ? wave * 4 : -wave * 4),
-                    decoration: BoxDecoration(
-                      color: [
-                        const Color(0xFFE14D42),
-                        const Color(0xFF4168D7),
-                        const Color(0xFF7B5DDA),
-                        accent,
-                      ][index],
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-        Positioned(
-          top: 30 - wave * 4,
-          right: 28,
-          child: _GlassBadge(
-            icon: Icons.local_fire_department_rounded,
-            label: '5 day streak',
-            color: accent,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _MiniActivityCard extends StatelessWidget {
-  const _MiniActivityCard({
-    required this.icon,
-    required this.label,
-    required this.color,
-  });
-
-  final IconData icon;
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 94,
-      height: 88,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.32)),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: color, size: 28),
-          const SizedBox(height: 7),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.white,
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _GlassBadge extends StatelessWidget {
-  const _GlassBadge({
-    required this.icon,
-    required this.label,
-    required this.color,
-  });
-
-  final IconData icon;
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: color, size: 17),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _OnboardingDots extends StatelessWidget {
-  const _OnboardingDots({
-    required this.count,
+  const _OnboardingPage({
+    required this.data,
     required this.index,
-    required this.accent,
+    required this.pageCount,
+    required this.isLast,
+    required this.motion,
+    required this.reduceMotion,
+    required this.onAdvance,
+    required this.onOpenAccountFlow,
   });
 
-  final int count;
+  final _OnboardingPageData data;
   final int index;
-  final Color accent;
+  final int pageCount;
+  final bool isLast;
+  final Animation<double> motion;
+  final bool reduceMotion;
+  final VoidCallback onAdvance;
+  final VoidCallback onOpenAccountFlow;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: motion,
+      builder: (context, _) {
+        final t = reduceMotion ? 0.5 : motion.value;
+        final wave = math.sin((t + index * 0.19) * math.pi * 2);
+
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color.lerp(data.background, Colors.white, 0.09)!,
+                data.background,
+                Color.lerp(data.background, Colors.black, 0.12)!,
+              ],
+              stops: const [0, 0.52, 1],
+            ),
+          ),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              IgnorePointer(
+                child: CustomPaint(
+                  painter: _ContourPainter(phase: t, color: Colors.white),
+                ),
+              ),
+              IgnorePointer(
+                child: CustomPaint(
+                  painter: _SparklePainter(
+                    phase: t,
+                    color: data.accent,
+                    seed: index,
+                  ),
+                ),
+              ),
+              SafeArea(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final compact = constraints.maxHeight < 690;
+                    final textScale = MediaQuery.textScalerOf(context).scale(1);
+                    final requiresVerticalScroll = textScale > 1.3;
+                    final baseHeroHeight = compact ? 238.0 : 318.0;
+                    final heroHeight =
+                        (baseHeroHeight - math.max(0, textScale - 1) * 130)
+                            .clamp(112.0, baseHeroHeight)
+                            .toDouble();
+                    final titleSize = compact ? 31.0 : 37.0;
+                    final content = Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 12, 24, 18),
+                      child: Column(
+                        mainAxisSize: requiresVerticalScroll
+                            ? MainAxisSize.min
+                            : MainAxisSize.max,
+                        children: [
+                          if (requiresVerticalScroll)
+                            const SizedBox(height: 24)
+                          else
+                            const Spacer(),
+                          _HeroScene(
+                            data: data,
+                            wave: wave,
+                            reduceMotion: reduceMotion,
+                            height: heroHeight,
+                          ),
+                          SizedBox(
+                            height: requiresVerticalScroll
+                                ? 16
+                                : compact
+                                ? 22
+                                : 30,
+                          ),
+                          Text(
+                            data.eyebrow,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: data.foreground,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.1,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            data.title,
+                            maxLines: requiresVerticalScroll ? 3 : 2,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: data.foreground,
+                              fontSize: titleSize,
+                              fontWeight: FontWeight.w800,
+                              height: 1.02,
+                              letterSpacing: -0.8,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            data.body,
+                            maxLines: requiresVerticalScroll
+                                ? 3
+                                : compact
+                                ? 2
+                                : 3,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: data.foreground,
+                              fontSize: compact ? 14 : 15,
+                              fontWeight: FontWeight.w500,
+                              height: 1.38,
+                            ),
+                          ),
+                          if (requiresVerticalScroll)
+                            const SizedBox(height: 28)
+                          else
+                            const Spacer(),
+                          _Footer(
+                            index: index,
+                            pageCount: pageCount,
+                            isLast: isLast,
+                            foreground: data.foreground,
+                            actionBackground: data.actionBackground,
+                            actionForeground: data.actionForeground,
+                            onAdvance: onAdvance,
+                            onSkip: onOpenAccountFlow,
+                          ),
+                        ],
+                      ),
+                    );
+
+                    if (requiresVerticalScroll) {
+                      return SingleChildScrollView(
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minHeight: constraints.maxHeight,
+                          ),
+                          child: content,
+                        ),
+                      );
+                    }
+
+                    return content;
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _HeroScene extends StatelessWidget {
+  const _HeroScene({
+    required this.data,
+    required this.wave,
+    required this.reduceMotion,
+    required this.height,
+  });
+
+  final _OnboardingPageData data;
+  final double wave;
+  final bool reduceMotion;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    final verticalOffset = reduceMotion ? 0.0 : wave * 7;
+    final angle = reduceMotion ? 0.0 : wave * 0.012;
+    final scale = reduceMotion ? 1.0 : 1.04 + wave * 0.018;
+
+    return SizedBox(
+      height: height,
+      child: Center(
+        child: Transform.translate(
+          offset: Offset(reduceMotion ? 0 : wave * 3, verticalOffset),
+          child: Transform.rotate(
+            angle: angle,
+            child: Transform.scale(
+              scale: scale,
+              child: Semantics(
+                image: true,
+                label: data.imageDescription,
+                child: Image.asset(
+                  data.imageAsset,
+                  fit: BoxFit.contain,
+                  filterQuality: FilterQuality.high,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Footer extends StatelessWidget {
+  const _Footer({
+    required this.index,
+    required this.pageCount,
+    required this.isLast,
+    required this.foreground,
+    required this.actionBackground,
+    required this.actionForeground,
+    required this.onAdvance,
+    required this.onSkip,
+  });
+
+  final int index;
+  final int pageCount;
+  final bool isLast;
+  final Color foreground;
+  final Color actionBackground;
+  final Color actionForeground;
+  final VoidCallback onAdvance;
+  final VoidCallback onSkip;
 
   @override
   Widget build(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(count, (dotIndex) {
-        final selected = dotIndex == index;
-
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          width: selected ? 22 : 7,
-          height: 7,
-          decoration: BoxDecoration(
-            color: selected ? accent : _dotColor(context),
-            borderRadius: BorderRadius.circular(999),
+      children: [
+        _PageDots(count: pageCount, index: index, color: foreground),
+        const Spacer(),
+        if (isLast)
+          FilledButton(
+            onPressed: onAdvance,
+            style: FilledButton.styleFrom(
+              backgroundColor: actionBackground,
+              foregroundColor: actionForeground,
+              minimumSize: const Size(132, 48),
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+              ),
+            ),
+            child: const Text('Let\'s go'),
+          )
+        else
+          TextButton(
+            onPressed: onSkip,
+            style: TextButton.styleFrom(
+              foregroundColor: foreground,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              textStyle: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+            child: const Text('Skip'),
           ),
-        );
-      }),
+      ],
     );
   }
 }
 
-class _SunMark extends StatelessWidget {
-  const _SunMark({required this.color});
+class _PageDots extends StatelessWidget {
+  const _PageDots({
+    required this.count,
+    required this.index,
+    required this.color,
+  });
 
+  final int count;
+  final int index;
   final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 42,
-      height: 42,
-      decoration: BoxDecoration(
-        color: color,
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.34),
-            blurRadius: 24,
-            spreadRadius: 4,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CloudMark extends StatelessWidget {
-  const _CloudMark({required this.opacity});
-
-  final double opacity;
-
-  @override
-  Widget build(BuildContext context) {
-    return Opacity(
-      opacity: opacity,
-      child: SizedBox(
-        width: 58,
-        height: 28,
-        child: Stack(
-          children: [
-            Positioned(bottom: 0, left: 0, child: _CloudCircle(size: 24)),
-            Positioned(bottom: 3, left: 17, child: _CloudCircle(size: 32)),
-            Positioned(bottom: 0, right: 0, child: _CloudCircle(size: 24)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CloudCircle extends StatelessWidget {
-  const _CloudCircle({required this.size});
-
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.9),
-        shape: BoxShape.circle,
+    return Semantics(
+      label: 'Page ${index + 1} of $count',
+      child: Row(
+        children: List.generate(count, (dotIndex) {
+          final selected = dotIndex == index;
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 240),
+            curve: Curves.easeOutCubic,
+            width: selected ? 22 : 7,
+            height: 7,
+            margin: EdgeInsets.only(right: dotIndex == count - 1 ? 0 : 6),
+            decoration: BoxDecoration(
+              color: selected ? color : color.withValues(alpha: 0.42),
+              borderRadius: BorderRadius.circular(999),
+            ),
+          );
+        }),
       ),
     );
   }
@@ -593,47 +489,140 @@ class _CloudCircle extends StatelessWidget {
 
 class _OnboardingPageData {
   const _OnboardingPageData({
+    required this.background,
+    required this.accent,
+    required this.foreground,
+    required this.actionBackground,
+    required this.actionForeground,
     required this.eyebrow,
     required this.title,
     required this.body,
     required this.imageAsset,
-    required this.accent,
-    required this.visual,
+    required this.imageDescription,
   });
 
+  final Color background;
+  final Color accent;
+  final Color foreground;
+  final Color actionBackground;
+  final Color actionForeground;
   final String eyebrow;
   final String title;
   final String body;
   final String imageAsset;
-  final Color accent;
-  final _OnboardingVisual visual;
+  final String imageDescription;
 }
 
-enum _OnboardingVisual { storyWorld, activityCards, progress }
+class _ContourPainter extends CustomPainter {
+  const _ContourPainter({required this.phase, required this.color});
 
-Color _pageBackground(BuildContext context) {
-  return Theme.of(context).brightness == Brightness.dark
-      ? const Color(0xFF101414)
-      : const Color(0xFFFFFBFA);
+  final double phase;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color.withValues(alpha: 0.17)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2;
+    final shift = (phase - 0.5) * 22;
+
+    for (final offset in [-0.12, 0.29, 0.73]) {
+      final path = Path()
+        ..moveTo(-20, size.height * (offset + 0.08))
+        ..cubicTo(
+          size.width * 0.22,
+          size.height * (offset - 0.02) + shift,
+          size.width * 0.72,
+          size.height * (offset + 0.17) - shift,
+          size.width + 24,
+          size.height * (offset + 0.04),
+        );
+      canvas.drawPath(path, paint);
+    }
+
+    final loop = Path()
+      ..moveTo(size.width * 0.73, -18)
+      ..cubicTo(
+        size.width * 0.98,
+        size.height * 0.09 + shift,
+        size.width * 0.45,
+        size.height * 0.21,
+        size.width * 0.78,
+        size.height * 0.34,
+      )
+      ..cubicTo(
+        size.width * 0.97,
+        size.height * 0.43,
+        size.width * 0.78,
+        size.height * 0.54,
+        size.width * 1.08,
+        size.height * 0.67,
+      );
+    canvas.drawPath(loop, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _ContourPainter oldDelegate) {
+    return oldDelegate.phase != phase || oldDelegate.color != color;
+  }
 }
 
-Color _primaryText(BuildContext context) =>
-    Theme.of(context).colorScheme.onSurface;
+class _SparklePainter extends CustomPainter {
+  const _SparklePainter({
+    required this.phase,
+    required this.color,
+    required this.seed,
+  });
 
-Color _secondaryText(BuildContext context) {
-  return Theme.of(context).brightness == Brightness.dark
-      ? const Color(0xFFC9C0BD)
-      : const Color(0xFF756C6C);
-}
+  final double phase;
+  final Color color;
+  final int seed;
 
-Color _mutedText(BuildContext context) {
-  return Theme.of(context).brightness == Brightness.dark
-      ? const Color(0xFF9EA8A6)
-      : const Color(0xFF9D9090);
-}
+  @override
+  void paint(Canvas canvas, Size size) {
+    const locations = <Offset>[
+      Offset(0.1, 0.19),
+      Offset(0.85, 0.21),
+      Offset(0.16, 0.55),
+      Offset(0.91, 0.65),
+      Offset(0.48, 0.1),
+    ];
 
-Color _dotColor(BuildContext context) {
-  return Theme.of(context).brightness == Brightness.dark
-      ? Colors.white.withValues(alpha: 0.18)
-      : const Color(0xFFE7DEDC);
+    for (var i = 0; i < locations.length; i++) {
+      final point = locations[i];
+      final wobble = math.sin((phase + seed * 0.13 + i * 0.19) * math.pi * 2);
+      final center = Offset(
+        size.width * point.dx + wobble * 3,
+        size.height * point.dy - wobble * 5,
+      );
+      final radius = 2.3 + (wobble + 1) * 1.25;
+      final paint = Paint()..color = color.withValues(alpha: 0.55);
+      canvas.drawCircle(center, radius, paint);
+
+      if (i.isEven) {
+        final linePaint = Paint()
+          ..color = Colors.white.withValues(alpha: 0.44)
+          ..strokeWidth = 1.2
+          ..strokeCap = StrokeCap.round;
+        canvas.drawLine(
+          Offset(center.dx - radius * 2.2, center.dy),
+          Offset(center.dx + radius * 2.2, center.dy),
+          linePaint,
+        );
+        canvas.drawLine(
+          Offset(center.dx, center.dy - radius * 2.2),
+          Offset(center.dx, center.dy + radius * 2.2),
+          linePaint,
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _SparklePainter oldDelegate) {
+    return oldDelegate.phase != phase ||
+        oldDelegate.color != color ||
+        oldDelegate.seed != seed;
+  }
 }

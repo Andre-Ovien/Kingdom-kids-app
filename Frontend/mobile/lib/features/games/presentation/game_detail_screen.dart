@@ -1,511 +1,689 @@
 import 'package:flutter/material.dart';
 
-import '../../../shared/widgets/liquid_glass.dart';
+import '../../../app/router.dart';
+import '../../../core/errors/app_exception.dart';
+import '../../auth/data/auth_repository.dart';
+import '../../auth/domain/kid_profile.dart';
+import '../../auth/presentation/kid_profile_avatar.dart';
+import '../../auth/presentation/session_expiry_navigation.dart';
 import '../data/game_repository.dart';
 import '../domain/mini_game.dart';
+import 'game_cover_image.dart';
+import 'game_play_screen.dart';
 
-class GameDetailScreen extends StatelessWidget {
-  const GameDetailScreen({required this.game, super.key});
-
-  final MiniGame game;
-
-  @override
-  Widget build(BuildContext context) {
-    final related = GameRepository.items
-        .where((item) => item.id != game.id)
-        .take(3)
-        .toList();
-
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(24, 12, 24, 36),
-              sliver: SliverList.list(
-                children: [
-                  const _GameDetailTopBar(),
-                  const SizedBox(height: 18),
-                  _GamePreviewCard(game: game),
-                  const SizedBox(height: 22),
-                  _GameInfo(game: game),
-                  const SizedBox(height: 28),
-                  Text(
-                    'More games',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: 0,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  for (final item in related) ...[
-                    _RelatedGameRow(game: item),
-                    const SizedBox(height: 14),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _GameDetailTopBar extends StatelessWidget {
-  const _GameDetailTopBar();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        LiquidGlass(
-          borderRadius: 28,
-          opacity: _isDark(context) ? 0.08 : 0.18,
-          blur: 28,
-          borderOpacity: _isDark(context) ? 0.34 : 0.58,
-          child: SizedBox.square(
-            dimension: 48,
-            child: IconButton(
-              padding: EdgeInsets.zero,
-              onPressed: () => Navigator.of(context).maybePop(),
-              icon: Icon(
-                Icons.arrow_back_ios_new_rounded,
-                color: _primaryText(context),
-                size: 22,
-              ),
-            ),
-          ),
-        ),
-        Expanded(
-          child: Text(
-            'Game',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: _primaryText(context),
-              fontSize: 21,
-              fontWeight: FontWeight.w400,
-              letterSpacing: 0,
-            ),
-          ),
-        ),
-        const SizedBox(width: 48),
-      ],
-    );
-  }
-}
-
-class _GamePreviewCard extends StatelessWidget {
-  const _GamePreviewCard({required this.game});
+class GameDetailScreen extends StatefulWidget {
+  const GameDetailScreen({
+    required this.game,
+    super.key,
+    this.repository,
+    this.authRepository,
+  });
 
   final MiniGame game;
+  final GameRepository? repository;
+  final AuthRepository? authRepository;
 
   @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(18),
-      child: AspectRatio(
-        aspectRatio: 16 / 10,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.asset(
-              game.imageAsset,
-              fit: BoxFit.cover,
-              alignment: game.imageAlignment,
-            ),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.topCenter,
-                  colors: [
-                    Colors.black.withValues(alpha: 0.7),
-                    Colors.black.withValues(alpha: 0.08),
-                  ],
-                ),
-              ),
-            ),
-            Center(
-              child: LiquidGlass(
-                borderRadius: 38,
-                opacity: 0.1,
-                blur: 28,
-                borderOpacity: 0.48,
-                child: SizedBox.square(
-                  dimension: 72,
-                  child: Icon(
-                    _gameIcon(game.type),
-                    color: Colors.white,
-                    size: 42,
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: 16,
-              child: Row(
-                children: [
-                  _GamePill(label: game.typeLabel),
-                  const SizedBox(width: 8),
-                  _GamePill(label: game.difficulty),
-                  const Spacer(),
-                  _GamePill(label: '+${game.rewardStars} stars'),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  State<GameDetailScreen> createState() => _GameDetailScreenState();
 }
 
-class _GamePill extends StatelessWidget {
-  const _GamePill({required this.label});
-
-  final String label;
+class _GameDetailScreenState extends State<GameDetailScreen> {
+  late MiniGame _game;
+  late final AuthRepository _authRepository;
+  late final GameRepository _repository;
+  KidProfile? _profile;
+  String? _error;
+  bool _loading = true;
+  bool _played = false;
+  bool _allowPop = false;
 
   @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-        child: Text(
-          label,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: const Color(0xFFFF7043),
-            fontSize: 10,
-            fontWeight: FontWeight.w500,
-            height: 1,
-            letterSpacing: 0,
-          ),
-        ),
-      ),
-    );
+  void initState() {
+    super.initState();
+    _game = widget.game;
+    _authRepository = widget.authRepository ?? AuthRepository();
+    _repository =
+        widget.repository ??
+        RemoteGameRepository(authRepository: _authRepository);
+    _load();
   }
-}
 
-class _GameInfo extends StatelessWidget {
-  const _GameInfo({required this.game});
-
-  final MiniGame game;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          game.title,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            color: _primaryText(context),
-            fontSize: 25,
-            fontWeight: FontWeight.w500,
-            height: 1.08,
-            letterSpacing: 0,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            const Icon(
-              Icons.extension_rounded,
-              color: Color(0xFFFF7043),
-              size: 18,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              '${game.duration}  •  ${game.totalLevels} levels',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: _mutedText(context),
-                fontSize: 12.5,
-                fontWeight: FontWeight.w400,
-                letterSpacing: 0,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 18),
-        Text(
-          game.description,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: _secondaryText(context),
-            fontSize: 13.4,
-            height: 1.46,
-            letterSpacing: 0,
-          ),
-        ),
-        const SizedBox(height: 18),
-        if (game.progress > 0) ...[
-          Row(
-            children: [
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(999),
-                  child: LinearProgressIndicator(
-                    value: game.progress,
-                    minHeight: 6,
-                    backgroundColor: _isDark(context)
-                        ? Colors.white.withValues(alpha: 0.12)
-                        : const Color(0xFFF1E7E5),
-                    valueColor: const AlwaysStoppedAnimation(Color(0xFFFF7043)),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Level ${game.currentLevel}',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: _mutedText(context),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 0,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-        ],
-        Row(
-          children: [
-            Expanded(
-              child: FilledButton.icon(
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFFFF7043),
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size.fromHeight(48),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-                onPressed: () => _showGameStartSheet(context, game),
-                icon: const Icon(Icons.play_arrow_rounded),
-                label: Text(game.progress > 0 ? 'Resume Game' : 'Start Game'),
-              ),
-            ),
-            const SizedBox(width: 12),
-            LiquidGlass(
-              borderRadius: 26,
-              opacity: _isDark(context) ? 0.06 : 0.2,
-              blur: 24,
-              borderOpacity: _isDark(context) ? 0.26 : 0.52,
-              child: SizedBox.square(
-                dimension: 48,
-                child: Icon(
-                  Icons.bookmark_rounded,
-                  color: _primaryText(context),
-                  size: 22,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _RelatedGameRow extends StatelessWidget {
-  const _RelatedGameRow({required this.game});
-
-  final MiniGame game;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(14),
-      onTap: () {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute<void>(builder: (_) => GameDetailScreen(game: game)),
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final profile = await _authRepository.currentKid();
+      if (!mounted) return;
+      if (profile == null) {
+        setState(() => _profile = null);
+        return;
+      }
+      final game = await _repository.fetchGame(
+        _game.slug,
+        profileId: profile.id,
+      );
+      if (mounted) {
+        setState(() {
+          _profile = profile;
+          _game = game;
+        });
+      }
+    } on AppException catch (error) {
+      if (mounted && returnToSignInIfSessionExpired(context, error)) return;
+      if (mounted) setState(() => _error = error.message);
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _error =
+              'We could not prepare this quest. Check your connection and try again.',
         );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _play() async {
+    final profile = _profile;
+    if (profile == null || _game.levels.isEmpty || _loading) return;
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => GamePlayScreen(
+          game: _game,
+          profile: profile,
+          repository: _repository,
+          authRepository: _authRepository,
+        ),
+      ),
+    );
+    if (changed == true && mounted) {
+      _played = true;
+      await _load();
+    }
+  }
+
+  Future<void> _chooseProfile() async {
+    await Navigator.of(context).pushNamed(AppRoutes.profilePicker);
+    if (mounted) await _load();
+  }
+
+  void _close() {
+    if (_allowPop) return;
+    setState(() => _allowPop = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) Navigator.of(context).pop(_played);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = _game.playerProgress;
+    final hasPlayableDetail = _game.levels.isNotEmpty;
+    final horizontalPadding = MediaQuery.sizeOf(context).width < 380
+        ? 16.0
+        : 22.0;
+
+    return PopScope(
+      canPop: _allowPop,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _close();
       },
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(13),
-            child: SizedBox(
-              width: 92,
-              height: 62,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Image.asset(
-                    game.imageAsset,
-                    fit: BoxFit.cover,
-                    alignment: game.imageAlignment,
+      child: Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: SafeArea(
+          child: RefreshIndicator(
+            color: const Color(0xFFFF7043),
+            onRefresh: _load,
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(
+                    horizontalPadding,
+                    10,
+                    horizontalPadding,
+                    38,
                   ),
-                  Center(
-                    child: Container(
-                      width: 30,
-                      height: 30,
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.34),
-                        shape: BoxShape.circle,
+                  sliver: SliverList.list(
+                    children: [
+                      _DetailTopBar(onBack: _close, profile: _profile),
+                      const SizedBox(height: 16),
+                      _QuestHero(game: _game),
+                      const SizedBox(height: 22),
+                      Text(
+                        _game.title,
+                        key: const Key('game-detail-title'),
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(
+                              fontWeight: FontWeight.w900,
+                              height: 1.06,
+                            ),
                       ),
-                      child: Icon(
-                        _gameIcon(game.type),
-                        color: Colors.white,
-                        size: 18,
+                      if (_game.subtitle.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          _game.subtitle,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                color: _accentTextColor(
+                                  context,
+                                  gameAccent(_game),
+                                ),
+                                fontWeight: FontWeight.w800,
+                              ),
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+                      _QuestFacts(game: _game),
+                      const SizedBox(height: 18),
+                      Text(
+                        _game.description,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          height: 1.48,
+                        ),
                       ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(width: 13),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  game.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: _primaryText(context),
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: 0,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  '${game.typeLabel}  •  ${game.difficulty}',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: _mutedText(context),
-                    fontSize: 11.5,
-                    letterSpacing: 0,
+                      if (_loading) ...[
+                        const SizedBox(height: 19),
+                        const LinearProgressIndicator(
+                          key: Key('game-detail-loading'),
+                          minHeight: 3,
+                        ),
+                      ],
+                      if (_profile == null && !_loading && _error == null) ...[
+                        const SizedBox(height: 20),
+                        _DetailNotice(
+                          icon: Icons.person_search_rounded,
+                          message:
+                              'Choose a kid profile so progress and stars have a home.',
+                          actionLabel: 'Choose profile',
+                          onAction: _chooseProfile,
+                        ),
+                      ],
+                      if (_error != null) ...[
+                        const SizedBox(height: 20),
+                        _DetailNotice(
+                          icon: Icons.cloud_off_rounded,
+                          message: _error!,
+                          actionLabel: 'Try again',
+                          onAction: _load,
+                        ),
+                      ],
+                      if (progress.hasStarted) ...[
+                        const SizedBox(height: 22),
+                        _ProgressCard(game: _game),
+                      ],
+                      const SizedBox(height: 24),
+                      if (hasPlayableDetail) ...[
+                        Text(
+                          'Your adventure map',
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(fontWeight: FontWeight.w900),
+                        ),
+                        const SizedBox(height: 12),
+                        _LevelMap(game: _game),
+                        const SizedBox(height: 24),
+                      ] else if (!_loading && _error == null) ...[
+                        const _NoLevelsNotice(),
+                        const SizedBox(height: 20),
+                      ],
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          key: const Key('play-game-button'),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: gameAccent(_game),
+                            foregroundColor: _buttonForeground(
+                              gameAccent(_game),
+                            ),
+                            minimumSize: const Size.fromHeight(56),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                          ),
+                          onPressed:
+                              _profile != null && hasPlayableDetail && !_loading
+                              ? _play
+                              : null,
+                          icon: Icon(
+                            progress.isComplete
+                                ? Icons.replay_rounded
+                                : Icons.play_arrow_rounded,
+                            size: 27,
+                          ),
+                          label: Text(
+                            progress.isComplete
+                                ? 'Replay quest'
+                                : progress.hasStarted
+                                ? 'Continue level ${progress.currentLevel}'
+                                : 'Start the adventure',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
 }
 
-void _showGameStartSheet(BuildContext context, MiniGame game) {
-  showModalBottomSheet<void>(
-    context: context,
-    backgroundColor: Colors.transparent,
-    builder: (context) => _GameStartSheet(game: game),
-  );
+class _DetailTopBar extends StatelessWidget {
+  const _DetailTopBar({required this.onBack, required this.profile});
+
+  final VoidCallback onBack;
+  final KidProfile? profile;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final largeText = MediaQuery.textScalerOf(context).scale(1) >= 2.1;
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            IconButton.filledTonal(
+              key: const Key('game-detail-back'),
+              tooltip: 'Back to games',
+              onPressed: onBack,
+              icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Quest details',
+                maxLines: largeText ? 2 : 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+              ),
+            ),
+            const SizedBox(width: 8),
+            if (profile == null)
+              const SizedBox(width: 48)
+            else
+              KidProfileAvatar(profile: profile!, size: largeText ? 40 : 46),
+          ],
+        );
+      },
+    );
+  }
 }
 
-class _GameStartSheet extends StatelessWidget {
-  const _GameStartSheet({required this.game});
+class _QuestHero extends StatelessWidget {
+  const _QuestHero({required this.game});
 
   final MiniGame game;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.all(14),
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
-      decoration: BoxDecoration(
-        color: _isDark(context) ? const Color(0xFF171D1C) : Colors.white,
-        borderRadius: BorderRadius.circular(28),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 42,
-            height: 4,
-            decoration: BoxDecoration(
-              color: _isDark(context)
-                  ? Colors.white.withValues(alpha: 0.18)
-                  : const Color(0xFFE7DEDC),
-              borderRadius: BorderRadius.circular(999),
-            ),
-          ),
-          const SizedBox(height: 18),
-          Icon(_gameIcon(game.type), color: const Color(0xFFFF7043), size: 34),
-          const SizedBox(height: 10),
-          Text(
-            'Level ${game.currentLevel}',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: _primaryText(context),
-              fontSize: 24,
-              fontWeight: FontWeight.w500,
-              letterSpacing: 0,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            game.title,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: _mutedText(context),
-              fontSize: 13,
-              letterSpacing: 0,
-            ),
-          ),
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              _StartStat(label: game.typeLabel, icon: Icons.extension_rounded),
-              _StartStat(label: game.difficulty, icon: Icons.bolt_rounded),
-              _StartStat(
-                label: '+${game.rewardStars}',
-                icon: Icons.star_rounded,
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFFF7043),
-              foregroundColor: Colors.white,
-              minimumSize: const Size.fromHeight(48),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
+    final accent = gameAccent(game);
+    return AspectRatio(
+      aspectRatio: 16 / 10,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(25),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            GameCoverImage(game: game),
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.transparent, Color(0xA8242030)],
+                ),
               ),
             ),
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Ready'),
-          ),
-        ],
+            Center(
+              child: Container(
+                width: 78,
+                height: 78,
+                decoration: BoxDecoration(
+                  color: accent,
+                  shape: BoxShape.circle,
+                  boxShadow: const [
+                    BoxShadow(color: Colors.black26, blurRadius: 20),
+                  ],
+                ),
+                child: Icon(
+                  gameTypeIcon(game.gameType),
+                  color: _buttonForeground(accent),
+                  size: 39,
+                ),
+              ),
+            ),
+            Positioned(
+              left: 13,
+              right: 13,
+              bottom: 13,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 11,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: accent,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    game.typeLabel,
+                    style: TextStyle(
+                      color: _buttonForeground(accent),
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _StartStat extends StatelessWidget {
-  const _StartStat({required this.label, required this.icon});
+class _QuestFacts extends StatelessWidget {
+  const _QuestFacts({required this.game});
 
-  final String label;
-  final IconData icon;
+  final MiniGame game;
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
+    return Wrap(
+      spacing: 9,
+      runSpacing: 9,
+      children: [
+        _Fact(icon: Icons.bolt_rounded, label: game.difficulty),
+        _Fact(icon: Icons.schedule_rounded, label: game.duration),
+        _Fact(icon: Icons.flag_rounded, label: '${game.totalLevels} levels'),
+      ],
+    );
+  }
+}
+
+class _Fact extends StatelessWidget {
+  const _Fact({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Wrap(
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 5,
+        runSpacing: 2,
+        children: [
+          Icon(icon, size: 17),
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProgressCard extends StatelessWidget {
+  const _ProgressCard({required this.game});
+
+  final MiniGame game;
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = game.playerProgress;
+    final accent = gameAccent(game);
+    return Container(
+      key: const Key('game-progress-card'),
+      padding: const EdgeInsets.all(17),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.09),
+        borderRadius: BorderRadius.circular(21),
+        border: Border.all(color: accent.withValues(alpha: 0.22)),
+      ),
       child: Column(
         children: [
-          Icon(icon, color: const Color(0xFFFF7043), size: 22),
-          const SizedBox(height: 6),
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: _primaryText(context),
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              letterSpacing: 0,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final large =
+                  MediaQuery.textScalerOf(context).scale(1) >= 1.7 ||
+                  constraints.maxWidth < 300;
+              final title = Row(
+                children: [
+                  Icon(Icons.explore_rounded, color: accent),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      progress.isComplete
+                          ? 'Adventure complete'
+                          : 'Level ${progress.currentLevel} is next',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+              final percent = Text(
+                '${(progress.percent * 100).round()}%',
+                style: TextStyle(
+                  color: _accentTextColor(context, accent),
+                  fontWeight: FontWeight.w900,
+                ),
+              );
+              if (large) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    title,
+                    const SizedBox(height: 6),
+                    Align(alignment: Alignment.centerRight, child: percent),
+                  ],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(child: title),
+                  const SizedBox(width: 8),
+                  percent,
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 11),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: progress.percent,
+              minHeight: 8,
+              backgroundColor: accent.withValues(alpha: 0.14),
+              valueColor: AlwaysStoppedAnimation(accent),
+            ),
+          ),
+          const SizedBox(height: 10),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final completed = Text(
+                '${progress.completedLevels} levels completed',
+              );
+              final stars = Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 3,
+                runSpacing: 2,
+                children: [
+                  const Icon(
+                    Icons.star_rounded,
+                    color: Color(0xFFFFA000),
+                    size: 19,
+                  ),
+                  Text(
+                    '${progress.starsEarned}/${progress.maxStars} stars',
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                ],
+              );
+              if (MediaQuery.textScalerOf(context).scale(1) >= 1.6 ||
+                  constraints.maxWidth < 300) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [completed, const SizedBox(height: 5), stars],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(child: completed),
+                  const SizedBox(width: 8),
+                  stars,
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LevelMap extends StatelessWidget {
+  const _LevelMap({required this.game});
+
+  final MiniGame game;
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = game.playerProgress;
+    final accent = gameAccent(game);
+    return Column(
+      children: [
+        for (var index = 0; index < game.levels.length; index++)
+          _LevelMapRow(
+            level: game.levels[index],
+            isLast: index == game.levels.length - 1,
+            completed:
+                game.levels[index].number <= progress.highestCompletedLevel,
+            current:
+                !progress.isComplete &&
+                game.levels[index].number == progress.currentLevel,
+            accent: accent,
+          ),
+      ],
+    );
+  }
+}
+
+class _LevelMapRow extends StatelessWidget {
+  const _LevelMapRow({
+    required this.level,
+    required this.isLast,
+    required this.completed,
+    required this.current,
+    required this.accent,
+  });
+
+  final GameLevel level;
+  final bool isLast;
+  final bool completed;
+  final bool current;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            width: 42,
+            child: Column(
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 220),
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: completed || current
+                        ? accent
+                        : Theme.of(context).colorScheme.surfaceContainerHighest,
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(
+                    completed ? Icons.check_rounded : Icons.flag_rounded,
+                    size: 19,
+                    color: completed || current
+                        ? _buttonForeground(accent)
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                if (!isLast)
+                  Expanded(
+                    child: Container(
+                      width: 3,
+                      color: completed
+                          ? accent.withValues(alpha: 0.6)
+                          : Theme.of(context).colorScheme.outlineVariant,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(bottom: isLast ? 0 : 17),
+              child: Container(
+                padding: const EdgeInsets.all(13),
+                decoration: BoxDecoration(
+                  color: current
+                      ? accent.withValues(alpha: 0.1)
+                      : Theme.of(context).colorScheme.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(16),
+                  border: current
+                      ? Border.all(color: accent.withValues(alpha: 0.35))
+                      : null,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Level ${level.number} • ${level.title}',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    if (level.instructions.isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        level.instructions,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ),
           ),
         ],
@@ -514,26 +692,108 @@ class _StartStat extends StatelessWidget {
   }
 }
 
-IconData _gameIcon(MiniGameType type) {
-  return switch (type) {
-    MiniGameType.dragAndDrop => Icons.touch_app_rounded,
-    MiniGameType.matching => Icons.compare_arrows_rounded,
-    MiniGameType.memory => Icons.style_rounded,
-    MiniGameType.quiz => Icons.quiz_rounded,
-    MiniGameType.puzzle => Icons.extension_rounded,
-  };
+class _DetailNotice extends StatelessWidget {
+  const _DetailNotice({
+    required this.icon,
+    required this.message,
+    required this.actionLabel,
+    required this.onAction,
+  });
+
+  final IconData icon;
+  final String message;
+  final String actionLabel;
+  final VoidCallback onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: Theme.of(
+          context,
+        ).colorScheme.errorContainer.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final messageRow = Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon),
+              const SizedBox(width: 11),
+              Expanded(child: Text(message)),
+            ],
+          );
+          final action = TextButton(
+            onPressed: onAction,
+            child: Text(actionLabel),
+          );
+          if (MediaQuery.textScalerOf(context).scale(1) >= 1.6 ||
+              constraints.maxWidth < 400) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                messageRow,
+                Align(alignment: Alignment.centerRight, child: action),
+              ],
+            );
+          }
+          return Row(
+            children: [
+              Expanded(child: messageRow),
+              const SizedBox(width: 8),
+              action,
+            ],
+          );
+        },
+      ),
+    );
+  }
 }
 
-bool _isDark(BuildContext context) =>
-    Theme.of(context).brightness == Brightness.dark;
+class _NoLevelsNotice extends StatelessWidget {
+  const _NoLevelsNotice();
 
-Color _primaryText(BuildContext context) =>
-    Theme.of(context).colorScheme.onSurface;
-
-Color _mutedText(BuildContext context) {
-  return _isDark(context) ? const Color(0xFF9EA8A6) : const Color(0xFFB8ADAE);
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: const Row(
+        children: [
+          Text('🛠️', style: TextStyle(fontSize: 30)),
+          SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Playable levels are still being prepared for this quest.',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-Color _secondaryText(BuildContext context) {
-  return _isDark(context) ? const Color(0xFFC9C0BD) : const Color(0xFF847A7A);
+Color _buttonForeground(Color background) {
+  return background.computeLuminance() > 0.179
+      ? const Color(0xFF2E2940)
+      : Colors.white;
 }
+
+Color _accentTextColor(BuildContext context, Color accent) {
+  final surface = Theme.of(context).scaffoldBackgroundColor;
+  final lighter = mathMax(
+    accent.computeLuminance(),
+    surface.computeLuminance(),
+  );
+  final darker = mathMin(accent.computeLuminance(), surface.computeLuminance());
+  final contrast = (lighter + 0.05) / (darker + 0.05);
+  return contrast >= 4.5 ? accent : _buttonForeground(surface);
+}
+
+double mathMax(double left, double right) => left > right ? left : right;
+double mathMin(double left, double right) => left < right ? left : right;
