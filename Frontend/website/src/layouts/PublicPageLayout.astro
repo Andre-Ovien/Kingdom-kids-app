@@ -1,0 +1,81 @@
+---
+import '@fontsource-variable/bricolage-grotesque/wght.css';
+import '../styles/public-page.css';
+
+import { privacyContact, siteConfig } from '../config/site';
+
+interface Props {
+  title: string;
+  description: string;
+  canonicalPath: string;
+}
+
+const { title, description, canonicalPath } = Astro.props;
+const siteOrigin = Astro.site ?? new URL(siteConfig.origin);
+const canonicalUrl = new URL(canonicalPath, siteOrigin);
+const socialImageUrl = new URL(siteConfig.socialImagePath, siteOrigin);
+const currentPath = Astro.url.pathname;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#f8d866" />
+    <meta name="description" content={description} />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href={canonicalUrl} />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={siteConfig.name} />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:title" content={`${title} | ${siteConfig.name}`} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:image" content={socialImageUrl} />
+    <meta property="og:image:alt" content="A pastel sky above the Kingdom Kids world" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={`${title} | ${siteConfig.name}`} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={socialImageUrl} />
+
+    <title>{title} | {siteConfig.name}</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+
+    <header class="public-header">
+      <nav class="public-nav" aria-label="Primary navigation">
+        <a class="public-brand" href="/" aria-label="Kingdom Kids home">
+          <span aria-hidden="true">K</span>
+          <strong>{siteConfig.name}</strong>
+        </a>
+        <div class="public-nav-links">
+          <a href="/">Home</a>
+          <a href="/privacy/" aria-current={currentPath === '/privacy/' ? 'page' : undefined}>Privacy</a>
+          <a
+            href="/account-deletion/"
+            aria-current={currentPath === '/account-deletion/' ? 'page' : undefined}
+          >Account deletion</a>
+        </div>
+      </nav>
+    </header>
+
+    <main id="main-content" class="public-main">
+      <slot />
+    </main>
+
+    <footer class="public-footer">
+      <div>
+        <strong>{siteConfig.name}</strong>
+        <span>Growing faith. Sharing joy.</span>
+      </div>
+      <nav aria-label="Legal and support links">
+        <a href="/privacy/">Privacy</a>
+        <a href="/account-deletion/">Account deletion</a>
+        <a href={privacyContact.href}>{privacyContact.email}</a>
+      </nav>
+    </footer>
+  </body>
+</html>

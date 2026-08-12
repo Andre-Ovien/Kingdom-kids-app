@@ -1,0 +1,208 @@
+---
+import PublicPageLayout from '../layouts/PublicPageLayout.astro';
+import { policyDates, privacyContact } from '../config/site';
+
+const description =
+  'How Kingdom Kids handles parent accounts, child profiles, learning activity, device data, and waitlist information.';
+---
+
+<PublicPageLayout title="Privacy policy" description={description} canonicalPath="/privacy/">
+  <header class="public-hero">
+    <p class="public-eyebrow">Privacy for families</p>
+    <h1>Plain answers about family data.</h1>
+    <p class="public-lead">
+      Kingdom Kids is designed around a parent-managed account and minimal child profiles. This policy describes
+      the information the current pre-release website, mobile app, and API handle and the choices available to
+      families.
+    </p>
+    <p class="public-meta">Last updated: {policyDates.privacyLastUpdated}</p>
+  </header>
+
+  <aside class="notice" aria-labelledby="prelaunch-contact-title">
+    <strong id="prelaunch-contact-title">Pre-launch privacy contact</strong>
+    <p>
+      <a href={privacyContact.href}>{privacyContact.email}</a> is the centralized provisional privacy contact.
+      {' '}{privacyContact.launchRequirement}
+    </p>
+  </aside>
+
+  <article class="policy-card">
+    <section class="policy-section" aria-labelledby="scope-title">
+      <h2 id="scope-title">1. Scope and who the service is for</h2>
+      <p>
+        This policy applies to the Kingdom Kids website, Android app, and supporting API. The app offers Bible
+        stories, device read-aloud features, games, and progress views for children, while a parent or guardian
+        creates and manages the family account.
+      </p>
+      <p>
+        A child is not asked to create an account or provide an email address or password. Parents should use a
+        nickname—not a full legal name—when creating a child profile.
+      </p>
+    </section>
+
+    <section class="policy-section" aria-labelledby="collect-title">
+      <h2 id="collect-title">2. Information we handle</h2>
+
+      <h3>Parent account and security information</h3>
+      <ul>
+        <li>Parent email address and account identifiers.</li>
+        <li>A one-way password hash; the service does not store the readable account password.</li>
+        <li>Email-verification and password-reset challenge records, attempt counts, expiry times, and security lockouts.</li>
+        <li>Access and refresh tokens used to maintain a signed-in session.</li>
+      </ul>
+
+      <h3>Minimal child-profile information</h3>
+      <ul>
+        <li>A parent-entered display name or nickname and a chosen character/avatar.</li>
+        <li>Reading preferences such as text size and whether narration is enabled.</li>
+        <li>
+          Learning activity tied to the profile: stories started or completed, game attempts and submitted answers,
+          scores, stars, completed levels, badges, and the last-played time.
+        </li>
+        <li>Daily streak dates and the device timezone offset used to calculate a local day.</li>
+      </ul>
+
+      <h3>Website and waitlist information</h3>
+      <ul>
+        <li>A grown-up’s email, consent time, and signup source when they ask to join the launch waitlist.</li>
+        <li>
+          Standard technical request information—such as IP address, request time, browser type, and error or
+          security events—may be processed by the production host, reverse proxy, or API to deliver and protect the service.
+        </li>
+      </ul>
+
+      <h3>Information kept on the device</h3>
+      <p>
+        Session tokens, the selected profile, preferences, first-launch state, and optional reminder settings are
+        stored using the device’s protected storage. Reminder notifications are scheduled locally after a grown-up
+        grants notification permission.
+      </p>
+    </section>
+
+    <section class="policy-section" aria-labelledby="not-collect-title">
+      <h2 id="not-collect-title">3. What the current product does not collect</h2>
+      <p>The current app does not ask for or integrate:</p>
+      <ul>
+        <li>A child’s email address, password, birth date, school, home address, or precise location.</li>
+        <li>Contacts, photos, camera, microphone, or advertising identifiers.</li>
+        <li>Third-party advertising, behavioural advertising, or third-party analytics SDKs.</li>
+      </ul>
+      <p>
+        If a future release changes these practices, this policy and the relevant app-store disclosures must be
+        updated before that release is made available.
+      </p>
+    </section>
+
+    <section class="policy-section" aria-labelledby="use-title">
+      <h2 id="use-title">4. Why we use information</h2>
+      <ul>
+        <li>Create, verify, secure, and recover a parent account.</li>
+        <li>Keep each child profile’s content preferences and progress separate.</li>
+        <li>Evaluate game activity, award progress, and show family-facing summaries.</li>
+        <li>Calculate streaks using the profile’s local day without requesting precise location.</li>
+        <li>Deliver requested launch updates to waitlist subscribers.</li>
+        <li>Prevent abuse, investigate errors, protect accounts, and operate the service.</li>
+        <li>Comply with applicable law and respond to valid legal requests.</li>
+      </ul>
+    </section>
+
+    <section class="policy-section" aria-labelledby="share-title">
+      <h2 id="share-title">5. When information may be shared</h2>
+      <p>Kingdom Kids does not sell or rent personal information.</p>
+      <p>Information may be disclosed only as needed to:</p>
+      <ul>
+        <li>
+          Vendors operating the production infrastructure, such as hosting, database, content-delivery, security,
+          and transactional-email providers, under appropriate data-protection terms.
+        </li>
+        <li>Comply with law, court orders, or valid government requests, or protect people and the service from harm.</li>
+        <li>
+          Complete a merger, financing, acquisition, or sale of assets, subject to notice and continued protection
+          of the information.
+        </li>
+      </ul>
+      <p>
+        Production vendors have not yet been named in this pre-launch policy. Their identities, regions, contracts,
+        and any international transfer safeguards must be reviewed and this policy updated before launch.
+      </p>
+    </section>
+
+    <section class="policy-section" aria-labelledby="retention-title">
+      <h2 id="retention-title">6. Retention and deletion</h2>
+      <ul>
+        <li>Parent account and associated child-profile data are kept while the account remains open.</li>
+        <li>
+          The self-service deletion flow removes the parent account, child profiles, preferences, story activity,
+          streak history, and game progress and attempts from the active service. A verified-account deletion also
+          removes a waitlist entry using the same email.
+        </li>
+        <li>
+          A parent account that is still waiting for email verification can be removed from the same public page
+          after password confirmation. Because that account has not proved control of the email address, an
+          independent waitlist signup is handled through the privacy contact instead.
+        </li>
+        <li>
+          Waitlist-only information is kept until launch communications are complete or the grown-up asks for removal.
+        </li>
+        <li>Email-verification and password-reset challenges are short-lived and retained only as needed for account security.</li>
+      </ul>
+      <p>
+        Production log and backup schedules are not yet finalized. They must be documented before launch. Once
+        configured, deleted information may remain temporarily in access-restricted backups until their normal
+        rotation, and must not be restored to the active service except for disaster recovery.
+      </p>
+    </section>
+
+    <section class="policy-section" aria-labelledby="children-title">
+      <h2 id="children-title">7. Children and parent controls</h2>
+      <p>
+        The child experience is attached to a grown-up’s verified account. A parent chooses the child-profile
+        nickname and avatar, can review profile information and progress, and can delete the entire family account.
+        Kingdom Kids does not use child-profile activity for advertising or build advertising profiles.
+      </p>
+      <p>
+        If a parent believes a child supplied information beyond what the app requests, they should delete the
+        account or contact the privacy address below so it can be investigated and removed.
+      </p>
+    </section>
+
+    <section class="policy-section" aria-labelledby="security-title">
+      <h2 id="security-title">8. Security</h2>
+      <p>
+        The production service is intended to require HTTPS, hash passwords with Django’s password-security system,
+        restrict data to the authenticated parent account, throttle sensitive endpoints, and store mobile session
+        data in protected device storage. No security control can guarantee absolute protection, so suspected
+        incidents should be reported promptly.
+      </p>
+    </section>
+
+    <section class="policy-section" aria-labelledby="choices-title">
+      <h2 id="choices-title">9. Family choices and rights</h2>
+      <ul>
+        <li>Use the <a href="/account-deletion/">account-deletion page</a> to permanently delete an account.</li>
+        <li>Turn optional notifications off in the app or device settings.</li>
+        <li>Ask to access, correct, or remove information, including a waitlist-only email.</li>
+        <li>Exercise any additional privacy rights available in the family’s country or region.</li>
+      </ul>
+      <p>
+        We may need to verify that a requester controls the relevant parent account or email before completing a request.
+      </p>
+    </section>
+
+    <section class="policy-section" aria-labelledby="changes-title">
+      <h2 id="changes-title">10. Changes to this policy</h2>
+      <p>
+        This page will show a revised date when the policy changes. Material changes affecting family data should be
+        communicated in the app, by email, or through another appropriate notice before they take effect.
+      </p>
+    </section>
+
+    <section class="policy-section" aria-labelledby="contact-title">
+      <h2 id="contact-title">11. Contact</h2>
+      <p>
+        Privacy questions or requests can be sent to <a href={privacyContact.href}>{privacyContact.email}</a>.
+      </p>
+      <p><strong>Pre-launch status:</strong> {privacyContact.launchRequirement}</p>
+    </section>
+  </article>
+</PublicPageLayout>

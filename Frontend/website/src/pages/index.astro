@@ -1,82 +1,65 @@
 ---
+import '@fontsource-variable/bricolage-grotesque/wght.css';
 import '../styles/global.css';
-import noahsArk from '../../../mobile/assets/images/onboarding/noahs-ark-v2.png';
-import storyCelebration from '../../../mobile/assets/images/onboarding/story-celebration-v2.png';
-import storyExplorer from '../../../mobile/assets/images/onboarding/story-explorer-v2.png';
+import { siteConfig } from '../config/site';
 
-type Step = {
-  number: string;
-  title: string;
-  description: string;
-  icon: 'book' | 'play' | 'crown';
-};
+const currentYear = new Date().getFullYear();
+const siteOrigin = Astro.site ?? new URL(siteConfig.origin);
+const canonicalUrl = new URL('/', siteOrigin);
 
-type Feature = {
-  label: string;
-  title: string;
-  description: string;
-};
-
-const navigation = [
-  { label: 'Benefits', href: '#benefits' },
-  { label: 'Stories', href: '#stories' },
-  { label: 'How it works', href: '#how-it-works' },
-  { label: 'Parents', href: '#parents' },
-  { label: 'FAQs', href: '#faqs' },
-  { label: 'Contact', href: '#contact' },
-];
-
-const steps: Step[] = [
+const appSections = [
   {
+    eyebrow: 'Stories',
     number: '01',
-    title: 'Choose',
-    description: 'Pick a Bible adventure that matches their age, curiosity, or the lesson you are sharing today.',
-    icon: 'book',
+    title: 'Stories that stay with them.',
+    description: 'Colorful Bible adventures with read-aloud support.',
+    type: 'stories',
+    theme: 'lilac',
   },
   {
+    eyebrow: 'Games',
     number: '02',
-    title: 'Explore',
-    description: 'Read, watch, listen, and play through every story with bright moments that invite kids to join in.',
-    icon: 'play',
+    title: 'Play with purpose.',
+    description: 'Bible games that bring familiar lessons back through play.',
+    type: 'games',
+    theme: 'sunshine',
   },
   {
+    eyebrow: 'Videos',
     number: '03',
-    title: 'Grow',
-    description: 'Celebrate little wins and follow gentle progress as truth, courage, and kindness take root.',
-    icon: 'crown',
-  },
-];
-
-const features: Feature[] = [
-  {
-    label: 'Storytime',
-    title: 'Big stories, made wonderfully clear.',
-    description: 'Colorful retellings help young readers understand and remember the heart of every Bible story.',
-  },
-  {
-    label: 'Playtime',
-    title: 'Games with goodness built in.',
-    description: 'Quick challenges turn memory, courage, and kindness into play they will want to revisit.',
-  },
-  {
-    label: 'Family time',
-    title: 'Simple ways to keep talking.',
-    description: 'Helpful prompts give parents and teachers an easy bridge from screen time to real conversation.',
+    title: 'A new way to watch.',
+    description: 'Short Bible videos are planned for a future update.',
+    status: 'Coming later',
+    type: 'videos',
+    theme: 'coral',
   },
 ];
 
 const faqs = [
   {
-    question: 'What ages is Kingdom Kids made for?',
-    answer: 'Kingdom Kids is designed for curious children ages 4–10, with simple navigation for independent play and plenty of moments families can enjoy together.',
+    question: 'What is Kingdom Kids?',
+    answer:
+      'A playful faith-learning app where children explore Bible stories through reading, read-along audio and games.',
   },
   {
-    question: 'Can parents follow their child’s progress?',
-    answer: 'Yes. Gentle family progress helps grown-ups see completed stories, favorite activities, and learning rhythms without turning faith into a scorecard.',
+    question: 'Who is it made for?',
+    answer:
+      'Young explorers and the grown-ups guiding them, with simple activities for independent or shared play.',
   },
   {
-    question: 'Is the experience safe for children?',
-    answer: 'Safety is central to the experience. Kingdom Kids is designed around age-appropriate content, calm interactions, and a parent-friendly approach.',
+    question: 'Will the first release include videos?',
+    answer:
+      'Not yet. The first beta focuses on stories, read-along audio and games; videos will follow in a later update.',
+  },
+  {
+    question: 'Can grown-ups follow along?',
+    answer:
+      'Yes. Family profiles and gentle progress views help grown-ups stay involved without turning faith into a score.',
+  },
+  {
+    question: 'Where will it launch first?',
+    answer:
+      'The first beta is being prepared for Android on Google Play. Join the waitlist for launch news.',
   },
 ];
 ---
@@ -85,247 +68,718 @@ const faqs = [
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta
-      name="description"
-      content="Kingdom Kids turns Bible stories into joyful adventures with stories, games, videos, and gentle family progress."
-    />
-    <meta name="theme-color" content="#0b0b0b" />
-    <title>Kingdom Kids | Bible Adventures Made Joyful</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#f4f0e6" />
+    <meta name="description" content={siteConfig.description} />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href={canonicalUrl} />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={siteConfig.name} />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:title" content="Kingdom Kids — Big stories for little hearts" />
+    <meta property="og:description" content={siteConfig.description} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Kingdom Kids — Big stories for little hearts" />
+    <meta name="twitter:description" content={siteConfig.description} />
+    <script is:inline>document.documentElement.classList.add('js');</script>
+    <link rel="preload" as="image" href="/images/hero/nia-reading-headline-v1.webp" fetchpriority="high" />
+    <title>Kingdom Kids — Big stories for little hearts</title>
   </head>
-  <body>
+
+  <body id="top">
     <a class="skip-link" href="#main-content">Skip to content</a>
-    <div class="site-shell" id="top">
-      <header class="site-header" aria-label="Primary navigation">
+
+    <header class="site-header" aria-label="Primary navigation" data-site-header>
+      <div class="header-shell">
         <a class="brand" href="#top" aria-label="Kingdom Kids home">
-          <span class="brand-mark" aria-hidden="true">K</span>
+          <span class="brand-symbol" aria-hidden="true"><i></i><i></i></span>
           <span>Kingdom Kids</span>
         </a>
 
         <nav class="desktop-nav" aria-label="Main menu">
-          {navigation.map((item) => <a href={item.href}>{item.label}</a>)}
-          <a class="header-action" href="#join">Join free</a>
+          <a href="#experience">Explore the app</a>
+          <a href="#faith-note">For grown-ups</a>
+          <a href="#faqs">FAQs</a>
+          <a href="/privacy/">Privacy</a>
+          <a href="/account-deletion/">Account deletion</a>
         </nav>
 
-        <details class="mobile-nav">
-          <summary aria-label="Navigation menu">
-            <span>Menu</span>
-            <span class="menu-lines" aria-hidden="true"></span>
-          </summary>
-          <nav aria-label="Mobile menu">
-            {navigation.map((item) => <a href={item.href}>{item.label}</a>)}
-            <a class="header-action" href="#join">Join free</a>
-          </nav>
-        </details>
-      </header>
+        <a class="header-cta" href="#join">Join waitlist <span aria-hidden="true">↗</span></a>
 
-      <main id="main-content">
-        <section class="hero-section" aria-labelledby="hero-title">
-          <div class="hero-inner">
-            <div class="hero-copy">
-              <h1 id="hero-title" aria-label="Hello wonder">
-                <span class="hero-word-bottom" aria-hidden="true">
-                  <span class="hero-letter hero-letter-w">w</span>
-                  <span class="hero-letter hero-letter-on"><span class="hero-word-top">hello</span>on</span>
-                  <span class="hero-letter hero-letter-d">d</span>
-                  <span class="hero-letter hero-letter-tail">er</span>
-                </span>
-              </h1>
-              <p class="hero-subtitle">Bible adventures <span aria-hidden="true">....</span> made joyful</p>
-              <p class="hero-description">
-                A bright world of stories, games, and faith-filled discovery—made for curious little hearts.
-              </p>
-              <a class="button button-orange" href="#stories">Start exploring</a>
-            </div>
+        <button
+          class="menu-toggle"
+          type="button"
+          aria-expanded="false"
+          aria-controls="mobile-menu"
+          aria-haspopup="true"
+          data-menu-toggle
+        >
+          <span class="sr-only" data-menu-label>Open navigation menu</span>
+          <span class="menu-icon" aria-hidden="true"><i></i><i></i></span>
+        </button>
+      </div>
 
-            <div class="hero-art">
-              <span class="hero-doodle hero-doodle-one" aria-hidden="true">✦</span>
-              <span class="hero-doodle hero-doodle-two" aria-hidden="true">●</span>
-              <img
-                src={noahsArk.src}
-                width={noahsArk.width}
-                height={noahsArk.height}
-                alt="A cheerful giraffe and elephant sailing in Noah's ark under a dove and smiling sun"
-                loading="eager"
-                fetchpriority="high"
-              />
-              <p class="art-note"><span aria-hidden="true">★</span> Read · Play · Grow</p>
-            </div>
-          </div>
-        </section>
+      <div class="scroll-progress" aria-hidden="true"><i></i></div>
 
-        <div class="wave-divider wave-pink-to-yellow" aria-hidden="true"></div>
+      <div class="mobile-menu" id="mobile-menu" aria-hidden="true" data-mobile-menu>
+        <nav aria-label="Mobile menu">
+          <a href="#top"><span>01</span> Home</a>
+          <a href="#experience"><span>02</span> Explore the app</a>
+          <a href="#faith-note"><span>03</span> For grown-ups</a>
+          <a href="#faqs"><span>04</span> FAQs</a>
+          <a href="/privacy/"><span>05</span> Privacy</a>
+          <a href="/account-deletion/"><span>06</span> Account deletion</a>
+          <a class="mobile-menu-cta" href="#join">Join the waitlist <span aria-hidden="true">↗</span></a>
+        </nav>
+      </div>
+    </header>
 
-        <section class="yellow-section" id="benefits">
-          <span class="edge-star edge-star-left" aria-hidden="true"><i></i></span>
-          <div class="edge-tiles" aria-hidden="true">
-            <span>★</span>
-            <span></span>
-            <span></span>
-          </div>
+    <button
+      class="nav-backdrop"
+      type="button"
+      tabindex="-1"
+      aria-label="Close navigation menu"
+      data-nav-backdrop
+    ></button>
 
-          <div class="section-container intro-grid">
-            <div class="intro-art">
-              <div class="art-platform" aria-hidden="true"></div>
-              <img
-                src={storyCelebration.src}
-                width={storyCelebration.width}
-                height={storyCelebration.height}
-                alt="A joyful girl celebrates Bible stories while colorful story cards and stars float around her"
-                loading="lazy"
-              />
-            </div>
+    <main id="main-content" data-menu-background>
+      <section class="editorial-hero" aria-labelledby="hero-title">
+        <span class="hero-sequence" aria-hidden="true">01 — 04</span>
+        <span class="hero-side-label" aria-hidden="true">Faith / wonder / play</span>
 
-            <div class="intro-copy">
-              <p class="eyebrow">Faith that feels like an adventure</p>
-              <h2>A joyful new way to grow.</h2>
-              <p>
-                Meet Kingdom Kids: a playful Bible-learning world where timeless stories become bright, memorable,
-                everyday adventures.
-              </p>
-              <p>
-                Children can read, watch, listen, and play—while families get simple ways to keep the learning going.
-              </p>
-            </div>
-          </div>
+        <div class="hero-heading-wrap">
+          <p class="hero-kicker"><span aria-hidden="true">✦</span> A joyful world made for young explorers</p>
 
-          <section class="how-section section-container" id="how-it-works" aria-labelledby="how-title">
-            <p class="section-kicker">Three little steps. One big adventure.</p>
-            <h2 id="how-title">How it works</h2>
-
-            <div class="step-grid">
-              {steps.map((step) => (
-                <article class="step-card">
-                  <div class="step-visual" aria-hidden="true">
-                    <span class={`step-symbol step-symbol-${step.icon}`}>
-                      {step.icon === 'book' && <><i></i><i></i></>}
-                      {step.icon === 'play' && <i></i>}
-                      {step.icon === 'crown' && <><i></i><b></b></>}
-                    </span>
-                  </div>
-                  <div class="step-heading">
-                    <span>{step.number}</span>
-                    <h3>{step.title}</h3>
-                  </div>
-                  <p>{step.description}</p>
-                </article>
-              ))}
-            </div>
-          </section>
-
-          <section class="story-section section-container" id="stories" aria-labelledby="stories-title">
-            <p class="section-kicker">One happy home for growing faith</p>
-            <h2 id="stories-title">We’ve got you<span aria-hidden="true">...</span> stories, games &amp; growing together.</h2>
-
-            <div class="story-billboard">
-              <div class="billboard-image">
+          <h1 id="hero-title">
+            <span class="hero-line">
+              Big
+              <span class="hero-face hero-face--nia" aria-hidden="true">
                 <img
-                  src="/images/hero-kingdom-illustration.png"
-                  width="1983"
-                  height="793"
-                  alt="Children gathered around a screen showing colorful illustrated Bible stories"
-                  loading="lazy"
+                  src="/images/hero/nia-reading-headline-v1.webp"
+                  width="500"
+                  height="500"
+                  alt=""
+                  decoding="async"
+                  fetchpriority="high"
                 />
-              </div>
-              <div class="billboard-copy">
-                <span class="mini-badge">Inside Kingdom Kids</span>
-                <h3>Every tap opens a new story.</h3>
-                <p>
-                  From Noah’s courage to David’s bravery, each experience helps big truths feel clear, warm, and close
-                  to home.
-                </p>
-                <a class="text-link" href="#join">See what’s waiting <span aria-hidden="true">→</span></a>
-              </div>
-            </div>
+              </span>
+              stories
+            </span>
+            <span class="hero-line">
+              <span class="hero-leaf hero-leaf--coral" aria-hidden="true"></span>
+              for little
+              <span class="hero-mobile-break" aria-hidden="true"></span>
+              <span class="hero-face hero-face--zuri" aria-hidden="true">
+                <img
+                  src="/images/hero/zuri-clap-headline-v1.webp"
+                  width="500"
+                  height="500"
+                  alt=""
+                  decoding="async"
+                />
+              </span>
+              hearts
+            </span>
+            <span class="hero-line">
+              ready
+              <span class="hero-mobile-break" aria-hidden="true"></span>
+              <span class="hero-face hero-face--kai" aria-hidden="true">
+                <img
+                  src="/images/hero/kai-jump-headline-v1.webp"
+                  width="500"
+                  height="500"
+                  alt=""
+                  decoding="async"
+                />
+              </span>
+              to grow
+              <span class="hero-leaf hero-leaf--yellow" aria-hidden="true"></span>
+            </span>
+          </h1>
+        </div>
 
-            <div class="feature-grid">
-              {features.map((feature) => (
-                <article class="feature-card">
-                  <span>{feature.label}</span>
-                  <h3>{feature.title}</h3>
-                  <p>{feature.description}</p>
-                </article>
-              ))}
-            </div>
-          </section>
-        </section>
-
-        <div class="wave-divider wave-yellow-to-pink" aria-hidden="true"></div>
-
-        <section class="parent-section" id="parents" aria-labelledby="parents-title">
-          <div class="section-container parent-grid">
-            <div class="parent-copy">
-              <p class="eyebrow">Made for kids. Thoughtful for grown-ups.</p>
-              <h2 id="parents-title">Big wonder.<br />Gentle guidance.</h2>
-              <p>
-                Kids get a world that feels playful and theirs. Parents get age-appropriate stories, calm design, and a
-                simple view of what their child is enjoying.
-              </p>
-
-              <ul class="parent-list">
-                <li><span aria-hidden="true">✓</span> Child-friendly by design</li>
-                <li><span aria-hidden="true">✓</span> Meaningful screen time</li>
-                <li><span aria-hidden="true">✓</span> Progress without pressure</li>
-              </ul>
-
-              <a class="button button-orange" href="#join">Bring the adventure home</a>
-            </div>
-
-            <div class="parent-art">
-              <img
-                src={storyExplorer.src}
-                width={storyExplorer.width}
-                height={storyExplorer.height}
-                alt="A smiling child walks with an open blue Bible as a rainbow, dove, and stars rise from its pages"
-                loading="lazy"
-              />
-              <div class="progress-note">
-                <span>Today’s little win</span>
-                <strong>2 stories explored</strong>
-                <i aria-hidden="true"></i>
-              </div>
-            </div>
+        <div class="hero-foot">
+          <div class="hero-intro">
+            <p>
+              Bible stories, warm read-along voices and playful challenges—made for curious little hearts and the
+              grown-ups guiding them.
+            </p>
+            <a class="primary-action" href="#join">Save their spot <span aria-hidden="true">↗</span></a>
           </div>
-        </section>
 
-        <section class="faq-section" id="faqs" aria-labelledby="faq-title">
-          <div class="section-container faq-grid">
-            <div class="faq-heading">
-              <p class="section-kicker">A few helpful answers</p>
-              <h2 id="faq-title">Wondering something?</h2>
-              <p>Here are the questions families ask us most.</p>
+          <a class="scroll-cue" href="#experience">
+            <span aria-hidden="true">↓</span>
+            <span>Explore the app</span>
+          </a>
+
+          <p class="hero-release"><span>Android beta</span> Coming first to Google Play</p>
+        </div>
+
+        <span class="hero-doodle hero-doodle--loop" aria-hidden="true"></span>
+        <span class="hero-doodle hero-doodle--burst" aria-hidden="true">✦</span>
+      </section>
+
+      <section class="experience-section" id="experience" aria-labelledby="experience-title">
+        <div class="section-index section-index--experience" aria-hidden="true">
+          <span>02</span><i></i><span>Explore</span>
+        </div>
+
+        <div class="experience-shell">
+          <header class="experience-header">
+            <div class="experience-heading" data-reveal>
+              <p class="section-kicker section-kicker--dark">
+                <span aria-hidden="true">✦</span> Stories. Games. Videos.
+              </p>
+              <h2 id="experience-title">Three worlds.<br /><em>One joyful app.</em></h2>
             </div>
 
-            <div class="faq-list">
+            <div class="experience-intro" data-reveal>
+              <p>
+                Stories and Bible games lead the first Android beta. Videos are planned for a later update.
+              </p>
+              <a class="primary-action experience-cta" href="#join">
+                Join the waitlist <span aria-hidden="true">↗</span>
+              </a>
+            </div>
+          </header>
+
+          <p class="sr-only" id="experience-scroll-help">
+            On smaller screens, scroll sideways to see all three app areas.
+          </p>
+          <ul
+            class="experience-steps"
+            aria-label="Explore the Kingdom Kids app"
+            aria-describedby="experience-scroll-help"
+            tabindex="0"
+          >
+            {appSections.map((section) => (
+              <li class="experience-step">
+                <div class="experience-step-inner" data-reveal>
+                  <div class="experience-step-meta">
+                    <p><i aria-hidden="true"></i>{section.eyebrow}</p>
+                    <span>{section.number}</span>
+                  </div>
+
+                  <article class={`experience-card experience-card--${section.theme}`}>
+                    {section.type === 'stories' && (
+                      <div class="pen-scene pen-scene--stories" aria-hidden="true">
+                        <span class="pen-story-arc arc-a"></span>
+                        <span class="pen-story-arc arc-b"></span>
+                        <span class="pen-story-sheet sheet-b"><i></i></span>
+                        <span class="pen-story-origin"></span>
+                        <span class="pen-story-terminal"></span>
+                      </div>
+                      <img
+                        class="feature-object-art story-books-art"
+                        src="/images/sections/story-books-3d-v1.webp"
+                        width="700"
+                        height="700"
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                        draggable="false"
+                      />
+                    )}
+
+                    {section.type === 'games' && (
+                      <div class="pen-scene pen-scene--games" aria-hidden="true">
+                        <span class="pen-game-ramp ramp-a"></span>
+                        <span class="pen-game-ramp ramp-b"></span>
+                        <span class="pen-game-ramp ramp-c"></span>
+                        <span class="pen-game-goal"></span>
+                        <span class="pen-game-controls"><i></i></span>
+                      </div>
+                      <img
+                        class="feature-object-art game-controller-art"
+                        src="/images/sections/game-controller-3d-v1.webp"
+                        width="700"
+                        height="700"
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                        draggable="false"
+                      />
+                    )}
+
+                    {section.type === 'videos' && (
+                      <div class="pen-scene pen-scene--videos" aria-hidden="true">
+                        <span class="pen-video-orbit orbit-a"></span>
+                        <span class="pen-video-orbit orbit-b"></span>
+                        <span class="pen-video-playhead"></span>
+                        <span class="pen-video-timeline"><i></i></span>
+                      </div>
+                      <img
+                        class="feature-object-art video-clapper-art"
+                        src="/images/sections/video-clapper-3d-v1.webp"
+                        width="700"
+                        height="700"
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                        draggable="false"
+                      />
+                    )}
+
+                    <div class="experience-card-caption">
+                      {section.status && <span class="experience-card-status is-coming">{section.status}</span>}
+                      <h3>{section.title}</h3>
+                      <p>{section.description}</p>
+                    </div>
+                  </article>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      <section class="faith-note-section" id="faith-note" aria-labelledby="faith-note-title">
+        <div class="faith-note-ticker" aria-hidden="true">
+          <div class="faith-note-ticker-track">
+            <span>Stories to share</span><i>✦</i><span>Read-along audio</span><i>✦</i><span>Playful Bible games</span><i>✦</i><span>Android beta</span><i>✦</i><span>Stories to share</span>
+          </div>
+        </div>
+
+        <div class="faith-note-shell">
+          <div class="faith-note-sticker" aria-hidden="true" data-reveal>
+            <div class="faith-note-sticker-card">
+              <strong><span>HEART</span><span>TALK</span></strong>
+              <small>KINGDOM KIDS <i></i> GROWN-UP NOTES</small>
+            </div>
+            <img
+              class="faith-note-sun"
+              src="/images/decor/heart-talk-sun-v1.png"
+              width="418"
+              height="446"
+              alt=""
+              loading="lazy"
+              decoding="async"
+              draggable="false"
+            />
+          </div>
+
+          <h2 id="faith-note-title" data-reveal>
+            If faith conversations feel harder than they should,
+            <mark>here’s a gentler place to begin.</mark>
+          </h2>
+
+          <ul class="faith-note-points" data-reveal>
+            <li>Children connect with Bible stories that feel welcoming, vivid and easy to revisit.</li>
+            <li>Read-along audio lets them follow each story at a comfortable pace.</li>
+            <li>Play gives familiar Bible moments another joyful way to stay with them.</li>
+            <li>The next step can be as simple as one story and one question together.</li>
+          </ul>
+
+          <div class="faith-note-promise" data-reveal>
+            <strong>You do not have to turn every moment into a lesson.</strong>
+            <p>Kingdom Kids is being built to help you begin naturally—with a story, a little play, and room for the questions that follow.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="faq-section" id="faqs" aria-labelledby="faqs-title">
+        <div class="faq-panel">
+          <div class="faq-masthead" data-faq-draw>
+            <svg
+              viewBox="0 0 324 87"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path
+                class="faq-masthead-line"
+                d="M0 43C10 30 20 23 31 23C44 23 55 35 59 48C63 59 58 69 48 76C38 83 24 86 18 82C26 68 42 46 58 33C72 22 84 15 92 20C98 24 99 31 95 39C92 45 91 49 95 52C99 55 104 53 110 50C136 44 160 28 190 18C220 8 245 8 264 19C284 30 299 47 324 62"
+              ></path>
+            </svg>
+            <h2 id="faqs-title">FAQ</h2>
+          </div>
+
+          <div class="faq-body">
+            <div class="faq-art" aria-hidden="true" data-reveal>
+              <img
+                src="/images/decor/faq-qa-vector-v1.svg"
+                width="156"
+                height="137"
+                alt=""
+                loading="lazy"
+                decoding="async"
+                draggable="false"
+              />
+            </div>
+
+            <div class="faq-list" data-reveal>
               {faqs.map((faq) => (
-                <details>
-                  <summary>{faq.question}<span aria-hidden="true">+</span></summary>
-                  <p>{faq.answer}</p>
+                <details name="kingdom-faq">
+                  <summary>
+                    <span class="faq-question">{faq.question}</span>
+                    <span class="faq-toggle" aria-hidden="true"></span>
+                  </summary>
+                  <div class="faq-answer">
+                    <div><p>{faq.answer}</p></div>
+                  </div>
                 </details>
               ))}
             </div>
           </div>
-        </section>
+        </div>
+      </section>
+    </main>
 
-        <section class="join-section" id="join" aria-labelledby="join-title">
-          <div class="join-copy">
-            <p>Ready when your little explorer is.</p>
-            <h2 id="join-title">Let’s grow something good.</h2>
+    <footer class="site-footer" id="join" data-menu-background>
+      <div class="footer-shell">
+        <section class="footer-signup" aria-labelledby="footer-signup-title" data-reveal>
+          <div class="footer-signup-copy">
+            <p class="footer-signup-eyebrow"><span aria-hidden="true">✦</span> Android beta · Google Play</p>
+            <h2 id="footer-signup-title">Join the Kingdom Kids launch list.</h2>
           </div>
-          <a class="button button-cream" href="mailto:hello@kingdomkids.app?subject=Kingdom%20Kids%20early%20access">
-            Join early access
-          </a>
-        </section>
-      </main>
 
-      <footer class="site-footer" id="contact">
-        <a class="brand footer-brand" href="#top" aria-label="Back to the top">
-          <span class="brand-mark" aria-hidden="true">K</span>
-          <span>Kingdom Kids</span>
-        </a>
-        <p>Joyful Bible adventures for curious little hearts.</p>
-        <a href="mailto:hello@kingdomkids.app">hello@kingdomkids.app</a>
-      </footer>
-    </div>
+          <form
+            class="waitlist-form"
+            action="/api/accounts/waitlist/"
+            method="post"
+            accept-charset="UTF-8"
+            novalidate
+            data-waitlist-form
+          >
+            <label class="sr-only" for="waitlist-email">Email address</label>
+            <div class="waitlist-controls">
+              <input
+                id="waitlist-email"
+                name="email"
+                type="email"
+                inputmode="email"
+                autocomplete="email"
+                maxlength="254"
+                placeholder="you@example.com"
+                aria-describedby="waitlist-status"
+                required
+                data-waitlist-email
+              />
+              <button class="waitlist-submit" type="submit" data-waitlist-submit>
+                <span data-waitlist-button-label>Join the waitlist</span>
+                <span aria-hidden="true">↗</span>
+              </button>
+            </div>
+            <p
+              class="waitlist-status"
+              id="waitlist-status"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+              data-waitlist-status
+            ></p>
+          </form>
+        </section>
+
+        <div class="footer-meta" data-reveal>
+          <div class="footer-brand-block">
+            <a class="brand brand--footer" href="#top" aria-label="Kingdom Kids home">
+              <span class="brand-symbol" aria-hidden="true"><i></i><i></i></span>
+              <span>Kingdom Kids</span>
+            </a>
+            <p>Big stories for little hearts.</p>
+          </div>
+
+          <nav class="footer-nav" aria-label="Footer navigation">
+            <div class="footer-nav-group">
+              <p>Explore</p>
+              <a href="#top">Home</a>
+              <a href="#experience">Explore the app</a>
+              <a href="#faith-note">For grown-ups</a>
+              <a href="#faqs">FAQs</a>
+            </div>
+            <div class="footer-nav-group">
+              <p>Privacy &amp; account</p>
+              <a href="/privacy/">Privacy</a>
+              <a href="/account-deletion/">Account deletion</a>
+            </div>
+          </nav>
+
+          <a class="footer-return" href="#top">
+            <span aria-hidden="true">↑</span>
+            <small>Back to top</small>
+          </a>
+        </div>
+
+        <div class="footer-bottom">
+          <p>&copy; {currentYear} Kingdom Kids</p>
+          <p>Faith <span aria-hidden="true">·</span> Wonder <span aria-hidden="true">·</span> Play</p>
+        </div>
+      </div>
+    </footer>
+
+    <script is:inline>
+      (() => {
+        const root = document.documentElement;
+        const pageBody = document.body;
+        const menuToggle = document.querySelector('[data-menu-toggle]');
+        const mobileMenu = document.querySelector('[data-mobile-menu]');
+        const menuLabel = document.querySelector('[data-menu-label]');
+        const navBackdrop = document.querySelector('[data-nav-backdrop]');
+        const menuBackgroundRegions = document.querySelectorAll('[data-menu-background]');
+        const waitlistForm = document.querySelector('[data-waitlist-form]');
+        const waitlistEmail = document.querySelector('[data-waitlist-email]');
+        const waitlistSubmit = document.querySelector('[data-waitlist-submit]');
+        const waitlistButtonLabel = document.querySelector('[data-waitlist-button-label]');
+        const waitlistStatus = document.querySelector('[data-waitlist-status]');
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+        let frame = 0;
+
+        const menuFocusables = () => {
+          if (!(menuToggle instanceof HTMLButtonElement) || !(mobileMenu instanceof HTMLElement)) return [];
+          return [menuToggle, ...mobileMenu.querySelectorAll('a[href], button:not([disabled])')];
+        };
+
+        const setMenuState = (open, returnFocus = false) => {
+          if (!(menuToggle instanceof HTMLButtonElement) || !(mobileMenu instanceof HTMLElement)) return;
+
+          menuToggle.setAttribute('aria-expanded', String(open));
+          mobileMenu.setAttribute('aria-hidden', String(!open));
+          root.classList.toggle('menu-open', open);
+          pageBody.classList.toggle('menu-open', open);
+          menuBackgroundRegions.forEach((region) => {
+            if (!(region instanceof HTMLElement)) return;
+            if (open) region.setAttribute('inert', '');
+            else region.removeAttribute('inert');
+          });
+
+          if (menuLabel) menuLabel.textContent = open ? 'Close navigation menu' : 'Open navigation menu';
+          if (open) {
+            window.requestAnimationFrame(() => {
+              const firstLink = mobileMenu.querySelector('a[href]');
+              if (firstLink instanceof HTMLElement) firstLink.focus();
+            });
+          } else if (returnFocus) {
+            menuToggle.focus();
+          }
+        };
+
+        menuToggle?.addEventListener('click', () => {
+          if (!(menuToggle instanceof HTMLButtonElement)) return;
+          setMenuState(menuToggle.getAttribute('aria-expanded') !== 'true');
+        });
+
+        navBackdrop?.addEventListener('click', () => setMenuState(false, true));
+        mobileMenu?.querySelectorAll('a').forEach((link) => {
+          link.addEventListener('click', () => setMenuState(false));
+        });
+
+        document.addEventListener('keydown', (event) => {
+          if (event.key === 'Escape' && root.classList.contains('menu-open')) {
+            setMenuState(false, true);
+            return;
+          }
+
+          if (event.key === 'Tab' && root.classList.contains('menu-open')) {
+            const focusables = menuFocusables();
+            if (focusables.length === 0) return;
+            const first = focusables[0];
+            const last = focusables[focusables.length - 1];
+            if (event.shiftKey && document.activeElement === first) {
+              event.preventDefault();
+              last.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+              event.preventDefault();
+              first.focus();
+            }
+          }
+        });
+
+        const faqDraw = document.querySelector('[data-faq-draw]');
+        const faqLine = faqDraw?.querySelector('.faq-masthead-line');
+        const faqLineSvg = faqLine?.ownerSVGElement;
+        let faqLineResizeFrame = 0;
+
+        const configureFaqLine = () => {
+          if (
+            !(faqDraw instanceof HTMLElement) ||
+            !(faqLine instanceof SVGPathElement) ||
+            !(faqLineSvg instanceof SVGSVGElement)
+          ) return;
+
+          const bounds = faqLineSvg.getBoundingClientRect();
+          if (bounds.width <= 0 || bounds.height <= 0) return;
+
+          const width = bounds.width;
+          const height = bounds.height;
+          const sourceHeight = 87;
+          const sourceWidth = 324;
+          const sourceJoin = 110;
+          const motifScale = height / sourceHeight;
+          const joinX = sourceJoin * motifScale;
+          const tailScale = (width - joinX) / (sourceWidth - sourceJoin);
+          const mapX = (value) => value <= sourceJoin
+            ? value * motifScale
+            : joinX + ((value - sourceJoin) * tailScale);
+          const mapY = (value) => value * motifScale;
+          const point = (x, y) => `${mapX(x).toFixed(2)} ${mapY(y).toFixed(2)}`;
+
+          faqLineSvg.setAttribute('viewBox', `0 0 ${width.toFixed(2)} ${height.toFixed(2)}`);
+          faqLine.setAttribute('d', [
+            `M${point(0, 43)}`,
+            `C${point(10, 30)} ${point(20, 23)} ${point(31, 23)}`,
+            `C${point(44, 23)} ${point(55, 35)} ${point(59, 48)}`,
+            `C${point(63, 59)} ${point(58, 69)} ${point(48, 76)}`,
+            `C${point(38, 83)} ${point(24, 86)} ${point(18, 82)}`,
+            `C${point(26, 68)} ${point(42, 46)} ${point(58, 33)}`,
+            `C${point(72, 22)} ${point(84, 15)} ${point(92, 20)}`,
+            `C${point(98, 24)} ${point(99, 31)} ${point(95, 39)}`,
+            `C${point(92, 45)} ${point(91, 49)} ${point(95, 52)}`,
+            `C${point(99, 55)} ${point(104, 53)} ${point(110, 50)}`,
+            `C${point(136, 44)} ${point(160, 28)} ${point(190, 18)}`,
+            `C${point(220, 8)} ${point(245, 8)} ${point(264, 19)}`,
+            `C${point(284, 30)} ${point(299, 47)} ${point(324, 62)}`,
+          ].join(' '));
+
+          const length = faqLine.getTotalLength();
+          faqLine.setAttribute('stroke-dasharray', `${length} ${length}`);
+          faqLine.setAttribute(
+            'stroke-dashoffset',
+            faqDraw.classList.contains('is-visible') || reduceMotion.matches ? '0' : String(length),
+          );
+          faqDraw.classList.add('is-draw-ready');
+          getComputedStyle(faqLine).strokeDashoffset;
+        };
+
+        configureFaqLine();
+
+        if ('ResizeObserver' in window && faqLineSvg instanceof SVGSVGElement) {
+          const faqLineResizeObserver = new ResizeObserver(() => {
+            cancelAnimationFrame(faqLineResizeFrame);
+            faqLineResizeFrame = requestAnimationFrame(configureFaqLine);
+          });
+          faqLineResizeObserver.observe(faqLineSvg);
+        }
+
+        const reveals = [...document.querySelectorAll('[data-reveal], [data-faq-draw]')];
+        if (reduceMotion.matches || !('IntersectionObserver' in window)) {
+          reveals.forEach((item) => item.classList.add('is-visible'));
+        } else {
+          const observer = new IntersectionObserver(
+            (entries) => {
+              entries.forEach((entry) => {
+                if (!entry.isIntersecting) return;
+                entry.target.classList.add('is-visible');
+                observer.unobserve(entry.target);
+              });
+            },
+            { rootMargin: '0px 0px -12% 0px', threshold: 0.12 },
+          );
+          reveals.forEach((item) => observer.observe(item));
+        }
+
+        const setWaitlistState = (state, message, buttonLabel = 'Join the waitlist', emailIsInvalid = false) => {
+          if (!(waitlistForm instanceof HTMLFormElement)) return;
+
+          waitlistForm.dataset.state = state;
+          waitlistForm.setAttribute('aria-busy', String(state === 'loading'));
+          if (waitlistStatus) waitlistStatus.textContent = message;
+          if (waitlistButtonLabel) waitlistButtonLabel.textContent = buttonLabel;
+          if (waitlistSubmit instanceof HTMLButtonElement) {
+            waitlistSubmit.disabled = state === 'loading' || state === 'success';
+            waitlistSubmit.setAttribute('aria-disabled', String(state === 'success'));
+          }
+          if (waitlistEmail instanceof HTMLInputElement) {
+            waitlistEmail.disabled = state === 'loading' || state === 'success';
+            waitlistEmail.setAttribute('aria-invalid', String(emailIsInvalid));
+          }
+        };
+
+        if (waitlistForm instanceof HTMLFormElement && waitlistEmail instanceof HTMLInputElement) {
+          waitlistEmail.addEventListener('input', () => {
+            if (waitlistForm.dataset.state === 'error') setWaitlistState('idle', '');
+          });
+
+          waitlistForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            if (waitlistForm.dataset.state === 'success') return;
+
+            if (!waitlistEmail.value.trim()) {
+              setWaitlistState('error', 'Enter an email address to join the waitlist.', 'Join the waitlist', true);
+              waitlistEmail.focus();
+              return;
+            }
+
+            if (!waitlistEmail.validity.valid) {
+              setWaitlistState('error', 'Enter a valid email address, such as name@example.com.', 'Join the waitlist', true);
+              waitlistEmail.focus();
+              return;
+            }
+
+            if (!navigator.onLine) {
+              setWaitlistState('error', 'You appear to be offline. Reconnect and try again.');
+              return;
+            }
+
+            setWaitlistState('loading', 'Sending your request…', 'Joining…');
+            const controller = new AbortController();
+            const requestTimeout = window.setTimeout(() => controller.abort(), 12000);
+
+            try {
+              const response = await fetch(waitlistForm.action, {
+                method: 'POST',
+                headers: {
+                  Accept: 'application/json',
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email: waitlistEmail.value.trim() }),
+                signal: controller.signal,
+              });
+
+              if (response.ok) {
+                setWaitlistState(
+                  'success',
+                  'You’re on the list. We’ll let you know when the Android beta is ready.',
+                  'Joined',
+                );
+                return;
+              }
+
+              if (response.status === 400) {
+                setWaitlistState('error', 'Enter a valid email address, such as name@example.com.', 'Join the waitlist', true);
+                waitlistEmail.focus();
+                return;
+              }
+
+              if (response.status === 429) {
+                setWaitlistState('error', 'Too many attempts just now. Wait a moment, then try again.');
+                return;
+              }
+
+              setWaitlistState('error', 'We couldn’t join the waitlist just now. Please try again.');
+            } catch {
+              const message = navigator.onLine
+                ? 'We couldn’t join the waitlist just now. Please try again.'
+                : 'You appear to be offline. Reconnect and try again.';
+              setWaitlistState('error', message);
+            } finally {
+              window.clearTimeout(requestTimeout);
+            }
+          });
+        }
+
+        const render = () => {
+          frame = 0;
+          const scrollRange = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+          const progress = Math.min(1, Math.max(0, window.scrollY / scrollRange));
+          root.style.setProperty('--scroll-progress', progress.toFixed(4));
+          pageBody.classList.toggle('nav-scrolled', window.scrollY > 18);
+        };
+
+        const requestRender = () => {
+          if (frame) return;
+          frame = window.requestAnimationFrame(render);
+        };
+
+        window.addEventListener('scroll', requestRender, { passive: true });
+        window.addEventListener('resize', () => {
+          if (window.innerWidth > 860 && root.classList.contains('menu-open')) setMenuState(false);
+          requestRender();
+        }, { passive: true });
+        window.addEventListener('pageshow', requestRender);
+        requestRender();
+      })();
+    </script>
   </body>
 </html>
