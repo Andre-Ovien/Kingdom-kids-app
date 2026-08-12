@@ -6,27 +6,41 @@ const description =
   'How Kingdom Kids handles parent accounts, child profiles, learning activity, device data, and waitlist information.';
 ---
 
-<PublicPageLayout title="Privacy policy" description={description} canonicalPath="/privacy/">
-  <header class="public-hero">
-    <p class="public-eyebrow">Privacy for families</p>
-    <h1>Plain answers about family data.</h1>
+<PublicPageLayout
+  title="Privacy policy"
+  description={description}
+  canonicalPath="/privacy/"
+  mainClass="public-main--privacy"
+>
+  <header class="privacy-intro">
+    <h1>Privacy policy.</h1>
     <p class="public-lead">
-      Kingdom Kids is designed around a parent-managed account and minimal child profiles. This policy describes
-      the information the current pre-release website, mobile app, and API handle and the choices available to
-      families.
+      Kingdom Kids is designed around a parent-managed account and minimal child profiles. This policy explains
+      what information our pre-release website, mobile app, and API handle, why we use it, and the choices available
+      to families.
     </p>
     <p class="public-meta">Last updated: {policyDates.privacyLastUpdated}</p>
   </header>
 
-  <aside class="notice" aria-labelledby="prelaunch-contact-title">
-    <strong id="prelaunch-contact-title">Pre-launch privacy contact</strong>
-    <p>
-      <a href={privacyContact.href}>{privacyContact.email}</a> is the centralized provisional privacy contact.
-      {' '}{privacyContact.launchRequirement}
-    </p>
-  </aside>
+  <div class="policy-layout">
+    <nav class="policy-toc" aria-labelledby="privacy-toc-title" data-policy-toc>
+      <h2 id="privacy-toc-title">On this page</h2>
+      <ol>
+        <li><a href="#scope-title"><span>01</span> Scope &amp; who it’s for</a></li>
+        <li><a href="#collect-title"><span>02</span> Information we handle</a></li>
+        <li><a href="#not-collect-title"><span>03</span> What we don’t collect</a></li>
+        <li><a href="#use-title"><span>04</span> Why we use information</a></li>
+        <li><a href="#share-title"><span>05</span> When information is shared</a></li>
+        <li><a href="#retention-title"><span>06</span> Retention &amp; deletion</a></li>
+        <li><a href="#children-title"><span>07</span> Children &amp; parent controls</a></li>
+        <li><a href="#security-title"><span>08</span> Security</a></li>
+        <li><a href="#choices-title"><span>09</span> Family choices &amp; rights</a></li>
+        <li><a href="#changes-title"><span>10</span> Changes to this policy</a></li>
+        <li><a href="#contact-title"><span>11</span> Contact</a></li>
+      </ol>
+    </nav>
 
-  <article class="policy-card">
+    <article class="policy-card policy-article">
     <section class="policy-section" aria-labelledby="scope-title">
       <h2 id="scope-title">1. Scope and who the service is for</h2>
       <p>
@@ -47,7 +61,10 @@ const description =
       <ul>
         <li>Parent email address and account identifiers.</li>
         <li>A one-way password hash; the service does not store the readable account password.</li>
-        <li>Email-verification and password-reset challenge records, attempt counts, expiry times, and security lockouts.</li>
+        <li>
+          Email-verification, password-reset, and account-deletion challenge records, attempt counts, expiry times,
+          and security lockouts.
+        </li>
         <li>Access and refresh tokens used to maintain a signed-in session.</li>
       </ul>
 
@@ -133,18 +150,21 @@ const description =
         <li>Parent account and associated child-profile data are kept while the account remains open.</li>
         <li>
           The self-service deletion flow removes the parent account, child profiles, preferences, story activity,
-          streak history, and game progress and attempts from the active service. A verified-account deletion also
-          removes a waitlist entry using the same email.
+          streak history, game progress and attempts, and a waitlist entry using the same email from the active
+          service.
         </li>
         <li>
-          A parent account that is still waiting for email verification can be removed from the same public page
-          after password confirmation. Because that account has not proved control of the email address, an
-          independent waitlist signup is handled through the privacy contact instead.
+          Deletion requests submitted through the public page are completed only after the requester verifies
+          control of the grown-up email address using a short-lived code. This process can be used for both verified
+          accounts and accounts still waiting for email verification.
         </li>
         <li>
           Waitlist-only information is kept until launch communications are complete or the grown-up asks for removal.
         </li>
-        <li>Email-verification and password-reset challenges are short-lived and retained only as needed for account security.</li>
+        <li>
+          Email-verification, password-reset, and account-deletion challenges are short-lived and retained only as
+          needed for account security.
+        </li>
       </ul>
       <p>
         Production log and backup schedules are not yet finalized. They must be documented before launch. Once
@@ -204,5 +224,46 @@ const description =
       </p>
       <p><strong>Pre-launch status:</strong> {privacyContact.launchRequirement}</p>
     </section>
-  </article>
+    </article>
+  </div>
+
+  <script>
+    const privacyToc = document.querySelector<HTMLElement>('[data-policy-toc]');
+    const privacySections = Array.from(document.querySelectorAll<HTMLElement>('.policy-article .policy-section'));
+    const privacyLinks = privacyToc
+      ? Array.from(privacyToc.querySelectorAll<HTMLAnchorElement>('a[href^="#"]'))
+      : [];
+    const privacyLinkById = new Map(
+      privacyLinks.map((link) => [link.hash.slice(1), link]),
+    );
+
+    const setActivePrivacySection = (id: string) => {
+      privacyLinks.forEach((link) => {
+        const isActive = link.hash === `#${id}`;
+        link.classList.toggle('is-active', isActive);
+        if (isActive) link.setAttribute('aria-current', 'location');
+        else link.removeAttribute('aria-current');
+      });
+    };
+
+    if (privacySections.length > 0 && privacyLinks.length > 0) {
+      setActivePrivacySection(privacySections[0].querySelector('h2')?.id ?? 'scope-title');
+
+      const sectionObserver = new IntersectionObserver(
+        (entries) => {
+          const visible = entries
+            .filter((entry) => entry.isIntersecting)
+            .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+          const heading = visible[0]?.target.querySelector<HTMLElement>('h2[id]');
+          if (heading && privacyLinkById.has(heading.id)) setActivePrivacySection(heading.id);
+        },
+        { rootMargin: '-18% 0px -66% 0px', threshold: 0 },
+      );
+
+      privacySections.forEach((section) => sectionObserver.observe(section));
+      privacyLinks.forEach((link) => {
+        link.addEventListener('click', () => setActivePrivacySection(link.hash.slice(1)));
+      });
+    }
+  </script>
 </PublicPageLayout>

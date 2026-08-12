@@ -217,6 +217,12 @@ body.nav-scrolled .site-header {
   transition: transform 170ms ease;
 }
 
+.action-arrow {
+  font-family: Arial, "Helvetica Neue", sans-serif;
+  font-variant-emoji: text;
+  font-weight: 400;
+}
+
 .header-cta:hover span,
 .primary-action:hover span,
 .waitlist-submit:hover:not(:disabled) span:last-child {
@@ -694,6 +700,10 @@ body.nav-scrolled .site-header {
   margin: clamp(74px, 11vh, 120px) 0 0;
   padding: 12px 8px 24px;
   list-style: none;
+}
+
+.experience-rail-tools {
+  display: none;
 }
 
 .experience-steps:focus-visible {
@@ -1257,9 +1267,26 @@ body.nav-scrolled .site-header {
   height: 100%;
   align-items: center;
   justify-content: center;
-  gap: clamp(16px, 2.5vw, 38px);
   padding: 0 22px;
   white-space: nowrap;
+}
+
+.faith-note-ticker-sequence {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(16px, 2.5vw, 38px);
+}
+
+.faith-note-ticker-sequence[aria-hidden="true"] {
+  display: none;
+}
+
+@keyframes faith-note-ticker-left {
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
 }
 
 .faith-note-ticker span {
@@ -2762,15 +2789,71 @@ body.nav-scrolled .site-header {
     margin-top: 72px;
     overflow-x: auto;
     overscroll-behavior-inline: contain;
-    padding: 12px 10px 42px;
+    padding: 12px 10px 22px;
     scroll-padding-inline: 10px;
     scroll-snap-type: inline mandatory;
-    scrollbar-color: var(--coral) rgba(18, 63, 62, 0.1);
-    scrollbar-width: thin;
+    scrollbar-width: none;
+  }
+
+  .experience-steps::-webkit-scrollbar {
+    display: none;
   }
 
   .experience-step {
     scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+
+  .experience-rail-tools {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 14px;
+  }
+
+  .experience-rail-tools[hidden] {
+    display: none;
+  }
+
+  .experience-rail-dots {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+  }
+
+  .experience-rail-dots button {
+    position: relative;
+    width: 44px;
+    height: 44px;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .experience-rail-dots button::before {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: rgba(18, 63, 62, 0.28);
+    content: "";
+    transform: translate(-50%, -50%);
+    transition: width 220ms ease, border-radius 220ms ease, background-color 220ms ease;
+  }
+
+  .experience-rail-dots button.is-active::before {
+    width: 28px;
+    border-radius: 999px;
+    background: var(--coral);
+  }
+
+  .experience-rail-dots button:focus-visible {
+    outline: 3px solid var(--coral);
+    outline-offset: 1px;
   }
 
   .experience-card {
@@ -3009,6 +3092,10 @@ body.nav-scrolled .site-header {
     padding-left: 5px;
   }
 
+  .experience-rail-tools {
+    margin-top: 10px;
+  }
+
   .experience-step-meta {
     min-height: 38px;
     padding: 0 4px;
@@ -3060,8 +3147,19 @@ body.nav-scrolled .site-header {
 
   .faith-note-ticker-track {
     justify-content: flex-start;
+    min-width: max-content;
+    padding: 0;
+    animation: faith-note-ticker-left 18s linear infinite;
+    will-change: transform;
+  }
+
+  .faith-note-ticker-sequence {
     gap: 18px;
-    padding: 0 16px;
+    padding-right: 18px;
+  }
+
+  .faith-note-ticker-sequence[aria-hidden="true"] {
+    display: flex;
   }
 
   .faith-note-ticker span {
@@ -3074,10 +3172,10 @@ body.nav-scrolled .site-header {
   }
 
   .faith-note-sticker {
-    width: 166px;
-    height: 94px;
+    width: 218px;
+    height: 116px;
     margin-bottom: 34px;
-    transform: rotate(-2deg) scale(0.9);
+    transform: none;
   }
 
   .faith-note-section h2 {
@@ -3267,21 +3365,58 @@ body.nav-scrolled .site-header {
   }
 
   .site-footer .waitlist-controls {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0;
-    border-radius: 4px;
+    grid-template-columns: minmax(0, 1fr) 54px;
+    gap: 4px;
+    border-width: 1.5px;
+    border-radius: 999px;
+    padding: 4px;
   }
 
   .site-footer .waitlist-controls input {
-    min-height: 58px;
-    border-bottom: 1.5px solid var(--ink-deep);
+    min-width: 0;
+    min-height: 52px;
+    border: 0;
+    padding: 0 8px 0 17px;
+    font-size: 1rem;
   }
 
   .site-footer .waitlist-submit {
-    width: 100%;
-    min-height: 58px;
-    border-top: 0;
+    width: 54px;
+    min-height: 54px;
+    border: 0;
     border-left: 0;
+    border-radius: 50%;
+    padding: 0;
+    box-shadow: none;
+  }
+
+  .site-footer .waitlist-submit .waitlist-button-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  .site-footer .waitlist-submit .action-arrow {
+    font-size: 1.3rem;
+  }
+
+  .site-footer .waitlist-status {
+    margin: 12px 4px 0;
+    font-size: 0.78rem;
+    line-height: 1.45;
+  }
+
+  .site-footer .waitlist-form[data-state="error"] .waitlist-controls {
+    border-color: var(--footer-coral-ink);
+    box-shadow: 0 0 0 1px var(--footer-coral-ink);
+  }
+
+  .site-footer .waitlist-form[data-state="error"] .waitlist-controls input {
+    box-shadow: none;
   }
 
   .footer-meta {
@@ -3305,7 +3440,7 @@ body.nav-scrolled .site-header {
   .footer-return {
     grid-column: auto;
     grid-row: auto;
-    justify-self: start;
+    justify-self: end;
     width: 72px;
   }
 
@@ -3337,6 +3472,16 @@ body.nav-scrolled .site-header {
     animation: none;
   }
 
+  .faith-note-ticker-track {
+    animation: none !important;
+    transform: none !important;
+    will-change: auto;
+  }
+
+  .faith-note-ticker-sequence[aria-hidden="true"] {
+    display: none;
+  }
+
   .site-header,
   .skip-link,
   .header-cta,
@@ -3348,6 +3493,7 @@ body.nav-scrolled .site-header {
   .nav-backdrop,
   .experience-step-inner,
   .experience-card,
+  .experience-rail-dots button::before,
   .buddy-tabs button,
   .buddies-stage img,
   .stage-shape,

@@ -102,10 +102,9 @@ const faqs = [
           <a href="#faith-note">For grown-ups</a>
           <a href="#faqs">FAQs</a>
           <a href="/privacy/">Privacy</a>
-          <a href="/account-deletion/">Account deletion</a>
         </nav>
 
-        <a class="header-cta" href="#join">Join waitlist <span aria-hidden="true">↗</span></a>
+        <a class="header-cta" href="#join">Join waitlist <span class="action-arrow" aria-hidden="true">&#x2197;&#xfe0e;</span></a>
 
         <button
           class="menu-toggle"
@@ -129,8 +128,7 @@ const faqs = [
           <a href="#faith-note"><span>03</span> For grown-ups</a>
           <a href="#faqs"><span>04</span> FAQs</a>
           <a href="/privacy/"><span>05</span> Privacy</a>
-          <a href="/account-deletion/"><span>06</span> Account deletion</a>
-          <a class="mobile-menu-cta" href="#join">Join the waitlist <span aria-hidden="true">↗</span></a>
+          <a class="mobile-menu-cta" href="#join">Join the waitlist <span class="action-arrow" aria-hidden="true">&#x2197;&#xfe0e;</span></a>
         </nav>
       </div>
     </header>
@@ -205,7 +203,7 @@ const faqs = [
               Bible stories, warm read-along voices and playful challenges—made for curious little hearts and the
               grown-ups guiding them.
             </p>
-            <a class="primary-action" href="#join">Save their spot <span aria-hidden="true">↗</span></a>
+            <a class="primary-action" href="#join">Save their spot <span class="action-arrow" aria-hidden="true">&#x2197;&#xfe0e;</span></a>
           </div>
 
           <a class="scroll-cue" href="#experience">
@@ -239,22 +237,24 @@ const faqs = [
                 Stories and Bible games lead the first Android beta. Videos are planned for a later update.
               </p>
               <a class="primary-action experience-cta" href="#join">
-                Join the waitlist <span aria-hidden="true">↗</span>
+                Join the waitlist <span class="action-arrow" aria-hidden="true">&#x2197;&#xfe0e;</span>
               </a>
             </div>
           </header>
 
           <p class="sr-only" id="experience-scroll-help">
-            On smaller screens, scroll sideways to see all three app areas.
+            On smaller screens, the slides advance automatically. Swipe sideways or use the slide buttons below to
+            explore all three app areas.
           </p>
           <ul
             class="experience-steps"
             aria-label="Explore the Kingdom Kids app"
             aria-describedby="experience-scroll-help"
             tabindex="0"
+            data-experience-rail
           >
             {appSections.map((section) => (
-              <li class="experience-step">
+              <li class="experience-step" data-experience-slide>
                 <div class="experience-step-inner" data-reveal>
                   <div class="experience-step-meta">
                     <p><i aria-hidden="true"></i>{section.eyebrow}</p>
@@ -331,13 +331,31 @@ const faqs = [
               </li>
             ))}
           </ul>
+          <div class="experience-rail-tools" data-experience-controls hidden>
+            <div class="experience-rail-dots" role="group" aria-label="Choose an app area">
+              {appSections.map((section, index) => (
+                <button
+                  type="button"
+                  class:list={{ 'is-active': index === 0 }}
+                  aria-label={`Show ${section.eyebrow}`}
+                  aria-current={index === 0 ? 'true' : undefined}
+                  data-experience-dot
+                ></button>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
       <section class="faith-note-section" id="faith-note" aria-labelledby="faith-note-title">
         <div class="faith-note-ticker" aria-hidden="true">
           <div class="faith-note-ticker-track">
-            <span>Stories to share</span><i>✦</i><span>Read-along audio</span><i>✦</i><span>Playful Bible games</span><i>✦</i><span>Android beta</span><i>✦</i><span>Stories to share</span>
+            <div class="faith-note-ticker-sequence">
+              <span>Stories to share</span><i>✦</i><span>Read-along audio</span><i>✦</i><span>Playful Bible games</span><i>✦</i><span>Android beta</span><i>✦</i>
+            </div>
+            <div class="faith-note-ticker-sequence" aria-hidden="true">
+              <span>Stories to share</span><i>✦</i><span>Read-along audio</span><i>✦</i><span>Playful Bible games</span><i>✦</i><span>Android beta</span><i>✦</i>
+            </div>
           </div>
         </div>
 
@@ -457,8 +475,8 @@ const faqs = [
                 data-waitlist-email
               />
               <button class="waitlist-submit" type="submit" data-waitlist-submit>
-                <span data-waitlist-button-label>Join the waitlist</span>
-                <span aria-hidden="true">↗</span>
+                <span class="waitlist-button-label" data-waitlist-button-label>Join the waitlist</span>
+                <span class="action-arrow" aria-hidden="true">&#x2197;&#xfe0e;</span>
               </button>
             </div>
             <p
@@ -523,6 +541,11 @@ const faqs = [
         const waitlistSubmit = document.querySelector('[data-waitlist-submit]');
         const waitlistButtonLabel = document.querySelector('[data-waitlist-button-label]');
         const waitlistStatus = document.querySelector('[data-waitlist-status]');
+        const experienceRail = document.querySelector('[data-experience-rail]');
+        const experienceSlides = [...document.querySelectorAll('[data-experience-slide]')];
+        const experienceControls = document.querySelector('[data-experience-controls]');
+        const experienceDots = [...document.querySelectorAll('[data-experience-dot]')];
+        const experienceMobile = window.matchMedia('(max-width: 900px)');
         const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
         let frame = 0;
 
@@ -667,6 +690,189 @@ const faqs = [
             { rootMargin: '0px 0px -12% 0px', threshold: 0.12 },
           );
           reveals.forEach((item) => observer.observe(item));
+        }
+
+        if (
+          experienceRail instanceof HTMLElement &&
+          experienceControls instanceof HTMLElement &&
+          experienceSlides.length > 1
+        ) {
+          let experienceTimer = 0;
+          let experienceScrollTimer = 0;
+          let activeExperience = 0;
+          let experienceDirection = 1;
+          let experienceInView = false;
+          let experienceHovering = false;
+          let experiencePointerActive = false;
+          let experienceFocused = false;
+
+          const clearExperienceTimer = () => {
+            window.clearTimeout(experienceTimer);
+            experienceTimer = 0;
+          };
+
+          const canRotateExperience = () =>
+            experienceMobile.matches &&
+            !reduceMotion.matches &&
+            experienceInView &&
+            !document.hidden &&
+            !experienceHovering &&
+            !experiencePointerActive &&
+            !experienceFocused &&
+            experienceRail.scrollWidth > experienceRail.clientWidth + 2;
+
+          const updateExperienceControls = () => {
+            experienceControls.hidden = !experienceMobile.matches;
+            experienceDots.forEach((dot, index) => {
+              dot.classList.toggle('is-active', index === activeExperience);
+              if (index === activeExperience) dot.setAttribute('aria-current', 'true');
+              else dot.removeAttribute('aria-current');
+            });
+          };
+
+          const closestExperienceSlide = () => {
+            const railBounds = experienceRail.getBoundingClientRect();
+            const styles = getComputedStyle(experienceRail);
+            const snapInset = Number.parseFloat(styles.scrollPaddingInlineStart)
+              || Number.parseFloat(styles.paddingInlineStart)
+              || 0;
+            const snapLine = railBounds.left + snapInset;
+            let closestIndex = 0;
+            let closestDistance = Number.POSITIVE_INFINITY;
+
+            experienceSlides.forEach((slide, index) => {
+              if (!(slide instanceof HTMLElement)) return;
+              const bounds = slide.getBoundingClientRect();
+              const distance = Math.abs(bounds.left - snapLine);
+              if (distance < closestDistance) {
+                closestDistance = distance;
+                closestIndex = index;
+              }
+            });
+
+            activeExperience = closestIndex;
+            updateExperienceControls();
+          };
+
+          const scrollToExperience = (index) => {
+            const slide = experienceSlides[index];
+            if (!(slide instanceof HTMLElement)) return;
+
+            const railBounds = experienceRail.getBoundingClientRect();
+            const slideBounds = slide.getBoundingClientRect();
+            const styles = getComputedStyle(experienceRail);
+            const snapInset = Number.parseFloat(styles.scrollPaddingInlineStart)
+              || Number.parseFloat(styles.paddingInlineStart)
+              || 0;
+
+            activeExperience = index;
+            updateExperienceControls();
+            experienceRail.scrollTo({
+              left: experienceRail.scrollLeft + slideBounds.left - railBounds.left - snapInset,
+              behavior: 'smooth',
+            });
+          };
+
+          const scheduleExperienceRotation = () => {
+            clearExperienceTimer();
+            if (!canRotateExperience()) return;
+
+            experienceTimer = window.setTimeout(() => {
+              if (activeExperience >= experienceSlides.length - 1) experienceDirection = -1;
+              else if (activeExperience <= 0) experienceDirection = 1;
+              scrollToExperience(activeExperience + experienceDirection);
+              scheduleExperienceRotation();
+            }, 3000);
+          };
+
+          const pauseExperienceInteraction = () => {
+            clearExperienceTimer();
+          };
+
+          experienceDots.forEach((dot, index) => {
+            dot.addEventListener('click', () => {
+              experienceDirection = index >= activeExperience ? 1 : -1;
+              scrollToExperience(index);
+            });
+          });
+
+          experienceRail.addEventListener('pointerdown', () => {
+            experiencePointerActive = true;
+            pauseExperienceInteraction();
+          }, { passive: true });
+          ['pointerup', 'pointercancel'].forEach((eventName) => {
+            experienceRail.addEventListener(eventName, () => {
+              experiencePointerActive = false;
+              closestExperienceSlide();
+              scheduleExperienceRotation();
+            }, { passive: true });
+          });
+          experienceRail.addEventListener('wheel', () => {
+            pauseExperienceInteraction();
+            scheduleExperienceRotation();
+          }, { passive: true });
+          experienceRail.addEventListener('keydown', (event) => {
+            if (['ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown'].includes(event.key)) {
+              pauseExperienceInteraction();
+            }
+          });
+          experienceRail.addEventListener('pointerenter', (event) => {
+            if (event.pointerType !== 'mouse') return;
+            experienceHovering = true;
+            pauseExperienceInteraction();
+          });
+          experienceRail.addEventListener('pointerleave', (event) => {
+            if (event.pointerType !== 'mouse') return;
+            experienceHovering = false;
+            scheduleExperienceRotation();
+          });
+          const experienceFocusRegions = [experienceRail, experienceControls];
+          experienceFocusRegions.forEach((region) => {
+            region.addEventListener('focusin', () => {
+              experienceFocused = true;
+              pauseExperienceInteraction();
+            });
+            region.addEventListener('focusout', () => {
+              window.requestAnimationFrame(() => {
+                experienceFocused = experienceFocusRegions.some((item) => item.contains(document.activeElement));
+                if (!experienceFocused) scheduleExperienceRotation();
+              });
+            });
+          });
+          experienceRail.addEventListener('scroll', () => {
+            window.clearTimeout(experienceScrollTimer);
+            experienceScrollTimer = window.setTimeout(() => {
+              closestExperienceSlide();
+              scheduleExperienceRotation();
+            }, 160);
+          }, { passive: true });
+
+          const experienceObserver = 'IntersectionObserver' in window
+            ? new IntersectionObserver(([entry]) => {
+                experienceInView = Boolean(entry?.isIntersecting && entry.intersectionRatio >= 0.35);
+                if (!experienceInView) clearExperienceTimer();
+                else scheduleExperienceRotation();
+              }, { threshold: [0, 0.35, 0.7] })
+            : null;
+
+          if (experienceObserver) experienceObserver.observe(experienceRail);
+          else experienceInView = true;
+
+          const refreshExperienceRotation = () => {
+            clearExperienceTimer();
+            updateExperienceControls();
+            if (!experienceMobile.matches) {
+              experienceDirection = 1;
+              activeExperience = 0;
+            }
+            scheduleExperienceRotation();
+          };
+
+          document.addEventListener('visibilitychange', refreshExperienceRotation);
+          experienceMobile.addEventListener('change', refreshExperienceRotation);
+          reduceMotion.addEventListener('change', refreshExperienceRotation);
+          updateExperienceControls();
+          scheduleExperienceRotation();
         }
 
         const setWaitlistState = (state, message, buttonLabel = 'Join the waitlist', emailIsInvalid = false) => {

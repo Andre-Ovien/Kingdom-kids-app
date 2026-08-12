@@ -29,11 +29,10 @@ https://kingdom-kids.app/api/*
 to the HTTPS Django API while preserving the path, HTTP method, JSON body, `Authorization` header, and correct forwarded host/protocol. This route supports:
 
 - `POST /api/accounts/waitlist/`
-- `POST /api/accounts/login/`
-- `DELETE /api/accounts/me/`
-- `DELETE /api/accounts/unverified-account/`
+- `POST /api/accounts/account-deletion/request/`
+- `POST /api/accounts/account-deletion/confirm/`
 
-Do not cache `/api/*` responses. Do not log authorization headers, passwords, login/deletion request bodies, or response tokens. Keep backend throttling enabled. A direct cross-origin API hostname requires an explicit, narrow CORS allowlist and should not replace the same-origin route without a reviewed deployment change.
+Do not cache `/api/*` responses. Do not log email-verification codes or deletion request bodies. Keep backend throttling enabled. A direct cross-origin API hostname requires an explicit, narrow CORS allowlist and should not replace the same-origin route without a reviewed deployment change.
 
 ## HTTPS and security headers
 
@@ -70,9 +69,9 @@ Run these against the deployed production origin, not only `astro preview`:
 
 1. Confirm `/`, `/privacy/`, and `/account-deletion/` return `200`, canonical URLs use HTTPS, and legal links are reachable without the app.
 2. Submit a valid and invalid waitlist address through the deployed same-origin `/api` path and confirm responses are not cached.
-3. Create a disposable verified parent account with child activity. On `/account-deletion/`, verify wrong credentials and a confirmation other than `DELETE` cannot delete it.
-4. Complete deletion with `DELETE`; confirm the page reports success, subsequent login fails, associated child/profile activity is gone, and any same-email waitlist row is gone.
-5. Inspect cookies, local storage, session storage, browser logs, proxy logs, and analytics/network tooling to confirm credentials and JWTs were not persisted or logged.
+3. Create a disposable parent account with child activity. On `/account-deletion/`, verify an unknown email receives the same request response and a wrong, expired, or over-attempted code cannot delete anything.
+4. Complete the emailed-code flow and explicit final confirmation; confirm the page reports success, subsequent login fails, associated child/profile activity is gone, and any same-email waitlist row is gone.
+5. Inspect cookies, local storage, session storage, browser logs, proxy logs, and analytics/network tooling to confirm challenge handles and email codes were not persisted or logged.
 6. Test offline, timeout, `429`, and API `5xx` responses; status updates must remain understandable to keyboard and screen-reader users.
 7. Verify TLS, redirects, CSP, HSTS, framing protection, MIME protection, referrer policy, and permissions policy with the actual CDN configuration.
 

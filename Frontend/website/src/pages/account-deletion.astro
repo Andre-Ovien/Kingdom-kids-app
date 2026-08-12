@@ -3,153 +3,240 @@ import PublicPageLayout from '../layouts/PublicPageLayout.astro';
 import { privacyContact } from '../config/site';
 
 const description =
-  'Permanently delete a Kingdom Kids parent account and its associated child profiles, preferences, and activity.';
+  'Request permanent deletion of a Kingdom Kids grown-up account and its associated family data.';
 ---
 
-<PublicPageLayout title="Delete your account" description={description} canonicalPath="/account-deletion/">
-  <header class="public-hero">
-    <p class="public-eyebrow">Family account control</p>
-    <h1>Delete a Kingdom Kids account.</h1>
+<PublicPageLayout
+  title="Request account deletion"
+  description={description}
+  canonicalPath="/account-deletion/"
+  mainClass="public-main--deletion"
+>
+  <header class="public-hero deletion-hero">
+    <p class="public-eyebrow">Privacy &amp; account</p>
+    <h1>Request account deletion.</h1>
     <p class="public-lead">
-      A parent can verify their account and remove it and its associated family data from the active service here,
-      without reinstalling the app. Restricted backup copies expire through the normal backup rotation described
-      in the privacy policy.
+      You can ask us to permanently delete your Kingdom Kids grown-up account and the family data connected to it.
+      We’ll verify the account before anything is removed.
+    </p>
+    <p class="deletion-safety" id="deletion-safety">
+      <strong>Keep your credentials private.</strong> Never enter your password, a child’s name, or a code from any
+      other Kingdom Kids email on this page.
     </p>
   </header>
 
-  <article class="deletion-card">
-    <h2>What this deletes</h2>
-    <p id="deletion-warning">
-      Deletion cannot be undone in the active service. It removes the parent account, child profiles, profile
-      preferences, story activity, streak history, and game progress and attempts. Deleting a verified account also
-      removes a waitlist entry using the same parent email. A pending, unverified account cannot prove ownership of
-      an independent waitlist signup, which can instead be removed through the privacy contact below. Published
-      stories and games are not personal account data and remain in the service. Access-restricted backup copies age
-      out through the provider's normal rotation and are not restored except for disaster recovery.
-    </p>
+  <div class="deletion-layout">
+    <article class="deletion-card" aria-labelledby="deletion-request-title">
+      <div data-deletion-request-stage>
+        <p class="public-eyebrow">Start here</p>
+        <h2 id="deletion-request-title">Send a deletion request</h2>
+        <p>
+          Enter the email address on the grown-up account. We’ll send a short-lived code so you can prove that you
+          control the address. Nothing is deleted at this step.
+        </p>
 
-    <ol class="deletion-steps" aria-label="Account deletion steps">
-      <li><strong>1. Verify</strong> Enter the parent account email and password.</li>
-      <li><strong>2. Confirm</strong> Type DELETE exactly to acknowledge the permanent action.</li>
-      <li><strong>3. Erase</strong> The API authenticates and removes the account from the active service.</li>
-    </ol>
+        <form
+          class="deletion-form"
+          data-deletion-request-form
+          action="/account-deletion/"
+          method="post"
+          aria-describedby="deletion-email-help deletion-safety"
+          aria-busy="false"
+          novalidate
+        >
+          <fieldset data-deletion-request-fields disabled>
+            <div class="form-field">
+              <label for="deletion-email">Email address on the grown-up account</label>
+              <input
+                id="deletion-email"
+                type="email"
+                inputmode="email"
+                autocomplete="email"
+                maxlength="254"
+                aria-describedby="deletion-email-help deletion-request-status"
+                required
+                data-deletion-email
+              />
+              <small id="deletion-email-help">
+                We’ll use this address only to locate the account and send verification instructions.
+              </small>
+            </div>
 
-    <aside class="danger-notice">
-      <strong>There is no active-service undo.</strong>
-      <p>Download or record anything the family wants to keep before continuing.</p>
+            <button class="delete-button delete-button--request" type="submit" data-deletion-request-submit>
+              Send verification code
+            </button>
+          </fieldset>
+
+          <p
+            class="form-status"
+            id="deletion-request-status"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            tabindex="-1"
+            data-deletion-request-status
+          ></p>
+        </form>
+      </div>
+
+      <section
+        class="deletion-confirmation"
+        aria-labelledby="deletion-confirm-title"
+        hidden
+        data-deletion-confirmation-stage
+      >
+        <p class="public-eyebrow">Check your inbox</p>
+        <h2 id="deletion-confirm-title" tabindex="-1">Confirm account deletion</h2>
+        <p>
+          Enter the six-digit code from the Kingdom Kids deletion email. This final confirmation permanently removes
+          the account and active-service data listed on this page.
+        </p>
+
+        <form
+          class="deletion-form deletion-form--confirm"
+          data-deletion-confirm-form
+          action="/account-deletion/"
+          method="post"
+          aria-describedby="deletion-code-help deletion-confirmation-help"
+          aria-busy="false"
+          novalidate
+          autocomplete="off"
+        >
+          <fieldset data-deletion-confirm-fields disabled>
+            <div class="form-field">
+              <label for="deletion-code">Six-digit deletion code</label>
+              <input
+                id="deletion-code"
+                type="text"
+                inputmode="numeric"
+                autocomplete="one-time-code"
+                maxlength="6"
+                pattern="[0-9]{6}"
+                aria-describedby="deletion-code-help deletion-confirm-status"
+                required
+                data-deletion-code
+              />
+              <small id="deletion-code-help">The code expires shortly and can be used only once.</small>
+            </div>
+
+            <label class="deletion-acknowledgement" id="deletion-confirmation-help">
+              <input type="checkbox" required data-deletion-confirmation />
+              <span>I understand that deleting this account and its associated family data cannot be undone.</span>
+            </label>
+
+            <button class="delete-button delete-button--danger" type="submit" data-deletion-confirm-submit>
+              Delete my account and data
+            </button>
+          </fieldset>
+
+          <p
+            class="form-status"
+            id="deletion-confirm-status"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            tabindex="-1"
+            data-deletion-confirm-status
+          ></p>
+        </form>
+      </section>
+
+      <section class="deletion-complete" hidden data-deletion-complete>
+        <p class="public-eyebrow">Request complete</p>
+        <h2 tabindex="-1" data-deletion-complete-title>Your account has been deleted.</h2>
+        <p>
+          The Kingdom Kids account and its associated data have been removed from the active service. You can now
+          close this page.
+        </p>
+      </section>
+
+      <noscript>
+        <p class="danger-notice">
+          JavaScript is required for the secure verification step. If it is unavailable, email
+          <a href={privacyContact.href}>{privacyContact.email}</a> to request help.
+        </p>
+      </noscript>
+    </article>
+
+    <aside class="deletion-side" aria-label="How account deletion works">
+      <section>
+        <p class="public-eyebrow">The process</p>
+        <ol class="deletion-steps">
+          <li><strong>1. Request</strong> Enter the email used for the grown-up account.</li>
+          <li><strong>2. Verify</strong> Open the email and enter the secure six-digit code.</li>
+          <li><strong>3. Delete</strong> Confirm once more, then the account and connected data are removed.</li>
+        </ol>
+      </section>
+
+      <section class="deletion-data-note">
+        <h2>What will be deleted</h2>
+        <ul>
+          <li>The grown-up account.</li>
+          <li>Child profiles and reading preferences.</li>
+          <li>Story activity and streak history.</li>
+          <li>Game progress, scores, and attempts.</li>
+          <li>A waitlist entry using the same verified email.</li>
+        </ul>
+        <p>
+          Published stories and games are not personal account data and remain available. Some deleted information
+          may remain temporarily in access-restricted backups until normal rotation; it is not restored to the active
+          service except for disaster recovery.
+        </p>
+      </section>
+
+      <p class="deletion-help">
+        Need help or no longer have access to that email?
+        <a href={privacyContact.href}>Contact {privacyContact.email}</a>.
+      </p>
     </aside>
-
-    <form
-      class="deletion-form"
-      data-deletion-form
-      action="/account-deletion/"
-      method="post"
-      aria-describedby="deletion-warning deletion-privacy"
-      aria-busy="false"
-      novalidate
-      autocomplete="off"
-    >
-      <fieldset data-deletion-fields disabled>
-        <legend class="public-eyebrow">Verify the parent account</legend>
-
-        <div class="form-field">
-          <label for="parent-email">Parent email</label>
-          <input
-            id="parent-email"
-            type="email"
-            inputmode="email"
-            autocomplete="email"
-            maxlength="254"
-            required
-            data-deletion-email
-          />
-        </div>
-
-        <div class="form-field">
-          <label for="parent-password">Current password</label>
-          <input
-            id="parent-password"
-            type="password"
-            autocomplete="current-password"
-            maxlength="128"
-            required
-            data-deletion-password
-          />
-        </div>
-
-        <div class="form-field">
-          <label for="delete-confirmation">Type DELETE to confirm</label>
-          <input
-            id="delete-confirmation"
-            type="text"
-            autocomplete="off"
-            autocapitalize="characters"
-            spellcheck="false"
-            maxlength="6"
-            pattern="DELETE"
-            aria-describedby="confirmation-help"
-            required
-            data-deletion-confirmation
-          />
-          <small id="confirmation-help">The confirmation is case-sensitive.</small>
-        </div>
-
-        <button class="delete-button" type="submit" data-deletion-submit>
-          Permanently delete account
-        </button>
-      </fieldset>
-
-      <p id="deletion-privacy">
-        Credentials and tokens are used only for this deletion request. This page does not save them to cookies,
-        local storage, or session storage, and does not log them.
-      </p>
-      <p
-        class="form-status"
-        role="status"
-        aria-live="polite"
-        aria-atomic="true"
-        tabindex="-1"
-        data-deletion-status
-      ></p>
-    </form>
-
-    <noscript>
-      <p class="danger-notice">
-        JavaScript is required for secure self-service deletion. Contact the provisional privacy address below if
-        JavaScript is unavailable.
-      </p>
-    </noscript>
-
-    <p>
-      If the parent cannot sign in or needs help, contact
-      {' '}<a href={privacyContact.href}>{privacyContact.email}</a>. {privacyContact.launchRequirement}
-    </p>
-  </article>
+  </div>
 
   <script>
-    const deletionForm = document.querySelector<HTMLFormElement>('[data-deletion-form]');
-    const deletionFields = document.querySelector<HTMLFieldSetElement>('[data-deletion-fields]');
+    const requestForm = document.querySelector<HTMLFormElement>('[data-deletion-request-form]');
+    const requestFields = document.querySelector<HTMLFieldSetElement>('[data-deletion-request-fields]');
     const emailInput = document.querySelector<HTMLInputElement>('[data-deletion-email]');
-    const passwordInput = document.querySelector<HTMLInputElement>('[data-deletion-password]');
+    const requestButton = document.querySelector<HTMLButtonElement>('[data-deletion-request-submit]');
+    const requestStatus = document.querySelector<HTMLElement>('[data-deletion-request-status]');
+    const requestStage = document.querySelector<HTMLElement>('[data-deletion-request-stage]');
+
+    const confirmationStage = document.querySelector<HTMLElement>('[data-deletion-confirmation-stage]');
+    const confirmationTitle = document.querySelector<HTMLElement>('#deletion-confirm-title');
+    const confirmForm = document.querySelector<HTMLFormElement>('[data-deletion-confirm-form]');
+    const confirmFields = document.querySelector<HTMLFieldSetElement>('[data-deletion-confirm-fields]');
+    const codeInput = document.querySelector<HTMLInputElement>('[data-deletion-code]');
     const confirmationInput = document.querySelector<HTMLInputElement>('[data-deletion-confirmation]');
-    const submitButton = document.querySelector<HTMLButtonElement>('[data-deletion-submit]');
-    const statusRegion = document.querySelector<HTMLElement>('[data-deletion-status]');
+    const confirmButton = document.querySelector<HTMLButtonElement>('[data-deletion-confirm-submit]');
+    const confirmStatus = document.querySelector<HTMLElement>('[data-deletion-confirm-status]');
 
-    const setStatus = (state: 'idle' | 'loading' | 'error' | 'success', message: string) => {
-      if (!statusRegion) return;
+    const completeStage = document.querySelector<HTMLElement>('[data-deletion-complete]');
+    const completeTitle = document.querySelector<HTMLElement>('[data-deletion-complete-title]');
+    let deletionChallengeId = '';
 
-      statusRegion.dataset.state = state;
-      statusRegion.setAttribute('role', state === 'error' ? 'alert' : 'status');
-      statusRegion.textContent = message;
-      if (state === 'error' || state === 'success') statusRegion.focus();
+    const setStatus = (
+      region: HTMLElement | null,
+      state: 'idle' | 'loading' | 'error' | 'success',
+      message: string,
+      focus = false,
+    ) => {
+      if (!region) return;
+      region.dataset.state = state;
+      region.setAttribute('role', state === 'error' ? 'alert' : 'status');
+      region.textContent = message;
+      if (focus) region.focus();
     };
 
-    const setBusy = (busy: boolean) => {
-      if (!deletionForm || !deletionFields || !submitButton) return;
+    const setRequestBusy = (busy: boolean) => {
+      if (!requestForm || !requestFields || !requestButton) return;
+      requestForm.setAttribute('aria-busy', String(busy));
+      requestFields.disabled = busy;
+      requestButton.textContent = busy ? 'Sending…' : 'Send verification code';
+    };
 
-      deletionForm.setAttribute('aria-busy', String(busy));
-      deletionFields.disabled = busy;
-      submitButton.textContent = busy ? 'Deleting account…' : 'Permanently delete account';
+    const setConfirmBusy = (busy: boolean) => {
+      if (!confirmForm || !confirmFields || !confirmButton) return;
+      confirmForm.setAttribute('aria-busy', String(busy));
+      confirmFields.disabled = busy;
+      confirmButton.textContent = busy ? 'Deleting account…' : 'Delete my account and data';
     };
 
     const timedFetch = async (input: RequestInfo | URL, init: RequestInit) => {
@@ -162,178 +249,180 @@ const description =
       }
     };
 
-    if (
-      deletionForm &&
-      deletionFields &&
-      emailInput &&
-      passwordInput &&
-      confirmationInput &&
-      submitButton
-    ) {
-      deletionForm.addEventListener('submit', async (event) => {
+    const jsonRequest = (body: object): RequestInit => ({
+      method: 'POST',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      cache: 'no-store',
+      credentials: 'omit',
+      referrerPolicy: 'same-origin',
+    });
+
+    if (requestForm && requestFields && emailInput && requestButton) {
+      requestForm.addEventListener('submit', async (event) => {
         event.preventDefault();
+        emailInput.setAttribute('aria-invalid', 'false');
 
         if (!emailInput.value.trim() || !emailInput.validity.valid) {
-          setStatus('error', 'Enter the valid email address used for the parent account.');
+          emailInput.setAttribute('aria-invalid', 'true');
+          setStatus(
+            requestStatus,
+            'error',
+            'Enter the email address used for your Kingdom Kids account.',
+          );
           emailInput.focus();
           return;
         }
-        if (!passwordInput.value) {
-          setStatus('error', 'Enter the current parent-account password.');
-          passwordInput.focus();
+        if (!navigator.onLine) {
+          setStatus(requestStatus, 'error', 'You appear to be offline. Reconnect and try again.', true);
           return;
         }
-        if (confirmationInput.value !== 'DELETE') {
-          setStatus('error', 'Type DELETE exactly to confirm this permanent action.');
+
+        setRequestBusy(true);
+        setStatus(requestStatus, 'loading', 'Sending verification instructions…');
+
+        try {
+          const response = await timedFetch(
+            '/api/accounts/account-deletion/request/',
+            jsonRequest({ email: emailInput.value.trim() }),
+          );
+
+          if (response.status === 202) {
+            const payload: unknown = await response.json();
+            if (
+              typeof payload !== 'object' ||
+              payload === null ||
+              !('challenge_id' in payload) ||
+              typeof payload.challenge_id !== 'string' ||
+              payload.challenge_id.length === 0
+            ) {
+              throw new Error('Invalid deletion-request response.');
+            }
+
+            deletionChallengeId = payload.challenge_id;
+            if (confirmationStage && confirmFields) {
+              confirmationStage.hidden = false;
+              confirmFields.disabled = false;
+            }
+            setStatus(
+              requestStatus,
+              'success',
+              'If a Kingdom Kids account matches that email, we sent the next step. Check your inbox and spam folder. The account has not been deleted yet.',
+            );
+            requestButton.textContent = 'Send another code';
+            confirmationTitle?.focus();
+          } else if (response.status === 429) {
+            setStatus(requestStatus, 'error', 'Too many requests. Wait a while, then try again.', true);
+          } else {
+            setStatus(
+              requestStatus,
+              'error',
+              'We couldn’t send the request right now. Try again later or email privacy@kingdom-kids.app.',
+              true,
+            );
+          }
+        } catch (error) {
+          const message = error instanceof DOMException && error.name === 'AbortError'
+            ? 'The request took too long. Try again later or email privacy@kingdom-kids.app.'
+            : 'We couldn’t reach the service. Check your connection and try again.';
+          setStatus(requestStatus, 'error', message, true);
+        } finally {
+          setRequestBusy(false);
+          if (deletionChallengeId) requestButton.textContent = 'Send another code';
+        }
+      });
+
+      requestFields.disabled = false;
+    }
+
+    if (
+      confirmForm &&
+      confirmFields &&
+      codeInput &&
+      confirmationInput &&
+      confirmButton
+    ) {
+      confirmForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        codeInput.setAttribute('aria-invalid', 'false');
+
+        if (!deletionChallengeId) {
+          setStatus(confirmStatus, 'error', 'Request a new verification code before continuing.', true);
+          emailInput?.focus();
+          return;
+        }
+        if (!/^[0-9]{6}$/.test(codeInput.value)) {
+          codeInput.setAttribute('aria-invalid', 'true');
+          setStatus(confirmStatus, 'error', 'Enter the six-digit code from the deletion email.');
+          codeInput.focus();
+          return;
+        }
+        if (!confirmationInput.checked) {
+          setStatus(confirmStatus, 'error', 'Confirm that you understand this deletion cannot be undone.');
           confirmationInput.focus();
           return;
         }
         if (!navigator.onLine) {
-          setStatus('error', 'You appear to be offline. Reconnect before trying again.');
+          setStatus(confirmStatus, 'error', 'You appear to be offline. Reconnect and try again.', true);
           return;
         }
 
-        const email = emailInput.value.trim();
-        const password = passwordInput.value;
-        let accessToken = '';
-
-        setBusy(true);
-        setStatus('loading', 'Verifying the parent account…');
+        setConfirmBusy(true);
+        setStatus(confirmStatus, 'loading', 'Deleting the account and connected family data…');
 
         try {
-          const loginResponse = await timedFetch('/api/accounts/login/', {
-            method: 'POST',
-            headers: {
-              Accept: 'application/json',
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ email, password }),
-            cache: 'no-store',
-            credentials: 'omit',
-            referrerPolicy: 'same-origin',
-          });
+          const response = await timedFetch(
+            '/api/accounts/account-deletion/confirm/',
+            jsonRequest({
+              challenge_id: deletionChallengeId,
+              code: codeInput.value,
+              confirmation: 'DELETE',
+            }),
+          );
 
-          if (!loginResponse.ok) {
-            let loginFailureCode = '';
-            try {
-              const loginFailure: unknown = await loginResponse.json();
-              if (
-                typeof loginFailure === 'object' &&
-                loginFailure !== null &&
-                'code' in loginFailure &&
-                typeof loginFailure.code === 'string'
-              ) {
-                loginFailureCode = loginFailure.code;
-              }
-            } catch {
-              // Status-based generic handling below remains safe when an
-              // upstream sends a non-JSON error page.
-            }
-
-            if (
-              loginResponse.status === 403 &&
-              loginFailureCode === 'email_verification_required'
-            ) {
-              setStatus('loading', 'Removing the pending parent account…');
-              const pendingDeletionResponse = await timedFetch(
-                '/api/accounts/unverified-account/',
-                {
-                  method: 'DELETE',
-                  headers: {
-                    Accept: 'application/json',
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({ email, password, confirmation: 'DELETE' }),
-                  cache: 'no-store',
-                  credentials: 'omit',
-                  referrerPolicy: 'same-origin',
-                },
-              );
-              if (pendingDeletionResponse.status === 204) {
-                deletionForm.reset();
-                deletionFields.disabled = true;
-                submitButton.textContent = 'Deletion request completed';
-                setStatus(
-                  'success',
-                  'The pending parent account was removed from the active service.',
-                );
-              } else if (pendingDeletionResponse.status === 429) {
-                setStatus('error', 'Too many deletion attempts. Wait a while before trying again.');
-              } else {
-                setStatus('error', 'The pending account could not be removed right now. Please try again later.');
-              }
-            } else if (loginResponse.status === 400 || loginResponse.status === 401) {
-              setStatus('error', 'We could not verify that email and password. No account was deleted.');
-            } else if (loginResponse.status === 429) {
-              setStatus('error', 'Too many attempts. Wait a while before trying again.');
-            } else {
-              setStatus('error', 'The account could not be verified right now. No account was deleted.');
-            }
-            return;
-          }
-
-          const loginPayload: unknown = await loginResponse.json();
-          if (
-            typeof loginPayload !== 'object' ||
-            loginPayload === null ||
-            !('access' in loginPayload) ||
-            typeof loginPayload.access !== 'string' ||
-            loginPayload.access.length === 0
-          ) {
-            setStatus('error', 'The account was verified, but a secure deletion session could not be started.');
-            return;
-          }
-          accessToken = loginPayload.access;
-          setStatus('loading', 'Deleting the account and family data…');
-
-          const deletionResponse = await timedFetch('/api/accounts/me/', {
-            method: 'DELETE',
-            headers: {
-              Accept: 'application/json',
-              Authorization: `Bearer ${accessToken}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ password }),
-            cache: 'no-store',
-            credentials: 'omit',
-            referrerPolicy: 'same-origin',
-          });
-
-          if (deletionResponse.status === 204) {
-            deletionForm.reset();
-            deletionFields.disabled = true;
-            submitButton.textContent = 'Account deleted';
+          if (response.status === 204) {
+            deletionChallengeId = '';
+            requestForm?.reset();
+            confirmForm.reset();
+            if (requestFields) requestFields.disabled = true;
+            confirmFields.disabled = true;
+            if (requestStage) requestStage.hidden = true;
+            if (confirmationStage) confirmationStage.hidden = true;
+            if (completeStage) completeStage.hidden = false;
+            completeTitle?.focus();
+          } else if (response.status === 400) {
             setStatus(
-              'success',
-              'The account and associated family data were removed from the active service. Restricted backup copies expire through normal rotation.',
+              confirmStatus,
+              'error',
+              'That deletion code is incorrect or has expired. Request a new code and try again.',
+              true,
             );
-            return;
-          }
-
-          if (deletionResponse.status === 400 || deletionResponse.status === 401) {
-            setStatus('error', 'The deletion could not be authorized. No account was deleted.');
-          } else if (deletionResponse.status === 429) {
-            setStatus('error', 'Too many deletion attempts. Wait a while before trying again.');
+          } else if (response.status === 429) {
+            setStatus(confirmStatus, 'error', 'Too many attempts. Wait a while, then try again.', true);
           } else {
-            setStatus('error', 'The account could not be deleted right now. Please try again later.');
+            setStatus(
+              confirmStatus,
+              'error',
+              'We couldn’t complete the deletion right now. Try again later or email privacy@kingdom-kids.app.',
+              true,
+            );
           }
         } catch (error) {
           const message = error instanceof DOMException && error.name === 'AbortError'
-            ? 'The request took too long. No deletion was confirmed; please check the account before retrying.'
-            : 'The service could not be reached. No deletion was confirmed; please check the account before retrying.';
-          setStatus('error', message);
+            ? 'The deletion request took too long. Check the account before trying again.'
+            : 'We couldn’t reach the service. No deletion was confirmed; check the account before retrying.';
+          setStatus(confirmStatus, 'error', message, true);
         } finally {
-          accessToken = '';
-          passwordInput.value = '';
-          confirmationInput.value = '';
-          if (statusRegion?.dataset.state !== 'success') setBusy(false);
+          if (!completeStage || completeStage.hidden) setConfirmBusy(false);
+          codeInput.value = '';
+          confirmationInput.checked = false;
         }
       });
-
-      // The credential controls are deliberately unnamed and disabled in the
-      // static HTML. Enable them only after the safe fetch-only handler exists,
-      // so a blocked or failed script can never fall back to a URL submission.
-      deletionFields.disabled = false;
     }
+
+    window.addEventListener('pagehide', () => {
+      deletionChallengeId = '';
+      if (codeInput) codeInput.value = '';
+    });
   </script>
 </PublicPageLayout>
