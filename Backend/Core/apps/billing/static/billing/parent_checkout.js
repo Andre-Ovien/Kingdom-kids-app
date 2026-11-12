@@ -50,9 +50,9 @@ export function tokenizationFailure(value) {
     return new BeforePayment('verification_configuration');
   return new BeforePayment('tokenization_unavailable');
 }
-export function validQuote(q, period) {
+export function validQuote(q, period, environment = 'sandbox') {
   const p = plans[period];
-  return Boolean(p && q && q.environment === 'sandbox' && q.country === 'US' && q.purchasable === true &&
+  return Boolean(p && q && ['sandbox', 'production'].includes(environment) && q.environment === environment && q.country === 'US' && q.purchasable === true &&
     q.billing_period === period && q.currency === 'USD' && q.amount_minor === p.amount &&
     q.cadence === p.cadence && q.coverage_rule === p.rule && q.first_renewal_rule === p.rule &&
     q.coverage_start === 'canonical_successful_payment_capture' && q.first_renewal_at === null &&
@@ -65,29 +65,32 @@ export function validQuote(q, period) {
     q.web_tokenization.amount === (p.amount / 100).toFixed(2) && q.web_tokenization.currencyCode === 'USD' &&
     q.web_tokenization.customerInitiated === true && q.web_tokenization.sellerKeyedIn === false);
 }
-export function validAccess(data, parent) {
-  if (!data || data.schema_version !== 1 || data.parent_id !== parent || data.environment !== 'sandbox' ||
+export function validAccess(data, parent, environment = 'sandbox') {
+  if (!data || data.schema_version !== 1 || data.parent_id !== parent || !['sandbox', 'production'].includes(environment) || data.environment !== environment ||
       !['paid', 'unpaid', 'unknown'].includes(data.access_state) || !Number.isFinite(Date.parse(data.evaluated_at)) ||
       !['available', 'unavailable', 'unknown'].includes(data.checkout?.state)) return false;
   return data.access_state !== 'paid' || (Number.isFinite(Date.parse(data.access_until)) &&
     Date.parse(data.access_until) > Date.parse(data.evaluated_at));
 }
 export class PurchaseFlow {
-  constructor({ api, tokenize, parent, canCharge = () => true }) {
+  constructor({ api, tokenize, parent, canCharge = () => true, environment = 'sandbox', purpose = 'purchase' }) {
     this.api = api; this.tokenize = tokenize; this.parent = parent;
+    if (!['sandbox', 'production'].includes(environment) || !['purchase', 'manage'].includes(purpose)) throw new Refused();
+    this.environment = environment; this.purpose = purpose;
     this.period = 'monthly'; this.quote = null; this.intent = ''; this.attempted = false;
     this.reserveAttempted = false; this.sourceAllowed = false; this.access = null;
     this.canCharge = canCharge; this.busy = false;
   }
   setQuote(quote, period) {
-    if (!validQuote(quote, period) || (this.intent && this.period !== period)) throw new Refused();
+    if (this.purpose !== 'purchase' || !validQuote(quote, period, this.environment) || (this.intent && this.period !== period)) throw new Refused();
     this.period = period; this.quote = quote;
   }
   async readAccess() {
     const result = await this.api('/api/billing/content-access/', 'GET');
-    if (!validAccess(result, this.parent)) throw new Refused();
+    if (!validAccess(result, this.parent, this.environment)) throw new Refused();
     this.access = result;
-    const recovery = result.purchase_recovery;
+    const recovery = this.purpose === 'manage' ? result.management_recovery || result.purchase_recovery : result.purchase_recovery;
+    this.recovery = recovery;
     if (recovery?.intent_id) {
       if (!uuid.test(recovery.intent_id) || !plans[recovery.billing_period] ||
           (this.intent && this.intent !== recovery.intent_id)) throw new Refused();
@@ -100,14 +103,14 @@ export class PurchaseFlow {
     return result;
   }
   consent(password) {
-    if (!password || password.length > 1024 || !validQuote(this.quote, this.period)) throw new Refused();
+    if (this.purpose !== 'purchase' || !password || password.length > 1024 || !validQuote(this.quote, this.period, this.environment)) throw new Refused();
     return { password, accepted: true, billing_period: this.period,
       disclosure_version: this.quote.disclosure_version, disclosure_sha256: this.quote.disclosure_sha256 };
   }
   acceptIntent(result) {
     if (!uuid.test(result?.id || '')) throw new Refused();
     this.intent = result.id; // Preserve the owned reference even if later validation fails.
-    if (!validQuote(result.terms, this.period) || result.terms.disclosure_sha256 !== this.quote.disclosure_sha256) throw new Refused();
+    if (!validQuote(result.terms, this.period, this.environment) || result.terms.disclosure_sha256 !== this.quote.disclosure_sha256) throw new Refused();
     if (result.current_term) { this.attempted = true; this.sourceAllowed = false; throw new Refused(); }
     this.sourceAllowed = true;
   }
@@ -116,7 +119,7 @@ export class PurchaseFlow {
     this.busy = true;
     let token = null;
     try {
-      if (this.attempted || !this.access || this.access.access_state === 'paid' ||
+      if (this.purpose !== 'purchase' || this.attempted || !this.access || this.access.access_state === 'paid' ||
           (this.access.access_state !== 'unpaid' && !this.sourceAllowed)) throw new Refused();
       const consent = this.consent(password);
       if (!this.intent) {
@@ -142,7 +145,7 @@ export class PurchaseFlow {
     return await this.readAccess();
   }
   async restart(password) {
-    if (!this.intent || this.access?.purchase_recovery?.restart_allowed !== true ||
+    if (this.purpose !== 'purchase' || !this.intent || this.access?.purchase_recovery?.restart_allowed !== true ||
         this.access.purchase_recovery.intent_id !== this.intent ||
         this.access.access_state !== 'unpaid') throw new Refused();
     const old = this.intent;
@@ -161,10 +164,12 @@ export class PurchaseFlow {
 function attachPage() {
   const $ = (id) => document.getElementById(id);
   const runtime = JSON.parse($('checkout-runtime').textContent);
+  const manageOnly = runtime.purpose === 'manage';
   const requestedPeriod = Object.hasOwn(plans, runtime.selected_plan) ? runtime.selected_plan : null;
   let access = '', signedInEmail = '', flow = null, card = null, busy = false, generation = 0;
-  let selectedPeriod = requestedPeriod || 'monthly', planChosen = Boolean(requestedPeriod);
-  let cardMount = null, mountSerial = 0;
+  let selectedPeriod = requestedPeriod || 'monthly', planChosen = manageOnly || Boolean(requestedPeriod);
+  let cardMount = null, mountSerial = 0, handoffModule = null;
+  let handoffPending = Boolean(location.hash && location.hash !== '#main');
   const active = (value) => { if (generation !== value || !access) throw new Refused(); };
   const message = (value, code = '') => {
     $('message').textContent = value; $('message').setAttribute('data-checkout-code', code);
@@ -242,10 +247,12 @@ function attachPage() {
     return data;
   }
   async function loadSdk(scope) {
+    if (manageOnly) throw new Refused();
     if (!window.Square) await new Promise((resolve, reject) => {
       const script = document.createElement('script');
       const timer = setTimeout(() => { script.remove(); reject(new Refused()); }, 20000);
-      script.src = 'https://sandbox.web.squarecdn.com/v1/square.js';
+      script.src = runtime.environment === 'production' ? 'https://web.squarecdn.com/v1/square.js' :
+        'https://sandbox.web.squarecdn.com/v1/square.js';
       script.onload = () => { clearTimeout(timer); resolve(); };
       script.onerror = () => { clearTimeout(timer); reject(new Refused()); };
       document.head.append(script);
@@ -268,6 +275,7 @@ function attachPage() {
     } catch (_) { abandoned = true; destroyCard(next); removeMount(mount); throw new Refused(); }
   }
   async function quote(period) {
+    if (manageOnly) throw new Refused();
     const scope = generation;
     const result = await api(base + '?billing_period=' + period); active(scope);
     flow.setQuote(result, period); $('consent').checked = false;
@@ -275,7 +283,7 @@ function attachPage() {
     if (!card && cardStepReady()) await loadSdk(scope);
   }
   function cardStepReady() {
-    return Boolean(access && planChosen && flow?.access?.checkout?.state === 'available' && !flow.attempted &&
+    return Boolean(!manageOnly && access && planChosen && flow?.access?.checkout?.state === 'available' && !flow.attempted &&
       flow.access.access_state !== 'paid' && (flow.access.access_state === 'unpaid' || flow.sourceAllowed));
   }
   function update() {
@@ -285,16 +293,16 @@ function attachPage() {
     $('unit').textContent = p.unit;
     $('pay').textContent = 'Pay $' + (p.amount / 100).toFixed(2);
     const paid = Boolean(access) && flow?.access?.access_state === 'paid';
-    const recovery = flow?.access?.purchase_recovery;
+    const recovery = flow?.recovery;
     const ready = cardStepReady();
-    const restart = Boolean(access && recovery?.restart_allowed === true && flow?.access?.access_state === 'unpaid');
-    const pending = Boolean(access && !paid && (flow?.attempted || (flow?.reserveAttempted && !flow?.intent) ||
+    const restart = Boolean(!manageOnly && access && recovery?.restart_allowed === true && flow?.access?.access_state === 'unpaid');
+    const pending = Boolean(!manageOnly && access && !paid && (flow?.attempted || (flow?.reserveAttempted && !flow?.intent) ||
       (flow?.intent && !flow?.sourceAllowed)));
     if ($('plan-step')) $('plan-step').hidden = planChosen || Boolean(access);
-    $('selected-plan').hidden = !planChosen || paid;
-    $('page-title').textContent = paid ? 'Payment confirmed' : !planChosen ? 'Choose your plan' :
+    $('selected-plan').hidden = manageOnly || !planChosen || paid;
+    $('page-title').textContent = manageOnly ? 'Manage plan' : paid ? 'Payment confirmed' : !planChosen ? 'Choose your plan' :
       !access ? 'Parent sign in' : pending ? 'Check your payment' : ready ? 'Complete payment' : 'Check access';
-    $('login-form').hidden = !planChosen || Boolean(access);
+    $('login-form').hidden = handoffPending || !planChosen || Boolean(access);
     $('account-identity').hidden = !access;
     $('account-identity').textContent = access ? 'Signed in as ' + signedInEmail : '';
     $('sign-out').hidden = !access;
@@ -310,9 +318,11 @@ function attachPage() {
     $('retry-access').hidden = !access || paid || pending || (ready && (Boolean(card) || busy));
     $('retry-access').textContent = ready ? 'Reload secure card form' : 'Check access';
     $('complete').hidden = !paid;
+    if (manageOnly && access) $('manage-plan').open = true;
     $('access-date').textContent = paid ? 'Your subscription is active.' : '';
-    $('manage-plan').hidden = !access || (!recovery?.renewals_enabled && !recovery?.setup_required);
-    $('setup').hidden = !paid || recovery?.setup_required !== true;
+    $('manage-plan').hidden = !access || (manageOnly ? !flow?.intent : !recovery?.renewals_enabled && !recovery?.setup_required);
+    $('setup').hidden = manageOnly ? !flow?.intent || paid : !paid || recovery?.setup_required !== true;
+    $('setup').textContent = manageOnly ? 'Check existing payment' : 'Complete card setup';
     $('stop-renewals').hidden = recovery?.renewals_enabled !== true;
     $('secure-note').hidden = !ready;
     sync();
@@ -324,49 +334,51 @@ function attachPage() {
       result.access_state === 'unpaid' || flow.sourceAllowed ? '' :
       'Access could not yet be confirmed. Your account is still signed in. Check or recover an existing purchase.');
   }
+  async function acceptSignIn(result, scope) {
+    if (generation !== scope || typeof result.access !== 'string' || !result.access || result.access.length > 16384 ||
+        !result.user?.id || result.user.email_verified !== true ||
+        typeof result.user.email !== 'string' || !result.user.email || result.user.email.length > 254) throw new Refused();
+    access = result.access;
+    signedInEmail = result.user.email;
+    flow = new PurchaseFlow({ environment: runtime.environment, purpose: manageOnly ? 'manage' : 'purchase', api: async (...args) => { active(scope); const value = await api(...args); active(scope); return value; },
+      parent: String(result.user.id), canCharge: () => {
+        active(scope);
+        if (!$('consent').checked) throw new BeforePayment('consent_required');
+        if (document.visibilityState !== 'visible') throw new BeforePayment('page_not_visible');
+        return true;
+      }, tokenize: async (details) => { active(scope);
+        if (!$('consent').checked) throw new BeforePayment('consent_required');
+        if (!card) throw new BeforePayment('tokenization_unavailable');
+        const tokenCard = card, tokenMount = cardMount;
+        let result;
+        try { result = await bounded(tokenCard.tokenize(details), 120000); }
+        catch (error) {
+          const issue = tokenizationFailure(error);
+          if (!['card_number', 'expiration_date', 'security_code', 'postal_code', 'card_details'].includes(issue.code)) {
+            destroyCard(tokenCard); removeMount(tokenMount); if (card === tokenCard) card = null;
+          }
+          throw issue;
+        }
+        active(scope);
+        if (result?.status !== 'OK') {
+          const issue = tokenizationFailure(result);
+          if (['tokenization_unavailable', 'verification_configuration'].includes(issue.code)) {
+            destroyCard(tokenCard); removeMount(tokenMount); if (card === tokenCard) card = null;
+          }
+          throw issue;
+        }
+        return result.token; } });
+    flow.period = selectedPeriod;
+    update();
+    await refresh();
+    if (!manageOnly && flow.access.checkout.state === 'available' && flow.access.access_state !== 'paid' &&
+        (cardStepReady() || flow.access.purchase_recovery?.restart_allowed)) await quote(flow.period);
+  }
   $('login-form').addEventListener('submit', (event) => { event.preventDefault(); perform(async () => {
     if (!planChosen) throw new Refused();
     let password = takePassword('login-password'); const scope = generation;
     try {
-      const result = await api('/api/accounts/login/', 'POST', { email: $('email').value.trim(), password });
-      if (generation !== scope || typeof result.access !== 'string' || result.access.length > 16384 ||
-          !result.user?.id || result.user.email_verified !== true ||
-          typeof result.user.email !== 'string' || !result.user.email || result.user.email.length > 254) throw new Refused();
-      access = result.access;
-      signedInEmail = result.user.email;
-      flow = new PurchaseFlow({ api: async (...args) => { active(scope); const value = await api(...args); active(scope); return value; },
-        parent: String(result.user.id), canCharge: () => {
-          active(scope);
-          if (!$('consent').checked) throw new BeforePayment('consent_required');
-          if (document.visibilityState !== 'visible') throw new BeforePayment('page_not_visible');
-          return true;
-        }, tokenize: async (details) => { active(scope);
-          if (!$('consent').checked) throw new BeforePayment('consent_required');
-          if (!card) throw new BeforePayment('tokenization_unavailable');
-          const tokenCard = card, tokenMount = cardMount;
-          let result;
-          try { result = await bounded(tokenCard.tokenize(details), 120000); }
-          catch (error) {
-            const issue = tokenizationFailure(error);
-            if (!['card_number', 'expiration_date', 'security_code', 'postal_code', 'card_details'].includes(issue.code)) {
-              destroyCard(tokenCard); removeMount(tokenMount); if (card === tokenCard) card = null;
-            }
-            throw issue;
-          }
-          active(scope);
-          if (result?.status !== 'OK') {
-            const issue = tokenizationFailure(result);
-            if (['tokenization_unavailable', 'verification_configuration'].includes(issue.code)) {
-              destroyCard(tokenCard); removeMount(tokenMount); if (card === tokenCard) card = null;
-            }
-            throw issue;
-          }
-          return result.token; } });
-      flow.period = selectedPeriod;
-      update();
-      await refresh();
-      if (flow.access.checkout.state === 'available' && flow.access.access_state !== 'paid' &&
-          (cardStepReady() || flow.access.purchase_recovery?.restart_allowed)) await quote(flow.period);
+      await acceptSignIn(await api('/api/accounts/login/', 'POST', { email: $('email').value.trim(), password }), scope);
     } finally { password = ''; }
   }); });
   for (const period of ['monthly', 'yearly']) if ($(period)) $(period).onclick = () => {
@@ -382,10 +394,10 @@ function attachPage() {
     if (!$('consent').checked) throw new BeforePayment('consent_required');
     await flow.purchase(takePassword('purchase-password'), contact()); await refresh();
   });
-  $('check').onclick = () => perform(async () => { await refresh(); if (flow.sourceAllowed && (!flow.quote || !card)) await quote(flow.period); });
+  $('check').onclick = () => perform(async () => { await refresh(); if (!manageOnly && flow.sourceAllowed && (!flow.quote || !card)) await quote(flow.period); });
   $('retry-access').onclick = () => perform(async () => {
     await refresh();
-    if (flow.access.checkout.state === 'available' && (flow.access.access_state === 'unpaid' || flow.sourceAllowed)) await quote(flow.period);
+    if (!manageOnly && flow.access.checkout.state === 'available' && (flow.access.access_state === 'unpaid' || flow.sourceAllowed)) await quote(flow.period);
   });
   $('recover').onclick = () => perform(async () => { await flow.recover(takePassword('purchase-password')); await refresh(); });
   $('setup').onclick = () => perform(async () => { await flow.recover(takePassword('manage-password')); await refresh(); });
@@ -400,18 +412,47 @@ function attachPage() {
     await flow.stopRenewals(takePassword('manage-password'));
     message('Future renewals are stopped. Already-paid access keeps its original end.');
   });
-  function clear() {
+  function clear({ silent = false } = {}) {
+    handoffModule?.revokeHandoff(access);
+    handoffPending = false;
     generation++; access = ''; signedInEmail = ''; flow = null; busy = false;
     $('card-container').replaceChildren(); cardMount = null;
     for (const input of document.querySelectorAll('input, select')) { if (input.type === 'checkbox') input.checked = false;
       else input.value = input.id === 'country' ? 'US' : ''; }
     destroyCard(card);
     card = null; $('terms').textContent = ''; $('manage-plan').open = false;
-    selectedPeriod = requestedPeriod || 'monthly'; planChosen = Boolean(requestedPeriod);
-    message('Signed out of this page. Your app session is unchanged.'); update();
+    selectedPeriod = requestedPeriod || 'monthly'; planChosen = manageOnly || Boolean(requestedPeriod);
+    message(silent ? '' : 'Signed out of this page. Your app session is unchanged.'); update();
   }
-  $('sign-out').onclick = clear;
-  window.addEventListener('pagehide', clear);
+  $('sign-out').onclick = () => clear();
+  window.addEventListener('pagehide', () => clear({ silent: true }));
+  async function bootstrapHandoff() {
+    const fragment = location.hash;
+    if (!fragment || fragment === '#main') return;
+    // Remove the capability before importing helpers or contacting any API/SDK.
+    history.replaceState(null, '', location.pathname + location.search);
+    clear({ silent: true });
+    handoffPending = true; update();
+    const scope = generation;
+    await perform(async () => {
+      let code = '';
+      try {
+        const helper = await import('./checkout_handoff.js');
+        if (scope !== generation) return;
+        handoffModule = helper;
+        code = helper.parseHandoff(fragment);
+        const result = await helper.redeemHandoff(code, { fetcher: fetch, runtime,
+          expectedPlan: requestedPeriod, expectedPurpose: manageOnly ? 'manage' : 'purchase' });
+        if (scope !== generation) return;
+        await acceptSignIn({ access: result.checkout_token, user: result.parent }, scope);
+      } catch (_) {
+        if (scope !== generation) return;
+        handoffModule?.revokeHandoff(access); access = ''; flow = null; signedInEmail = '';
+        message('Open checkout again from the app.');
+      } finally { code = ''; if (scope === generation) handoffPending = false; }
+    });
+  }
+  window.addEventListener('hashchange', () => { void bootstrapHandoff(); });
   const countryCodes = 'AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS YE YT ZA ZM ZW'.split(' ');
   const countryNames = new Intl.DisplayNames(['en'], { type: 'region' });
   const options = [...new Set(countryCodes)].map((code) => ({ code, name: countryNames.of(code) }));
@@ -422,11 +463,14 @@ function attachPage() {
   }
   $('country').value = 'US';
   if (location.protocol !== 'https:' || !window.isSecureContext || location.origin !== runtime.origin ||
-      runtime.environment !== 'sandbox' || !runtime.application_id.startsWith('sandbox-')) {
+      !['sandbox', 'production'].includes(runtime.environment) ||
+      (!manageOnly && !(runtime.environment === 'sandbox' ? /^sandbox-[A-Za-z0-9_-]{8,160}$/.test(runtime.application_id) :
+        /^sq0id[pb]-[A-Za-z0-9_-]{8,160}$/.test(runtime.application_id)))) {
     message('Secure parent checkout is not configured for this address.');
     document.querySelectorAll('button').forEach((button) => { button.disabled = true; });
     return;
   }
   update();
+  if (handoffPending) void bootstrapHandoff();
 }
 if (typeof document !== 'undefined') attachPage();

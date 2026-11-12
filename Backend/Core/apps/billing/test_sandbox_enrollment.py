@@ -64,11 +64,11 @@ class SandboxEnrollmentTests(TestCase):
         self.assertFalse(SquareCheckoutIntent.objects.exists())
         self.assertEqual(client.get('/api/accounts/me/').status_code, 200)
 
-    def test_routing_is_parent_scoped_sandbox_only_and_unlisted_status_has_no_queries(self):
+    def test_routing_is_parent_scoped_and_unlisted_status_queries_only_owned_management(self):
         allowed = parent_content_access(self.parent)
         self.assertTrue(allowed['parent_plan_routing_enabled'])
         self.assertEqual(allowed['checkout']['state'], 'available')
-        with self.assertNumQueries(0):
+        with self.assertNumQueries(1):
             denied = parent_content_access(self.other)
         self.assertEqual(denied['access_state'], 'unknown')
         self.assertEqual(denied['reason_code'], 'not_enrolled')
@@ -132,6 +132,13 @@ class SandboxEnrollmentTests(TestCase):
         client = APIClient(HTTP_HOST='checkout.example.test'); client.force_authenticate(self.parent)
         with override_settings(SQUARE_SANDBOX_TEST_PARENT_IDS=''), patch(
                 'apps.billing.views.configured_client', side_effect=AssertionError('Cancel provider call')):
+            status = parent_content_access(self.parent)
+            self.assertEqual(status['access_state'], 'unknown')
+            self.assertEqual(status['checkout']['state'], 'unavailable')
+            self.assertEqual(status['checkout']['management_state'], 'available')
+            self.assertIsNone(status['purchase_recovery'])
+            self.assertEqual(status['management_recovery']['intent_id'], str(intent.pk))
+            self.assertFalse(status['management_recovery']['source_allowed'])
             self.assertEqual(client.get(self.base+str(intent.pk)+'/').status_code, 200)
             response = client.post(self.base+str(intent.pk)+'/cancel/', {'password': PASSWORD}, format='json')
             self.assertEqual(response.status_code, 200)

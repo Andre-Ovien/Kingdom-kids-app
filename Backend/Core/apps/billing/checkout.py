@@ -11,7 +11,8 @@ from django.utils import timezone
 from django.views.decorators.debug import sensitive_variables
 
 from .client import SquareClientError
-from .configuration import checkout_configuration, configured_client, provider_identifier
+from .configuration import (checkout_configuration, configured_client, provider_identifier,
+                            require_payment_parent, require_checkout_enabled, payment_environment)
 from .models import SquareCheckoutIntent
 from .plans import POLICY_SHA256, confirmed_content_plan
 from .term_plans import content_term_plan, term_plan_for_policy
@@ -61,12 +62,12 @@ def _check_parent(parent, password):
 
 @sensitive_variables()
 def reserve_checkout(*, parent, password, disclosure_version, accepted, mode='direct',
-                     billing_timezone='', disclosure_sha256='', billing_period='monthly'):
-    from .configuration import require_sandbox_test_parent
-    require_sandbox_test_parent(parent)
+                     billing_timezone='', disclosure_sha256='', billing_period='monthly', environment='sandbox'):
+    require_payment_parent(parent, environment=environment)
+    require_checkout_enabled(environment=environment)
     if mode != 'payments':
         raise CheckoutRejected('Historical automatic-subscription checkout is retired and read-only.')
-    config = checkout_configuration(terms=True)
+    config = checkout_configuration(terms=True, environment=environment)
     plan = content_term_plan(billing_period) if mode == 'payments' else confirmed_content_plan()
     policy_sha = plan.policy_sha256 if mode == 'payments' else POLICY_SHA256
     if mode not in {'direct', 'hosted', 'payments'}:
@@ -76,19 +77,21 @@ def reserve_checkout(*, parent, password, disclosure_version, accepted, mode='di
         expected_version = plan.disclosure_version
     if accepted is not True or disclosure_version != expected_version:
         raise CheckoutRejected('Accept the current billing disclosure before continuing.')
-    digest = fingerprint({'policy': policy_sha, 'merchant': config.provider.merchant_id,
+    request = {'policy': policy_sha, 'merchant': config.provider.merchant_id,
                           'location': config.location_id, 'variation': config.variation_id, 'mode': mode,
-                          'billing_timezone': billing_timezone, 'disclosure_sha256': disclosure_sha256})
+                          'billing_timezone': billing_timezone, 'disclosure_sha256': disclosure_sha256}
+    if environment == 'production': request['environment'] = environment
+    digest = fingerprint(request)
     with transaction.atomic():
         locked_parent = type(parent).objects.select_for_update().get(pk=parent.pk)
         _check_parent(locked_parent, password)
-        existing_query = SquareCheckoutIntent.objects.filter(parent=locked_parent, is_open=True)
+        existing_query = SquareCheckoutIntent.objects.filter(parent=locked_parent, is_open=True, environment=environment)
         existing = (existing_query.filter(checkout_mode='payments').first() if mode == 'payments'
             else existing_query.filter(policy_id=plan.policy_id).first())
         if existing:
             from .models import SquareContentAgreement
             from django.db.models import Q, Max
-            agreement = SquareContentAgreement.objects.select_for_update().filter(intent_reference=existing.pk).first()
+            agreement = SquareContentAgreement.objects.select_for_update().filter(intent_reference=existing.pk, environment=environment).first()
             if agreement and not agreement.renewals_enabled and term_plan_for_policy(existing.policy_id).purchasable:
                 now = timezone.now()
                 paid_end = agreement.terms.filter(captured_at__isnull=False).aggregate(end=Max('valid_until'))['end']
@@ -106,16 +109,17 @@ def reserve_checkout(*, parent, password, disclosure_version, accepted, mode='di
                 raise CheckoutConflict('An existing purchase requires reconciliation before another checkout.')
             if mode == 'payments':
                 from .models import SquareContentAgreement
-                if not SquareContentAgreement.objects.filter(intent_reference=existing.pk).exists():
+                if not SquareContentAgreement.objects.filter(intent_reference=existing.pk, environment=environment).exists():
                     existing.consented_at, existing.reauthenticated_at = timezone.now(), timezone.now()
                     existing.save(update_fields=('consented_at', 'reauthenticated_at', 'updated_at'))
             return existing
         now = timezone.now()
         from .permissions import verified_paid_coverage_until
-        if any(verified_paid_coverage_until(locked_parent,environment=environment,at=now) is not None
-                for environment in ('sandbox','production')):
+        proof_environments = ('sandbox', 'production') if environment == 'sandbox' else ('production',)
+        if any(verified_paid_coverage_until(locked_parent,environment=proof_env,at=now) is not None
+                for proof_env in proof_environments):
             raise CheckoutConflict('Existing verified paid coverage must end before another purchase.')
-        return SquareCheckoutIntent.objects.create(parent=locked_parent,
+        return SquareCheckoutIntent.objects.create(parent=locked_parent, environment=environment,
             merchant_id=config.provider.merchant_id, location_id=config.location_id,
             variation_id=config.variation_id, policy_id=plan.policy_id, policy_sha256=policy_sha,
             disclosure_version=disclosure_version, disclosure_sha256=disclosure_sha256,
@@ -124,15 +128,15 @@ def reserve_checkout(*, parent, password, disclosure_version, accepted, mode='di
 
 
 @sensitive_variables()
-def acquire_intent(*, parent, intent_id, password=None, reconciliation=False, terms=False):
-    config = checkout_configuration(reconciliation=reconciliation, terms=terms)
+def acquire_intent(*, parent, intent_id, password=None, reconciliation=False, terms=False, environment='sandbox'):
+    config = checkout_configuration(reconciliation=reconciliation, terms=terms, environment=environment)
     with transaction.atomic():
         locked_parent = type(parent).objects.select_for_update().get(pk=parent.pk)
         if password is not None:
             _check_parent(locked_parent, password)
         elif not locked_parent.is_active or not locked_parent.email_verified_at:
             raise CheckoutRejected('A verified active parent is required.')
-        intent = SquareCheckoutIntent.objects.select_for_update().get(pk=intent_id, parent=locked_parent)
+        intent = SquareCheckoutIntent.objects.select_for_update().get(pk=intent_id, parent=locked_parent, environment=environment)
         policy_sha = term_plan_for_policy(intent.policy_id).policy_sha256 if terms else POLICY_SHA256
         if (intent.merchant_id != config.provider.merchant_id or intent.location_id != config.location_id
                 or intent.variation_id != config.variation_id or intent.policy_sha256 != policy_sha):
@@ -150,7 +154,7 @@ def acquire_intent(*, parent, intent_id, password=None, reconciliation=False, te
 def checkpoint(intent, **changes):
     """A delayed worker cannot apply results after a newer worker owns lease."""
     with transaction.atomic():
-        current = SquareCheckoutIntent.objects.select_for_update().get(pk=intent.pk)
+        current = SquareCheckoutIntent.objects.select_for_update().get(pk=intent.pk, environment=intent.environment)
         if (current.processing_lease != intent.processing_lease or not current.lease_until
                 or current.lease_until <= timezone.now()):
             raise CheckoutBusy('Checkout ownership changed; retry reconciliation.')
@@ -281,17 +285,22 @@ def checkout_status(intent):
         from .models import SquareContentAgreement, ParentContentEntitlement
         from .plans import ALL_CONTENT_FEATURE
         from django.db.models import Q
-        agreement = SquareContentAgreement.objects.filter(intent_reference=intent.pk, parent_id=intent.parent_id).first()
+        agreement = SquareContentAgreement.objects.filter(intent_reference=intent.pk, parent_id=intent.parent_id,
+            environment=intent.environment).first()
         from django.db.models.functions import Coalesce
-        term = agreement.terms.order_by(Coalesce('request_not_before','valid_from','created_at').desc(),
+        term = agreement.terms.filter(environment=intent.environment).order_by(Coalesce('request_not_before','valid_from','created_at').desc(),
             '-created_at','-pk').first() if agreement else None
         now = timezone.now()
         paid = ParentContentEntitlement.objects.filter(parent_id=intent.parent_id, provider='square',
-            environment='sandbox', provider_account_id=intent.merchant_id, feature_code=ALL_CONTENT_FEATURE,
+            environment=intent.environment, provider_account_id=intent.merchant_id, feature_code=ALL_CONTENT_FEATURE,
             source_reference__startswith='square-term:', payment_verified_at__lte=now,
             valid_from__lte=now, valid_until__gt=now).filter(Q(revoked_at__isnull=True) | Q(revoked_at__gt=now)).exists()
+        if intent.environment == 'production':
+            from .permissions import verified_paid_coverage_until
+            paid = bool(intent.parent_id and verified_paid_coverage_until(intent.parent, environment='production', at=now))
         plan = term_plan_for_policy(intent.policy_id)
-        terms = (term_disclosure(intent.billing_timezone,billing_period=plan.billing_period) if plan.purchasable else
+        terms = (term_disclosure(intent.billing_timezone,billing_period=plan.billing_period,
+            environment=intent.environment) if plan.purchasable else
             {'policy_id':intent.policy_id,'policy_sha256':intent.policy_sha256,'disclosure_version':intent.disclosure_version,
              'disclosure_sha256':intent.disclosure_sha256,'amount_minor':plan.amount_minor,'currency':'USD',
              'cadence':plan.cadence,'billing_period':plan.billing_period,'purchasable':False,

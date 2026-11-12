@@ -159,3 +159,38 @@ test('unknown payment cannot use restart or create a new nonce', async () => {
   await assert.rejects(flow.restart('synthetic-password'));
   assert.equal(calls.length, 0); assert.equal(count(), 0);
 });
+
+test('production quotes/access require the same explicit runtime environment', async () => {
+  const q = { ...quote(), environment: 'production' };
+  const a = { ...access(), environment: 'production' };
+  assert.equal(validQuote(q, 'monthly'), false);
+  assert.equal(validQuote(q, 'monthly', 'production'), true);
+  assert.equal(validAccess(a, parent), false);
+  assert.equal(validAccess(a, parent, 'production'), true);
+  const calls = [];
+  const flow = new PurchaseFlow({ parent, environment: 'production', tokenize: async () => 'cnon:fake-production',
+    api: async (path, method, body) => { calls.push({path,method,body});
+      if(path === '/api/billing/content-access/') return a;
+      if(path === basePath()) return {id,terms:q,current_term:null};
+      return {}; } });
+  function basePath() { return '/api/billing/square/checkout-intents/'; }
+  flow.setQuote(q,'monthly'); await flow.readAccess(); await flow.purchase('synthetic-password',{});
+  assert.equal(calls.filter((r)=>r.path.endsWith('/confirm/')).length,1);
+  assert.equal(calls.find((r)=>r.path.endsWith('/confirm/')).body.charge_source_id,'cnon:fake-production');
+  assert.throws(()=>flow.setQuote(quote(),'monthly'));
+});
+
+test('manage purpose permits only explicit read recovery/cancel and never quote/source/restart', async () => {
+  const calls = []; let tokens = 0;
+  const a={...access(),checkout:{state:'unavailable',management_state:'available'},purchase_recovery:null,management_recovery:{
+    intent_id:id,billing_period:'monthly',source_allowed:false,restart_allowed:true,renewals_enabled:true}};
+  const flow=new PurchaseFlow({parent,purpose:'manage',tokenize:async()=>{tokens++;return 'cnon:forbidden';},
+    api:async(path,method,body)=>{calls.push({path,method,body});return path==='/api/billing/content-access/'?a:{};}});
+  await flow.readAccess();
+  assert.throws(()=>flow.setQuote(quote(),'monthly'));
+  await assert.rejects(flow.purchase('synthetic-password',{}));await assert.rejects(flow.restart('synthetic-password'));
+  assert.equal(tokens,0);assert.equal(calls.length,1);
+  await flow.recover('synthetic-password');await flow.stopRenewals('synthetic-password');
+  assert.deepEqual(calls.filter((r)=>r.method==='POST').map((r)=>r.body),[
+    {password:'synthetic-password'},{password:'synthetic-password'}]);
+});

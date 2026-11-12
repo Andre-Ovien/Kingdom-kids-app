@@ -1,5 +1,7 @@
 """Read-only parent access discovery, independent of the paid rollout bypass."""
 from django.conf import settings
+from apps.accounts.authentication import VerifiedEmailJWTAuthentication
+from .checkout_auth import CheckoutSessionAuthentication
 from django.db import DatabaseError
 from django.utils import timezone
 from django.utils.cache import patch_vary_headers
@@ -11,7 +13,7 @@ from rest_framework.views import APIView
 
 from .models import SquareBillingTerm, SquareCheckoutIntent
 from .permissions import verified_paid_coverage_until
-from .configuration import sandbox_parent_allowed
+from .configuration import sandbox_parent_allowed, active_billing_environment, SquareConfigurationError
 
 
 def _base(parent, now):
@@ -22,14 +24,16 @@ def _base(parent, now):
             'access_until': None, 'reason_code': 'not_qualified',
             'content_enforcement_enabled': settings.PAID_CONTENT_ENFORCEMENT_ENABLED is True,
             'parent_plan_routing_enabled': False,
-            'checkout': {'state': 'unavailable', 'reason_code': 'not_configured'},
-            'purchase_recovery': None}
+            'checkout': {'state': 'unavailable', 'reason_code': 'not_configured',
+                         'management_state': 'unavailable', 'management_reason_code': 'not_qualified',
+                         'handoff_available': False, 'management_handoff_available': False},
+            'purchase_recovery': None, 'management_recovery': None}
 
 
-def _owned_recovery(parent):
+def _owned_recovery(parent, *, environment='sandbox'):
     """Never create/reconcile a purchase while discovering existing work."""
     from .term_plans import term_plan_for_policy
-    intents = list(SquareCheckoutIntent.objects.filter(parent=parent, is_open=True)
+    intents = list(SquareCheckoutIntent.objects.filter(parent=parent, is_open=True, environment=environment)
                    .only('id', 'policy_id', 'state', 'checkout_mode', 'processing_lease').order_by('-created_at')[:2])
     if not intents:
         return None
@@ -40,7 +44,7 @@ def _owned_recovery(parent):
         plan = term_plan_for_policy(intent.policy_id)
     except ValueError:
         return {'state': 'review_required', 'source_allowed': False, 'requires_review': True}
-    term = (SquareBillingTerm.objects.filter(agreement__parent=parent,
+    term = (SquareBillingTerm.objects.filter(environment=environment, agreement__environment=environment, agreement__parent=parent,
             agreement__intent_reference=intent.pk).select_related('agreement').order_by('-created_at').first())
     source_allowed = (term is None and intent.checkout_mode == 'payments'
                       and intent.state == 'reserved' and plan.purchasable
@@ -75,17 +79,20 @@ def parent_content_access(parent, *, at=None):
     if environment == 'sandbox' and not sandbox_parent_allowed(parent):
         result['reason_code'] = 'not_enrolled'
         result['checkout']['reason_code'] = 'not_enrolled'
+        try:
+            from .parent_checkout_web import checkout_capability
+            result['checkout'] = checkout_capability(parent)
+            result['management_recovery'] = result['checkout'].pop('management_recovery', None)
+        except (DatabaseError, ValueError, SquareConfigurationError):
+            result['checkout'].update(management_state='unknown', management_reason_code='temporarily_unavailable')
         return result
     try:
         end = verified_paid_coverage_until(parent, environment=environment, at=now)
         if end is not None:
             result.update(access_state='paid', access_until=end.isoformat(), reason_code='active_proof')
-        # These preparatory Square tables are Sandbox only. Do not let Sandbox
-        # attempts change production access discovery or leak their references.
-        if environment == 'sandbox':
-            result['purchase_recovery'] = _owned_recovery(parent)
-            if result['access_state'] == 'paid' and result['purchase_recovery']:
-                result['purchase_recovery']['restart_allowed'] = False
+        result['purchase_recovery'] = _owned_recovery(parent, environment=environment)
+        if result['access_state'] == 'paid' and result['purchase_recovery']:
+            result['purchase_recovery']['restart_allowed'] = False
         if result['access_state'] != 'paid':
             if (result['purchase_recovery'] is not None
                     and result['purchase_recovery']['requires_review']):
@@ -94,15 +101,20 @@ def parent_content_access(parent, *, at=None):
                 result.update(access_state='unpaid', reason_code='no_active_proof')
         from .parent_checkout_web import checkout_capability
         result['checkout'] = checkout_capability(parent)
-        result['parent_plan_routing_enabled'] = bool(environment == 'sandbox'
-            and result['checkout']['state'] == 'available')
-    except (DatabaseError, ValueError):
+        result['management_recovery'] = result['checkout'].pop('management_recovery', None)
+        result['parent_plan_routing_enabled'] = bool(
+            (environment == 'sandbox' and result['checkout']['state'] == 'available')
+            or (environment == 'production' and active_billing_environment() == 'production'
+                and settings.PAID_CONTENT_ENFORCEMENT_ENABLED is True))
+    except (DatabaseError, ValueError, SquareConfigurationError):
         result = _base(parent, now)
         result['reason_code'] = 'temporarily_unavailable'
+        result['checkout'].update(management_state='unknown', management_reason_code='temporarily_unavailable')
     return result
 
 
 class ParentContentAccessView(APIView):
+    authentication_classes = (CheckoutSessionAuthentication, VerifiedEmailJWTAuthentication)
     permission_classes = (IsAuthenticated,)
     throttle_classes = (ScopedRateThrottle, UserRateThrottle)
     throttle_scope = 'billing_status'

@@ -1,4 +1,4 @@
-"""Disabled-by-default, sandbox-only backend configuration."""
+"""Explicit environment-bound configuration; production activation defaults off."""
 from dataclasses import dataclass, field
 from datetime import date
 import re
@@ -14,6 +14,56 @@ class SquareDisabled(Exception):
 
 class SquareConfigurationError(Exception):
     pass
+
+
+def payment_environment(environment):
+    if environment not in {'sandbox', 'production'}:
+        raise SquareConfigurationError('A known payment environment is required.')
+    return environment
+
+
+def active_billing_environment():
+    """Server configuration only; never a request/query/body selector."""
+    return payment_environment(getattr(settings, 'SQUARE_ENVIRONMENT', 'sandbox'))
+
+
+def environment_prefix(environment):
+    return 'SQUARE_' + payment_environment(environment).upper()
+
+
+def parent_allowed(parent, *, environment='sandbox'):
+    payment_environment(environment)
+    if environment == 'sandbox':
+        return sandbox_parent_allowed(parent)
+    return bool(parent is not None and parent.is_authenticated and parent.is_active and parent.is_email_verified)
+
+
+def require_payment_parent(parent, *, environment='sandbox'):
+    if not parent_allowed(parent, environment=environment):
+        raise SquareDisabled('Payment parent is not eligible in this environment.')
+
+
+def assert_client_environment(client, *, environment='sandbox'):
+    # Historical synthetic clients without a tag are Sandbox only.
+    if getattr(client, 'environment', 'sandbox') != payment_environment(environment):
+        raise SquareConfigurationError('Payment client environment does not match the operation.')
+
+
+def require_production_qualified():
+    if (getattr(settings, 'SQUARE_PRODUCTION_RELEASE_QUALIFIED', False) is not True
+            or getattr(settings, 'PAID_CONTENT_ENFORCEMENT_ENABLED', False) is not True
+            or getattr(settings, 'PARENT_CONTENT_ACCESS_STATUS_ENABLED', False) is not True
+            or getattr(settings, 'PAID_CONTENT_ENTITLEMENT_ENVIRONMENT', '') != 'production'):
+        raise SquareDisabled('Production billing is not explicitly release-qualified.')
+
+
+def require_checkout_enabled(*, environment='sandbox'):
+    if environment == 'production':
+        require_production_qualified()
+        if (getattr(settings, 'SQUARE_PRODUCTION_CHECKOUT_ENABLED', False) is not True
+                or getattr(settings, 'PARENT_CHECKOUT_PRODUCTION_ENABLED', False) is not True):
+            raise SquareDisabled('Production checkout is not explicitly release-qualified.')
+    payment_environment(environment)
 
 
 def sandbox_test_parent_ids():
@@ -58,6 +108,7 @@ class SquareConfiguration:
     timeout_seconds: int
     max_response_bytes: int
     max_webhook_bytes: int
+    environment: str = 'sandbox'
 
 
 @dataclass(frozen=True)
@@ -79,51 +130,59 @@ def provider_identifier(value, maximum=255):
 
 
 @sensitive_variables()
-def checkout_configuration(*, reconciliation=False, terms=False):
-    flag = ('SQUARE_SANDBOX_TERM_BILLING_ENABLED' if terms else
+def checkout_configuration(*, reconciliation=False, terms=False, environment='sandbox'):
+    payment_environment(environment)
+    if environment == 'production' and not terms:
+        raise SquareDisabled('Historical automatic-subscription operations are Sandbox only.')
+    flag = (environment_prefix(environment) + '_TERM_BILLING_ENABLED' if terms else
             'SQUARE_SANDBOX_RECONCILIATION_ENABLED' if reconciliation else 'SQUARE_SANDBOX_CHECKOUT_ENABLED')
     if not getattr(settings, flag, False):
         raise SquareDisabled('Square sandbox checkout or reconciliation is disabled.')
     if not reconciliation and not terms and not getattr(settings, 'SQUARE_SANDBOX_CANCELLATION_ENABLED', False):
         raise SquareConfigurationError('Renewal cancellation must be explicitly configured before checkout.')
-    provider = square_configuration()
+    provider = square_configuration(environment=environment)
     return SquareCheckoutConfiguration(provider=provider,
-        location_id=provider_identifier(settings.SQUARE_SANDBOX_LOCATION_ID, 192),
+        location_id=provider_identifier(getattr(settings, environment_prefix(environment) + '_LOCATION_ID', ''), 192),
         variation_id='' if terms else provider_identifier(settings.SQUARE_SANDBOX_PLAN_VARIATION_ID))
 
 
 @sensitive_variables()
-def configured_client():
-    """Explicit callable injection or separately enabled builtin SANDBOX TLS."""
-    from .client import SquareSandboxClient
-    square_configuration()  # Refuse disabled/production even before constructing a factory.
-    factory = getattr(settings, 'SQUARE_SANDBOX_TRANSPORT_FACTORY', None)
+def configured_client(*, environment='sandbox'):
+    """Explicit fixed-environment client/transport; no credential fallback."""
+    from .client import SquareProductionClient, SquareSandboxClient
+    square_configuration(environment=environment)
+    prefix = environment_prefix(environment)
+    factory = getattr(settings, prefix + '_TRANSPORT_FACTORY', None)
     try:
         if factory is not None:
             if not callable(factory): raise ValueError
             transport = factory()
-        elif getattr(settings, 'SQUARE_SANDBOX_HTTP_TRANSPORT_ENABLED', False) is True:
-            from .http_transport import SandboxTransport
-            transport = SandboxTransport()
+        elif getattr(settings, prefix + '_HTTP_TRANSPORT_ENABLED', False) is True:
+            from .http_transport import ProductionTransport, SandboxTransport
+            transport = ProductionTransport() if environment == 'production' else SandboxTransport()
         else:
             raise ValueError
         if not callable(getattr(transport, 'send', None)):
             raise ValueError
-        return SquareSandboxClient(transport)
+        bound_environment = getattr(transport, 'environment', environment)
+        if isinstance(bound_environment, str) and bound_environment != environment:
+            raise ValueError
+        return (SquareProductionClient if environment == 'production' else SquareSandboxClient)(transport)
     except Exception:
         raise SquareConfigurationError('No valid explicit Square sandbox transport factory is configured.') from None
 
 
 @sensitive_variables()
-def square_configuration(*, webhook=False):
-    if not settings.SQUARE_SANDBOX_ENABLED:
+def square_configuration(*, webhook=False, environment='sandbox'):
+    prefix = environment_prefix(environment)
+    if getattr(settings, prefix + '_ENABLED', False) is not True:
         raise SquareDisabled('Square sandbox is disabled.')
-    if settings.SQUARE_ENVIRONMENT != 'sandbox':
-        raise SquareConfigurationError('Only Square sandbox is supported.')
-    merchant = settings.SQUARE_SANDBOX_MERCHANT_ID
-    token = settings.SQUARE_SANDBOX_ACCESS_TOKEN
-    key = settings.SQUARE_SANDBOX_WEBHOOK_SIGNATURE_KEY
-    url = settings.SQUARE_SANDBOX_WEBHOOK_NOTIFICATION_URL
+    if active_billing_environment() != environment:
+        raise SquareConfigurationError('Payment operation does not match the server environment.')
+    merchant = getattr(settings, prefix + '_MERCHANT_ID', '')
+    token = getattr(settings, prefix + '_ACCESS_TOKEN', '')
+    key = getattr(settings, prefix + '_WEBHOOK_SIGNATURE_KEY', '')
+    url = getattr(settings, prefix + '_WEBHOOK_NOTIFICATION_URL', '')
     version = settings.SQUARE_API_VERSION
     try:
         if (type(settings.SQUARE_HTTP_TIMEOUT_SECONDS) is not int
@@ -151,4 +210,5 @@ def square_configuration(*, webhook=False):
     return SquareConfiguration(merchant_id=merchant, api_version=version,
         access_token=token, signature_key=key, notification_url=url,
         timeout_seconds=settings.SQUARE_HTTP_TIMEOUT_SECONDS,
-        max_response_bytes=1_048_576, max_webhook_bytes=settings.SQUARE_WEBHOOK_MAX_BODY_BYTES)
+        max_response_bytes=1_048_576, max_webhook_bytes=settings.SQUARE_WEBHOOK_MAX_BODY_BYTES,
+        environment=environment)

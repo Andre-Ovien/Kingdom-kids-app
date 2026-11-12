@@ -49,7 +49,7 @@ def reserve_customer_operation(*, parent, operation_id, email_address):
     body = {'email_address': email_address, 'reference_id': str(parent.pk)}
     digest = hashlib.sha256(json.dumps(body, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
     operation, _ = SquareSandboxOperation.objects.get_or_create(
-        parent=parent, merchant_id=config.merchant_id, operation_id=operation_id,
+        environment='sandbox', parent=parent, merchant_id=config.merchant_id, operation_id=operation_id,
         defaults={'kind': 'customer.create', 'request_sha256': digest})
     if operation.kind != 'customer.create' or operation.request_sha256 != digest:
         raise SquareOperationConflict('An operation cannot be reused with different input.')
@@ -64,7 +64,7 @@ def bind_customer_identity(*, parent, customer_id):
     try:
         with transaction.atomic():
             identity, _ = SquareCustomerIdentity.objects.get_or_create(
-                parent=parent, merchant_id=config.merchant_id, defaults={'customer_id': customer_id})
+                environment='sandbox', parent=parent, merchant_id=config.merchant_id, defaults={'customer_id': customer_id})
             if identity.customer_id != customer_id:
                 raise SquareOwnershipError('A sandbox identity is already bound.')
             return identity
@@ -78,11 +78,11 @@ def bind_subscription_identity(*, parent, customer_identity_id, subscription_id)
     subscription_id = _identity(subscription_id)
     with transaction.atomic():
         customer = SquareCustomerIdentity.objects.filter(
-            pk=customer_identity_id, parent=parent, merchant_id=config.merchant_id).first()
+            pk=customer_identity_id, environment='sandbox', parent=parent, merchant_id=config.merchant_id).first()
         if customer is None:
             raise SquareOwnershipError('Sandbox customer not found for this parent.')
         identity, _ = SquareSubscriptionIdentity.objects.get_or_create(
-            subscription_id=subscription_id, defaults={'customer': customer})
+            environment='sandbox', subscription_id=subscription_id, defaults={'customer': customer})
         if identity.customer_id != customer.pk:
             raise SquareOwnershipError('Sandbox subscription belongs to another parent.')
         return identity

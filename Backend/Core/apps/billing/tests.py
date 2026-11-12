@@ -161,9 +161,13 @@ class SandboxWebhookTests(TestCase):
             response = self.post(b'not-json', signed=False)
         self.assertEqual(response.status_code, 404)
         for settings in [{'SQUARE_SANDBOX_WEBHOOK_SIGNATURE_KEY': ''},
-                         {'SQUARE_SANDBOX_WEBHOOK_NOTIFICATION_URL': ''}, {'SQUARE_ENVIRONMENT': 'production'}]:
+                         {'SQUARE_SANDBOX_WEBHOOK_NOTIFICATION_URL': ''}]:
             with override_settings(**settings), self.assertNumQueries(0):
                 self.assertEqual(self.post(b'not-json', signed=False).status_code, 503)
+        # A server explicitly selecting the default-OFF production receiver
+        # cannot fall back to enabled Sandbox webhook credentials.
+        with override_settings(SQUARE_ENVIRONMENT='production'), self.assertNumQueries(0):
+            self.assertEqual(self.post(b'not-json', signed=False).status_code, 404)
         self.assertEqual(SquareWebhookReceipt.objects.count(), 0)
 
     def test_signature_is_checked_before_parse_and_request_host_is_not_used(self):

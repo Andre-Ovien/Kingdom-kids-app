@@ -14,6 +14,7 @@ from .parsing import strict_json
 
 
 SANDBOX_ORIGIN = 'https://connect.squareupsandbox.com'
+PRODUCTION_ORIGIN = 'https://connect.squareup.com'
 
 
 class SquareClientError(Exception):
@@ -36,8 +37,30 @@ class SquareTransport(Protocol):
 
 
 class SquareSandboxClient:
+    environment = 'sandbox'
+    origin = SANDBOX_ORIGIN
     def __init__(self, transport=None):
         self.transport = transport
+
+    def _authorize_operation(self, method, path, payload=None):
+        if self.environment != 'production':
+            return
+        if path.startswith(('/v2/subscriptions', '/v2/online-checkout', '/v2/catalog', '/v2/invoices')):
+            raise SquareDisabled('Historical subscription adapters are Sandbox only.')
+        if method == 'GET':
+            return
+        from django.conf import settings
+        from .configuration import require_checkout_enabled, require_production_qualified
+        require_production_qualified()
+        if getattr(settings, 'SQUARE_PRODUCTION_TERM_BILLING_ENABLED', False) is not True:
+            raise SquareDisabled('Production financial operations are disabled.')
+        if method != 'POST' or path not in {'/v2/payments', '/v2/customers', '/v2/cards'}:
+            raise SquareDisabled('Production operation is outside the reviewed payment adapter.')
+        if path == '/v2/payments' and isinstance(payload, dict) and payload.get('customer_details', {}).get('customer_initiated') is False:
+            if getattr(settings, 'SQUARE_PRODUCTION_RENEWALS_ENABLED', False) is not True:
+                raise SquareDisabled('Production renewal dispatch is disabled.')
+        else:
+            require_checkout_enabled(environment='production')
 
     @sensitive_variables()
     def _request_result(self, method, path, payload=None, query=None):
@@ -46,7 +69,8 @@ class SquareSandboxClient:
         Path arguments are constructed only by the typed methods below. A
         transport is explicitly supplied; no production/default network exists.
         """
-        config = square_configuration()
+        config = square_configuration(environment=self.environment)
+        self._authorize_operation(method, path, payload)
         if self.transport is None:
             raise SquareClientError('No Square sandbox transport is configured; no request was sent.')
         if method not in {'GET', 'POST', 'DELETE'} or not path.startswith('/v2/') or '?' in path or '#' in path:
@@ -55,7 +79,10 @@ class SquareSandboxClient:
             body = json.dumps(payload, separators=(',', ':'), allow_nan=False).encode() if payload is not None else b''
             if len(body) > 65_536:
                 raise ValueError
-            url = SANDBOX_ORIGIN + path
+            bound = getattr(self.transport, 'environment', self.environment)
+            if isinstance(bound, str) and bound != self.environment:
+                raise ValueError
+            url = self.origin + path
             if query:
                 url += '?' + urlencode(query)
             result = self.transport.send(method=method, url=url,
@@ -138,7 +165,7 @@ class SquareSandboxClient:
         is limited to this typed operation; generic request parsing stays strict.
         A timeout or empty response never means success by itself.
         """
-        config = square_configuration()
+        config = square_configuration(environment=self.environment)
         identifier = provider_identifier(identifier)
         customer_id = provider_identifier(customer_id, 192)
         def verify_owner(card):
@@ -276,7 +303,8 @@ class SquareSandboxClient:
 
     @sensitive_variables()
     def create_customer(self, *, email_address, reference_id, idempotency_key):
-        config = square_configuration()
+        config = square_configuration(environment=self.environment)
+        self._authorize_operation('POST', '/v2/customers')
         if self.transport is None:
             raise SquareClientError('No Square sandbox transport is configured; no request was sent.')
         try:
@@ -292,7 +320,10 @@ class SquareSandboxClient:
         body = json.dumps({'email_address': email_address, 'reference_id': reference_id,
                            'idempotency_key': key}, separators=(',', ':')).encode()
         try:
-            result = self.transport.send(method='POST', url=SANDBOX_ORIGIN + '/v2/customers',
+            bound = getattr(self.transport, 'environment', self.environment)
+            if isinstance(bound, str) and bound != self.environment:
+                raise ValueError
+            result = self.transport.send(method='POST', url=self.origin + '/v2/customers',
                 headers={'Authorization': 'Bearer ' + config.access_token,
                          'Square-Version': config.api_version, 'Content-Type': 'application/json',
                          'Accept': 'application/json'}, body=body,
@@ -302,6 +333,8 @@ class SquareSandboxClient:
                 raise ValueError
             payload = strict_json(result.body)
             if not isinstance(payload, dict) or not isinstance(payload.get('customer'), dict):
+                raise ValueError
+            if self.environment == 'production' and payload['customer'].get('reference_id') != reference_id:
                 raise ValueError
             customer_id = payload['customer'].get('id')
             if not isinstance(customer_id, str) or not 1 <= len(customer_id) <= 192:
@@ -314,3 +347,9 @@ class SquareSandboxClient:
             # Never surface a bearer token, raw provider error/body or PII.
             # A timeout is ambiguous: retry only the SAME stored operation key.
             raise SquareClientError('Square sandbox request failed or its result is uncertain.') from None
+
+
+class SquareProductionClient(SquareSandboxClient):
+    """Same reviewed protocol with an immutable, separate production endpoint."""
+    environment = 'production'
+    origin = PRODUCTION_ORIGIN

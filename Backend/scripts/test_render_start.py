@@ -46,6 +46,44 @@ def sandbox_environment():
     return values
 
 
+def production_environment():
+    """Synthetic plausible configuration only; not an approved/provisioned host."""
+    values = environment()
+    host = 'kingdom-kids-release-fixture.onrender.com'
+    origin = 'https://' + host
+    release = json.loads(startup.PRIVATE_MEDIA_MAP.read_text())
+    values.update(RENDER_PRODUCTION_CHECKOUT_QUALIFICATION_ENABLED='true',
+        RENDER_PRODUCTION_OPERATIONS_QUALIFIED='true', RENDER_EXTERNAL_HOSTNAME=host,
+        RENDER_PRODUCTION_APPROVED_ORIGIN=origin, PARENT_CHECKOUT_ORIGIN=origin,
+        SQUARE_ENVIRONMENT='production', PAID_CONTENT_ENTITLEMENT_ENVIRONMENT='production',
+        DJANGO_TRUST_X_FORWARDED_PROTO='true', DJANGO_API_NUM_PROXIES='1',
+        SQUARE_API_VERSION='2026-09-16', SQUARE_PRODUCTION_APPLICATION_ID='sq0idp-production-fixture-app',
+        SQUARE_PRODUCTION_ACCESS_TOKEN='synthetic-production-provider-token',
+        SQUARE_PRODUCTION_MERCHANT_ID='production-merchant-fixture',
+        SQUARE_PRODUCTION_LOCATION_ID='production-location-fixture',
+        SQUARE_PRODUCTION_WEBHOOK_SIGNATURE_KEY='synthetic-production-webhook-secret',
+        SQUARE_PRODUCTION_WEBHOOK_NOTIFICATION_URL=origin + '/api/billing/square/webhook/',
+        DJANGO_EMAIL_BACKEND='Core.resend_backend.EmailBackend',
+        DJANGO_DEFAULT_FROM_EMAIL='Kingdom Kids <support@notify.kingdom.test>',
+        RESEND_VERIFIED_DOMAIN='notify.kingdom.test', RESEND_API_KEY='re_synthetic-not-a-real-secret',
+        CLOUDINARY_CLOUD_NAME=release['cloud_name'], CLOUDINARY_API_KEY='1234567890',
+        CLOUDINARY_API_SECRET='synthetic-private-secret-not-a-real-account',
+        CLOUDINARY_PRIVATE_MEDIA_MAP_SHA256=startup.PRIVATE_MEDIA_MAP_SHA256,
+        CLOUDINARY_PRIVATE_URL_TTL_SECONDS='300', DJANGO_CONTENT_MEDIA_HOSTS='api.cloudinary.com')
+    values.update({flag: 'true' for flag in startup.PRODUCTION_QUALIFICATION_FLAGS})
+    return values
+
+
+def custom_production_environment():
+    values = production_environment()
+    host, origin = startup.SANDBOX_QUALIFICATION_HOST, startup.PRODUCTION_CUSTOM_ORIGIN
+    values.update(RENDER_EXTERNAL_HOSTNAME=host, RENDER_PRODUCTION_APPROVED_ORIGIN=origin,
+        RENDER_PRODUCTION_CUSTOM_DOMAIN_VERIFIED='true', PARENT_CHECKOUT_ORIGIN=origin,
+        DJANGO_ALLOWED_HOSTS=host + ',' + startup.PRODUCTION_CUSTOM_HOST,
+        SQUARE_PRODUCTION_WEBHOOK_NOTIFICATION_URL=origin + '/api/billing/square/webhook/')
+    return values
+
+
 class RenderStartupTests(unittest.TestCase):
     def lookup_fixture(self, **changes):
         data = dict(pk=41, is_active=True, email_verified_at=object(), is_staff=False,
@@ -332,7 +370,7 @@ class RenderStartupTests(unittest.TestCase):
                 self.fail('Must not migrate without ownership')
         connection.__exit__.assert_called_once()
 
-    def run_start(self,fail_migration=False,private_media=False,fail_bootstrap=None,private_family=False,sandbox_checkout=False,parent_lookup=False):
+    def run_start(self,fail_migration=False,private_media=False,fail_bootstrap=None,private_family=False,sandbox_checkout=False,parent_lookup=False,production_checkout=False):
         events=[]
         _, lookup_model, _ = self.lookup_fixture()
         lookup_query = lookup_model.objects.filter.return_value
@@ -363,6 +401,8 @@ class RenderStartupTests(unittest.TestCase):
             values=self.private_environment() if private_media else environment()
             if sandbox_checkout:
                 values.update(sandbox_environment())
+            if production_checkout:
+                values.update(production_environment())
             if parent_lookup:
                 values['KK_SANDBOX_TEST_PARENT_LOOKUP_EMAIL']='private-parent@example.test'
             if private_family:
@@ -430,6 +470,172 @@ class RenderStartupTests(unittest.TestCase):
             with self.subTest(name=name):
                 events=self.run_start(private_media=True,fail_bootstrap=name)
                 self.assertFalse(any(isinstance(event,tuple) for event in events))
+
+
+class ProductionRenderStartupTests(unittest.TestCase):
+    def test_only_pinned_verified_custom_origin_can_reuse_platform_handle(self):
+        values = custom_production_environment()
+        expected_hosts = values['DJANGO_ALLOWED_HOSTS']
+        self.assertEqual(startup.prepare_environment(values), '10000')
+        self.assertEqual(values['DJANGO_ALLOWED_HOSTS'], expected_hosts)
+        for name, value in (
+            ('RENDER_PRODUCTION_CUSTOM_DOMAIN_VERIFIED', 'false'),
+            ('RENDER_PRODUCTION_CUSTOM_DOMAIN_VERIFIED', '1'),
+            ('RENDER_PRODUCTION_APPROVED_ORIGIN', 'https://other.kingdom-kids.app'),
+            ('PARENT_CHECKOUT_ORIGIN', 'https://' + startup.SANDBOX_QUALIFICATION_HOST),
+            ('SQUARE_PRODUCTION_WEBHOOK_NOTIFICATION_URL', 'https://' + startup.SANDBOX_QUALIFICATION_HOST + '/api/billing/square/webhook/'),
+            ('DJANGO_ALLOWED_HOSTS', startup.SANDBOX_QUALIFICATION_HOST),
+            ('DJANGO_ALLOWED_HOSTS', startup.PRODUCTION_CUSTOM_HOST),
+            ('DJANGO_ALLOWED_HOSTS', expected_hosts + ',attacker.example'),
+            ('DJANGO_ALLOWED_HOSTS', expected_hosts + ',' + startup.PRODUCTION_CUSTOM_HOST),
+            ('DJANGO_ALLOWED_HOSTS', '*')):
+            changed = custom_production_environment(); changed[name] = value
+            with self.subTest(name=name, value=value), self.assertRaises(startup.StartupRejected):
+                startup.prepare_environment(changed)
+        draft = custom_production_environment(); draft['RENDER_PRODUCTION_CUSTOM_DOMAIN_VERIFIED'] = 'false'
+        self.assertFalse(startup.production_preflight_report(draft)['local_configuration_valid'])
+        report = startup.production_preflight_report(custom_production_environment())
+        self.assertTrue(report['local_configuration_valid'])
+        self.assertFalse(report['public_release_ready'])
+        self.assertIn('custom_domain_dns_mapping_and_certificate_if_selected', report['runtime_qualification_required'])
+
+    def test_exact_production_contract_passes_local_guards_without_external_imports(self):
+        values = production_environment()
+        with patch.dict(sys.modules, {'django': None, 'psycopg': None, 'http.client': None}):
+            self.assertEqual(startup.prepare_environment(values), '10000')
+        self.assertNotIn('RENDER_DJANGO_SECRET_SEED', values)
+
+    def test_production_flags_require_separate_explicit_qualification(self):
+        for opt_in in (None, 'false', '', 'TRUE', '1'):
+            values = production_environment()
+            if opt_in is None:
+                values.pop('RENDER_PRODUCTION_CHECKOUT_QUALIFICATION_ENABLED')
+            else:
+                values['RENDER_PRODUCTION_CHECKOUT_QUALIFICATION_ENABLED'] = opt_in
+            with self.subTest(opt_in=opt_in), self.assertRaises(startup.StartupRejected):
+                startup.prepare_environment(values)
+        for flag in startup.PRODUCTION_ONLY_FLAGS:
+            values = environment(); values[flag] = 'true'
+            with self.subTest(flag=flag), self.assertRaises(startup.StartupRejected):
+                startup.prepare_environment(values)
+
+    def test_every_required_release_flag_and_operations_gate_is_independent(self):
+        flags = startup.PRODUCTION_QUALIFICATION_FLAGS + ('RENDER_PRODUCTION_OPERATIONS_QUALIFIED',)
+        for flag in flags:
+            for value in ('false', '', None):
+                values = production_environment()
+                if value is None:
+                    values.pop(flag)
+                else:
+                    values[flag] = value
+                with self.subTest(flag=flag, value=value), self.assertRaises(startup.StartupRejected):
+                    startup.prepare_environment(values)
+
+    def test_exact_origin_callback_and_render_proxy_are_required(self):
+        variants = [('RENDER_PRODUCTION_APPROVED_ORIGIN', value) for value in (
+            '', 'http://kingdom-kids-release-fixture.onrender.com',
+            'https://kingdom-kids-release-fixture.onrender.com/',
+            'https://kingdom-kids-release-fixture.onrender.com?query=1',
+            'https://user:private@kingdom-kids-release-fixture.onrender.com',
+            'https://other.onrender.com', 'https://kingdom-kids-release-fixture.onrender.com:444')]
+        variants += [('PARENT_CHECKOUT_ORIGIN', 'https://other.onrender.com'),
+            ('SQUARE_PRODUCTION_WEBHOOK_NOTIFICATION_URL', 'https://other.onrender.com/api/billing/square/webhook/'),
+            ('SQUARE_PRODUCTION_WEBHOOK_NOTIFICATION_URL', 'https://kingdom-kids-release-fixture.onrender.com/api/billing/square/webhook'),
+            ('SQUARE_ENVIRONMENT', 'sandbox'), ('PAID_CONTENT_ENTITLEMENT_ENVIRONMENT', 'sandbox'),
+            ('DJANGO_TRUST_X_FORWARDED_PROTO', 'false'), ('DJANGO_API_NUM_PROXIES', '0'),
+            ('SQUARE_API_VERSION', '2025-01-01')]
+        for name, value in variants:
+            values = production_environment(); values[name] = value
+            with self.subTest(name=name, value=value), self.assertRaises(startup.StartupRejected):
+                startup.prepare_environment(values)
+        for host in (startup.SANDBOX_QUALIFICATION_HOST, 'example.onrender.com', 'your-production.onrender.com',
+                'kingdom-kids-staging.onrender.com', '127.0.0.1', 'localhost', 'private.internal',
+                '*.onrender.com', 'attacker.example', 'a'*64 + '.onrender.com'):
+            values = production_environment(); origin = 'https://' + host
+            values.update(RENDER_EXTERNAL_HOSTNAME=host, RENDER_PRODUCTION_APPROVED_ORIGIN=origin,
+                PARENT_CHECKOUT_ORIGIN=origin,
+                SQUARE_PRODUCTION_WEBHOOK_NOTIFICATION_URL=origin + '/api/billing/square/webhook/')
+            with self.subTest(host=host), self.assertRaises(startup.StartupRejected):
+                startup.prepare_environment(values)
+
+    def test_sandbox_and_private_import_configuration_cannot_enter_production(self):
+        for name in startup.SANDBOX_ONLY_FLAGS + ('RENDER_SANDBOX_CHECKOUT_QUALIFICATION_ENABLED',):
+            values = production_environment(); values[name] = 'true'
+            with self.subTest(name=name), self.assertRaises(startup.StartupRejected):
+                startup.prepare_environment(values)
+        for name in startup.SANDBOX_CONFIGURATION_SLOTS + startup.SANDBOX_IMPORT_SLOTS:
+            values = production_environment(); values[name] = 'synthetic-private-sandbox-value'
+            with self.subTest(name=name), self.assertRaises(startup.StartupRejected) as caught:
+                startup.prepare_environment(values)
+            self.assertNotIn('synthetic-private-sandbox-value', str(caught.exception))
+
+    def test_missing_malformed_or_sandbox_labelled_provider_values_fail_redacted(self):
+        names = ('SQUARE_PRODUCTION_ACCESS_TOKEN', 'SQUARE_PRODUCTION_MERCHANT_ID',
+            'SQUARE_PRODUCTION_LOCATION_ID', 'SQUARE_PRODUCTION_WEBHOOK_SIGNATURE_KEY')
+        for name in names:
+            for value in ('', 'sandbox-private-value', 'private value', '\nprivate-value'):
+                values = production_environment(); values[name] = value
+                with self.subTest(name=name, value=value), self.assertRaises(startup.StartupRejected) as caught:
+                    startup.prepare_environment(values)
+                self.assertNotIn('private-value', str(caught.exception))
+        for value in ('sandbox-synthetic-application', '', 'sq0idp-short'):
+            values = production_environment(); values['SQUARE_PRODUCTION_APPLICATION_ID'] = value
+            with self.subTest(value=value), self.assertRaises(startup.StartupRejected):
+                startup.prepare_environment(values)
+
+    def test_all_original_local_security_guards_still_reject_production(self):
+        variants = [('DJANGO_DEBUG', 'true'), ('RESEND_API_KEY', ''),
+            ('DJANGO_EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend'),
+            ('RENDER_DJANGO_SECRET_SEED', 'private-invalid-seed'), ('DJANGO_ALLOWED_HOSTS', '*'),
+            ('DJANGO_CACHE_URL', 'redis://attacker.example:6379'), ('DJANGO_CACHE_ALLOW_INSECURE', 'false'),
+            ('PORT', '80'), ('CLOUDINARY_PRIVATE_MEDIA_MAP_SHA256', '0'*64)]
+        for name, value in variants:
+            values = production_environment(); values[name] = value
+            with self.subTest(name=name), self.assertRaises(startup.StartupRejected):
+                startup.prepare_environment(values)
+
+    def test_stored_production_credentials_do_not_change_current_sandbox_qualification(self):
+        values = sandbox_environment(); source = production_environment()
+        for name in ('SQUARE_PRODUCTION_ACCESS_TOKEN', 'SQUARE_PRODUCTION_MERCHANT_ID',
+                'SQUARE_PRODUCTION_LOCATION_ID', 'SQUARE_PRODUCTION_APPLICATION_ID',
+                'SQUARE_PRODUCTION_WEBHOOK_SIGNATURE_KEY', 'SQUARE_PRODUCTION_WEBHOOK_NOTIFICATION_URL'):
+            values[name] = source[name]
+        self.assertEqual(startup.prepare_environment(values), '10000')
+        for flag in startup.PRODUCTION_ONLY_FLAGS:
+            changed = sandbox_environment(); changed[flag] = 'true'
+            with self.subTest(flag=flag), self.assertRaises(startup.StartupRejected):
+                startup.prepare_environment(changed)
+
+    def test_production_start_still_checks_migrates_and_bootstraps_before_web_only(self):
+        helper = RenderStartupTests()
+        events = helper.run_start(production_checkout=True)
+        self.assertEqual(events[:8], ['setup', 'check', 'lock', 'migrate', 'install_published_matching_release',
+            'install_private_media_release', 'unlock', 'close_connections'])
+        self.assertEqual(events[8][0], 'gunicorn')
+        self.assertFalse(any(isinstance(value, str) and 'billing_job' in value for value in events))
+        failed = helper.run_start(production_checkout=True, fail_migration=True)
+        self.assertEqual(failed, ['setup', 'check', 'lock', 'migrate'])
+
+    def test_offline_report_is_redacted_nonmutating_and_never_public_release_ready(self):
+        values = production_environment(); original = dict(values)
+        with patch.dict(sys.modules, {'django': None, 'psycopg': None, 'http.client': None}):
+            report = startup.production_preflight_report(values)
+        self.assertEqual(values, original)
+        self.assertTrue(report['local_configuration_valid'])
+        self.assertFalse(report['public_release_ready'])
+        self.assertFalse(report['activation_performed'])
+        self.assertEqual(report['provider_operations'], 0)
+        self.assertEqual(report['database_operations'], 0)
+        self.assertEqual(report['environment_mutations'], 0)
+        for name in ('SQUARE_PRODUCTION_ACCESS_TOKEN', 'SQUARE_PRODUCTION_MERCHANT_ID',
+                'SQUARE_PRODUCTION_LOCATION_ID', 'SQUARE_PRODUCTION_WEBHOOK_SIGNATURE_KEY'):
+            self.assertNotIn(values[name], json.dumps(report))
+        values['RENDER_PRODUCTION_OPERATIONS_QUALIFIED'] = 'false'
+        self.assertFalse(startup.production_preflight_report(values)['local_configuration_valid'])
+        draft = environment()
+        draft['SQUARE_PRODUCTION_ACCESS_TOKEN'] = original['SQUARE_PRODUCTION_ACCESS_TOKEN']
+        self.assertEqual(startup.production_preflight_report(draft)['status'], 'disabled_draft')
+        self.assertFalse(startup.production_preflight_report(draft)['public_release_ready'])
 
 
 if __name__=='__main__':unittest.main()

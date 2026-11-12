@@ -4,10 +4,14 @@ import { createHash } from 'node:crypto';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
 const source = await readFile(new URL('./static/billing/parent_checkout.js', import.meta.url), 'utf8');
+const helperSource = await readFile(new URL('./static/billing/checkout_handoff.js', import.meta.url));
+const handoffModule = await import('data:text/javascript;base64,' + helperSource.toString('base64'));
 const sourceSha = createHash('sha256').update(source).digest('hex');
 const later = () => new Promise((resolve) => setTimeout(resolve, 0));
 const deferred = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return {promise, resolve, reject}; };
 async function fixture(mode) {
+  const handoff = mode.startsWith('handoff_');
+  const manage=mode.startsWith('manage_'), environment=mode==='production_card'?'production':'sandbox';
   const elements = new Map(), staticIds = new Set();
   class Element {
     constructor(id = '') { this._id='';this.id=id;this.value='';this._text='';this.hidden=false;this.disabled=false;
@@ -35,17 +39,19 @@ async function fixture(mode) {
     staticIds.add(id); new Element(id);
   }
   el('consent').type='checkbox';el('country').value='US';
-  el('checkout-runtime').textContent=JSON.stringify({environment:'sandbox',origin:'https://localhost:18443',
-    application_id:'sandbox-synthetic-app',location_id:'synthetic-location',selected_plan:mode==='plan_step'?null:mode==='yearly_card'?'yearly':'monthly'});
+  el('checkout-runtime').textContent=JSON.stringify({environment,purpose:manage?'manage':'purchase',origin:'https://localhost:18443',
+    application_id:manage?'':environment==='production'?'sq0idp-synthetic-app':'sandbox-synthetic-app',location_id:'synthetic-location',selected_plan:mode==='plan_step'?null:mode==='yearly_card'?'yearly':'monthly'});
   const buttons=['monthly','yearly','proceed','pay','restart','recover','check','retry-access','stop-renewals','setup','sign-out','login'];
   const inputs=['consent','login-password','email','purchase-password','manage-password','given-name','family-name','address','city','region','country'];
   const oldAttach=deferred(), oldToken=deferred(), oldAccess=deferred();
+  let quoteCalls=0, cancelCalls=0, redeemCalls=0, historyClears=0;
+  const windowHandlers = {};
   let created=0, loginCount=0, accessReads=0, confirmCalls=0, destroyCalls=0, tokenizations=0, reserveCalls=0, statusCalls=0;
   const frames = () => {
     const found=[]; const visit=(element)=>{ if(element.sdkFrame) found.push(element.sdkFrame); for(const child of element.children) visit(child); };
     visit(el('card-container')); return found;
   };
-  const monthlyQuote={environment:'sandbox',country:'US',purchasable:true,billing_period:'monthly',currency:'USD',amount_minor:999,
+  const monthlyQuote={environment,country:'US',purchasable:true,billing_period:'monthly',currency:'USD',amount_minor:999,
     cadence:'DAYS_30',coverage_rule:'elapsed_days_30',first_renewal_rule:'elapsed_days_30',coverage_start:'canonical_successful_payment_capture',
     first_renewal_at:null,billing_controller:'app_owned_terms',can_prorate:false,free_period:false,billing_timezone:'America/New_York',
     disclosure_version:'synthetic-version',disclosure_sha256:'a'.repeat(64),disclosure:'Synthetic terms',
@@ -56,11 +62,12 @@ async function fixture(mode) {
   const response=(data,status=200)=>{ const raw=new TextEncoder().encode(JSON.stringify(data));let done=false;
     return{status,ok:status===200,headers:{get:()=> 'application/json'},body:{getReader(){return{
       async read(){if(done)return{done:true};done=true;return{done:false,value:raw};},releaseLock(){}};}}}; };
-  const sandbox={ TextDecoder,TextEncoder,Uint8Array,AbortController,setTimeout,clearTimeout,
+  const sandbox={ TextDecoder,TextEncoder,Uint8Array,AbortController,setTimeout,clearTimeout,__handoffModule:handoffModule,
+    history:{replaceState(_state,_title,path){historyClears++;sandbox.location.hash='';assert.equal(path,'/parent/checkout/?plan=monthly');}},
     document:{getElementById:el,visibilityState:'visible',createElement:()=>new Element(),
       querySelectorAll:(selector)=>(selector==='button'?buttons:inputs).map(el)},
-    location:{protocol:'https:',origin:'https://localhost:18443'},
-    window:{isSecureContext:true,addEventListener(){},Square:{payments(){return{async card(){
+    location:{protocol:'https:',origin:'https://localhost:18443',pathname:'/parent/checkout/',search:'?plan=monthly',hash:handoff?'#handoff='+ 'a'.repeat(43):''},
+    window:{isSecureContext:true,addEventListener(name,fn){windowHandlers[name]=fn;},Square:{payments(){return{async card(){
       const id=++created;return{
         async attach(selector) { const mount=el(selector.slice(1)); assert.ok(mount); if(mode==='late_attach'&&id===1) await oldAttach.promise;
           const frame=new Element();frame.sdkFrame=id;mount.appendChild(frame); },
@@ -78,30 +85,42 @@ async function fixture(mode) {
         destroy(){destroyCalls++;return Promise.reject(new Error('Synthetic SDK cleanup failure'));}
       };
     }};}}},
-    fetch:async(path)=>{
+    fetch:async(path,options={})=>{
+      if(path==='/api/billing/checkout-handoffs/redeem/') {
+        redeemCalls++;assert.equal(historyClears,1);assert.equal(sandbox.location.hash,'');
+        assert.equal(options.headers.Authorization,undefined);
+        assert.deepEqual(Object.keys(JSON.parse(options.body)),['code']);
+        const result={schema_version:1,environment,purpose:'purchase',billing_period:mode==='handoff_wrong_plan'?'yearly':'monthly',
+          parent:{id:'41',email:'parent-0@example.test',email_verified:true},checkout_token:'kkco.'+'b'.repeat(60),
+          expires_at:new Date(Date.now()+60000).toISOString()};
+        if(mode==='handoff_late')return oldAccess.promise;
+        return response(result);
+      }
+      if(path==='/api/billing/checkout-handoffs/revoke/')return response({});
       if(path==='/api/accounts/login/') {loginCount++;return response({access:'synthetic-memory-'+loginCount,user:{id:'synthetic-parent-'+loginCount,email:'parent-'+loginCount+'@example.test',email_verified:true}});}
       if(path==='/api/billing/content-access/') {accessReads++; if(mode==='stale_401'&&accessReads===2)return oldAccess.promise;
-        const paid=mode==='paid_parent'||(mode==='payment_success'&&confirmCalls>0);
-        return response({schema_version:1,parent_id:'synthetic-parent-'+loginCount,environment:'sandbox',
-          access_state:paid?'paid':mode==='uncertain_post'&&confirmCalls?'unknown':'unpaid',
-          evaluated_at:'2026-11-12T00:00:00Z',access_until:paid?'2026-12-12T00:00:00Z':null,checkout:{state:'available'},
-          purchase_recovery:paid?{intent_id:'11111111-1111-4111-8111-111111111111',billing_period:serverPeriod,
+        const paid=mode==='paid_parent'||mode==='manage_paid'||(mode==='payment_success'&&confirmCalls>0);
+        return response({schema_version:1,parent_id:handoff?'41':'synthetic-parent-'+loginCount,environment,
+          access_state:paid?'paid':mode==='manage_unknown'||mode==='uncertain_post'&&confirmCalls?'unknown':'unpaid',
+          evaluated_at:'2026-11-12T00:00:00Z',access_until:paid?'2026-12-12T00:00:00Z':null,checkout:{state:manage?'unavailable':'available',management_state:'available'},
+          purchase_recovery:(paid||mode==='manage_unknown')?{intent_id:'11111111-1111-4111-8111-111111111111',billing_period:serverPeriod,
             source_allowed:false,renewals_enabled:true,setup_required:false}:
             mode==='uncertain_post'&&confirmCalls?{intent_id:'11111111-1111-4111-8111-111111111111',
             billing_period:'monthly',source_allowed:true}:null});}
       if(path.startsWith('/api/billing/square/checkout-intents/?billing_period=')) {
-        serverPeriod=path.split('=').at(-1);return response(quoteFor(serverPeriod));}
+        quoteCalls++;serverPeriod=path.split('=').at(-1);return response(quoteFor(serverPeriod));}
       if(path==='/api/billing/square/checkout-intents/') {reserveCalls++;
         if(mode==='before_token_hidden')sandbox.document.visibilityState='hidden';
         if(mode==='before_token_unchecked')el('consent').checked=false;
         return response({id:'11111111-1111-4111-8111-111111111111',terms:quoteFor(serverPeriod),current_term:null});}
       if(path==='/api/billing/square/checkout-intents/11111111-1111-4111-8111-111111111111/') {
         statusCalls++;return response({id:'11111111-1111-4111-8111-111111111111',terms:quoteFor(serverPeriod),current_term:null});}
-      if(path.endsWith('/confirm/')) {confirmCalls++;if(mode==='uncertain_post')throw new Error('private-confirm-reply');return response({});}
+      if(path.endsWith('/cancel/')) {cancelCalls++;return response({renewals_enabled:false});}
+      if(path.endsWith('/confirm/')) {if(manage)assert.deepEqual(Object.keys(JSON.parse(options.body)),['password']);confirmCalls++;if(mode==='uncertain_post')throw new Error('private-confirm-reply');return response({});}
       throw new Error('Unexpected synthetic endpoint');
     }
   };
-  vm.runInNewContext(source.replace(/^export /gm,''),sandbox,{filename:'actual-parent-checkout.js'});
+  vm.runInNewContext(source.replace(/^export /gm,'').replace("import('./checkout_handoff.js')",'Promise.resolve(__handoffModule)'),sandbox,{filename:'actual-parent-checkout.js'});
   const settle=async()=>{await later();await later();};
   const login=async()=>{el('email').value='synthetic@example.test';el('login-password').value='synthetic-password';
     el('login-form').handlers.submit({preventDefault(){}});await settle();};
@@ -114,7 +133,49 @@ async function fixture(mode) {
     assert.equal(el('payment-area').hidden,false);assert.equal(el('plan-step').hidden,true);assert.equal(reserveCalls,0);
     return {plan_and_card_steps_separate:true,yearly_amount_from_quote:true,proceed_does_not_reserve_or_charge:true};
   }
-  await login();assert.equal(created,mode==='paid_parent'?0:1);
+  if(handoff) {
+    await settle();assert.equal(loginCount,0);assert.equal(redeemCalls,1);assert.equal(historyClears,1);
+    assert.equal(reserveCalls,0);assert.equal(confirmCalls,0);
+    if(mode==='handoff_late') {
+      await signout();const before=el('message').textContent;
+      oldAccess.resolve(response({schema_version:1,environment,purpose:'purchase',billing_period:'monthly',
+        parent:{id:'41',email:'parent-0@example.test',email_verified:true},checkout_token:'kkco.'+'b'.repeat(60),
+        expires_at:new Date(Date.now()+60000).toISOString()}));await settle();
+      assert.equal(el('account-identity').hidden,true);assert.equal(el('message').textContent,before);assert.equal(created,0);
+      return {single_use_exchange_without_login:true,late_old_handoff_cannot_sign_parent_back_in:true};
+    }
+    if(mode==='handoff_wrong_plan') {
+      assert.equal(created,0);assert.equal(el('login-form').hidden,false);
+      assert.equal(el('message').textContent,'Open checkout again from the app.');
+      return {mismatched_plan_never_authenticates_or_loads_sdk:true,no_secret_error_text:true};
+    }
+    assert.equal(el('login-form').hidden,true);assert.equal(el('payment-area').hidden,false);
+    assert.equal(el('page-title').textContent,'Complete payment');assert.equal(created,1);assert.equal(quoteCalls,1);
+    assert.ok(el('account-identity').textContent.includes('parent-0@example.test'));
+    assert.equal(sandbox.location.hash,'');
+    return {no_second_signin:true,fragment_cleared_before_exchange:true,correct_parent_card_step:true,no_implicit_payment:true};
+  }
+  await login();assert.equal(created,mode==='paid_parent'||manage?0:1);
+  if(manage) {
+    assert.equal(el('page-title').textContent,'Manage plan');
+    for(const id of ['selected-plan','payment-area','pay','authorization','restart','password-area','recovery'])assert.equal(el(id).hidden,true);
+    assert.equal(el('manage-plan').open,true);
+    el('retry-access').onclick();await settle();el('check').onclick();await settle();
+    assert.equal(quoteCalls,0);assert.equal(reserveCalls,0);assert.equal(tokenizations,0);assert.equal(confirmCalls,0);
+    if(mode==='manage_unknown') {
+      assert.equal(el('setup').hidden,false);assert.equal(el('setup').textContent,'Check existing payment');
+      el('manage-password').value='synthetic-password';el('setup').onclick();await settle();
+      assert.equal(confirmCalls,1);assert.equal(created,0);assert.equal(tokenizations,0);
+    } else assert.equal(el('setup').hidden,true);
+    el('manage-password').value='synthetic-password';el('stop-renewals').onclick();await settle();
+    assert.equal(cancelCalls,1);assert.equal(quoteCalls,0);assert.equal(created,0);
+    return {management_remains_available_without_new_checkout:true,no_sdk_quote_reserve_or_payment:true,explicit_cancel_only:true};
+  }
+  if(mode==='production_card') {
+    assert.equal(el('payment-area').hidden,false);assert.equal(el('pay').textContent,'Pay $9.99');
+    assert.equal(quoteCalls,1);assert.equal(reserveCalls,0);
+    return {production_environment_quote_accepted:true,no_payment_without_explicit_pay:true};
+  }
   assert.equal(el('account-identity').hidden,false);
   assert.ok(el('account-identity').textContent.includes('parent-1@example.test'));
   const pay=async()=>{
@@ -212,6 +273,6 @@ async function fixture(mode) {
 const scenarios={};
 for(const name of ['rejected_destroy','late_attach','late_token','stale_401','sdk_invalid','sdk_thrown_invalid',
   'sdk_configuration','before_token_hidden','before_token_unchecked','after_token_hidden','uncertain_post',
-  'plan_step','paid_parent','yearly_card','payment_success'])scenarios[name]=await fixture(name);
+  'plan_step','paid_parent','yearly_card','payment_success','manage_paid','manage_unknown','production_card','handoff_success','handoff_late','handoff_wrong_plan'])scenarios[name]=await fixture(name);
 const result={source_sha256:sourceSha,fake_dom_sdk_only:true,real_network_requests:0,real_card_data:false,scenarios};
 console.log(JSON.stringify(result));

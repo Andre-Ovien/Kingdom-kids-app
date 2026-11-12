@@ -18,7 +18,8 @@ from django.views.decorators.debug import sensitive_variables
 from .checkout import (CheckoutBusy, CheckoutRejected, acquire_intent, checkpoint, fingerprint,
                        release_intent, subscription_facts, validate_subscription, verify_provider_terms)
 from .client import SquareClientError
-from .configuration import checkout_configuration, configured_client, provider_identifier
+from .configuration import (checkout_configuration, configured_client, provider_identifier,
+                            assert_client_environment, environment_prefix, payment_environment)
 from .models import (ParentContentEntitlement, SquareBillingTerm, SquareCheckoutIntent,
                      SquareInvoiceEvidence, SquareWebhookReceipt)
 
@@ -367,7 +368,7 @@ def reconcile_intent(*, parent, intent_id, client=None, invoice_id=None):
             raise SquareClientError('Canonical subscription changed during reconciliation.')
         with transaction.atomic():
             locked_parent = type(parent).objects.select_for_update().get(pk=parent.pk)
-            current = SquareCheckoutIntent.objects.select_for_update().get(pk=intent.pk, parent=locked_parent)
+            current = SquareCheckoutIntent.objects.select_for_update().get(pk=intent.pk, parent=locked_parent, environment='sandbox')
             if (not locked_parent.is_active or not locked_parent.email_verified_at
                     or current.processing_lease != intent.processing_lease or not current.lease_until
                     or current.lease_until <= timezone.now()):
@@ -379,7 +380,8 @@ def reconcile_intent(*, parent, intent_id, client=None, invoice_id=None):
                 raise CheckoutRejected('A conflicting or older canonical subscription was rejected.')
             # Validate every row before applying any observations or revocations.
             old_rows = {row.invoice_id: row for row in SquareInvoiceEvidence.objects.select_for_update().filter(
-                merchant_id=intent.merchant_id, invoice_id__in=[s['invoice_id'] for s in snapshots])}
+                environment='sandbox', intent__environment='sandbox', merchant_id=intent.merchant_id,
+                invoice_id__in=[s['invoice_id'] for s in snapshots])}
             for snapshot in snapshots:
                 old = old_rows.get(snapshot['invoice_id'])
                 if old and (old.intent_id != current.pk or old.charge_order_id != snapshot['charge_order_id']
@@ -394,7 +396,7 @@ def reconcile_intent(*, parent, intent_id, client=None, invoice_id=None):
                     revoked_at = revoked_at or timezone.now()
                 if revoked_at:
                     snapshot['outcome_code'] = 'payment_fully_refunded'
-                SquareInvoiceEvidence.objects.update_or_create(merchant_id=current.merchant_id,
+                SquareInvoiceEvidence.objects.update_or_create(environment='sandbox', merchant_id=current.merchant_id,
                     invoice_id=snapshot['invoice_id'], defaults={
                         **{k: v for k, v in snapshot.items() if k != 'invoice_id'}, 'intent': current,
                         'observed_at': timezone.now(), 'revoked_at': revoked_at})
@@ -434,7 +436,8 @@ def _event_target(reader, receipt):
     else:
         payment = reader.retrieve_payment(receipt.object_id)
     order_id = provider_identifier(payment.get('order_id'), 192)
-    proof = SquareInvoiceEvidence.objects.filter(merchant_id=receipt.merchant_id,
+    proof = SquareInvoiceEvidence.objects.filter(environment=receipt.environment, intent__environment=receipt.environment,
+                                               merchant_id=receipt.merchant_id,
                                                charge_order_id=order_id).select_related('intent').first()
     if proof is None:
         raise CheckoutRejected('Invoice binding is not available yet; retry after subscription/invoice receipt.')
@@ -442,18 +445,20 @@ def _event_target(reader, receipt):
 
 
 @sensitive_variables()
-def process_receipt(*, receipt_id, client=None):
+def process_receipt(*, receipt_id, client=None, environment='sandbox'):
     from django.conf import settings
-    if getattr(settings, 'SQUARE_SANDBOX_TERM_RECONCILIATION_ENABLED', False):
+    payment_environment(environment)
+    if getattr(settings, environment_prefix(environment) + '_TERM_RECONCILIATION_ENABLED', False):
         from .terms import term_configuration
-        config = term_configuration(readonly=True)
+        config = term_configuration(readonly=True, environment=environment)
     else:
-        config = checkout_configuration(reconciliation=True)
-    client = client or configured_client()
+        config = checkout_configuration(reconciliation=True, environment=environment)
+    client = client or configured_client(environment=environment)
+    assert_client_environment(client, environment=environment)
     now, lease = timezone.now(), uuid4()
     with transaction.atomic():
         receipt = SquareWebhookReceipt.objects.select_for_update().get(pk=receipt_id,
-            merchant_id=config.provider.merchant_id)
+            environment=environment, merchant_id=config.provider.merchant_id)
         if receipt.processing_state in {'processed', 'ignored'}:
             return receipt.processing_state
         if receipt.processing_lease and receipt.lease_until and receipt.lease_until > now:
@@ -480,27 +485,32 @@ def process_receipt(*, receipt_id, client=None):
                 try: term_id = UUID(payment.get('reference_id', ''))
                 except (ValueError, TypeError, AttributeError): term_id = None
                 term = SquareBillingTerm.objects.filter(pk=term_id,
+                    environment=environment, agreement__environment=environment,
                     agreement__merchant_id=receipt.merchant_id).first() if term_id else None
                 if term:
                     from .terms import reconcile_term
-                    reconcile_term(term_id=term.pk, payment_id=payment['id'], client=client)
+                    reconcile_term(term_id=term.pk, payment_id=payment['id'], client=client, environment=environment)
                     state, code = 'processed', 'exact_term_payment_recorded'
                     return state
+            if environment != 'sandbox':
+                # Historical autonomous subscriptions are never production adapters.
+                state, code = 'ignored', 'no_owned_environment_term'
+                return state
             subscription_id, invoice_id = _event_target(reader, receipt)
             subscription = reader.retrieve_subscription(subscription_id)
-            intent = SquareCheckoutIntent.objects.filter(merchant_id=receipt.merchant_id,
+            intent = SquareCheckoutIntent.objects.filter(environment='sandbox', merchant_id=receipt.merchant_id,
                 subscription_id=subscription_id).select_related('parent').first()
             if intent is None:
                 # Lost direct POST responses can be recovered only through the
                 # server-created unique customer/card pair; the next stage
                 # rechecks its exact customer.reference_id and canonical card.
-                intent = SquareCheckoutIntent.objects.filter(merchant_id=receipt.merchant_id,
+                intent = SquareCheckoutIntent.objects.filter(environment='sandbox', merchant_id=receipt.merchant_id,
                     checkout_mode='direct', customer_id=subscription.get('customer_id'),
                     card_id=subscription.get('card_id')).exclude(customer_id='').exclude(card_id='').select_related('parent').first()
             if intent is None:
                 phases = subscription.get('phases', [])
                 templates = [phase.get('order_template_id') for phase in phases if isinstance(phase, dict)] if isinstance(phases, list) else []
-                matches = list(SquareCheckoutIntent.objects.filter(merchant_id=receipt.merchant_id,
+                matches = list(SquareCheckoutIntent.objects.filter(environment='sandbox', merchant_id=receipt.merchant_id,
                     checkout_mode='hosted', order_template_id__in=[t for t in templates if t]).select_related('parent')[:2])
                 if len(matches) != 1:
                     raise CheckoutRejected('No unique server-owned checkout intent exists for this subscription.')
@@ -512,7 +522,7 @@ def process_receipt(*, receipt_id, client=None):
         pass
     finally:
         with transaction.atomic():
-            current = SquareWebhookReceipt.objects.select_for_update().get(pk=receipt_id)
+            current = SquareWebhookReceipt.objects.select_for_update().get(pk=receipt_id, environment=environment)
             if current.processing_lease == lease:
                 current.processing_state, current.outcome_code = state, code
                 current.processing_lease, current.lease_until = None, None

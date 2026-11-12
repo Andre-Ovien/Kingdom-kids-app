@@ -31,4 +31,6 @@ def coverage_hash(term, agreement):
         'captured_at':term.captured_at.isoformat() if term.captured_at else None,
         'valid_from':term.valid_from.isoformat() if term.valid_from else None,
         'valid_until':term.valid_until.isoformat() if term.valid_until else None}
+    if getattr(agreement, 'environment', 'sandbox') == 'production':
+        fields['environment'] = 'production'
     return sha256(json.dumps(fields,sort_keys=True,separators=(',',':')).encode()).hexdigest()

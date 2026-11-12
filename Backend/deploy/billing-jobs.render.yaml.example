@@ -1,0 +1,45 @@
+# OPT-IN REVIEW TEMPLATE ONLY. This file is not the repository's render.yaml.
+# Do not import until the owner approves scheduler cost, names, region, durable
+# production datastores, backup/restore, environment group and qualified release.
+# Both commands intentionally omit --apply and all job switches remain OFF.
+services:
+  - type: cron
+    name: kingdom-kids-billing-reconcile-template
+    runtime: docker
+    plan: 0.5c-512mb
+    region: virginia
+    branch: main
+    rootDir: Backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    autoDeployTrigger: "off"
+    schedule: "*/2 * * * *"
+    dockerCommand: python scripts/run_billing_jobs.py --environment production --stage reconcile --limit 5 --max-calls 80 --max-seconds 120
+    envVars:
+      - fromGroup: OWNER_APPROVED_SERVER_ONLY_ENVIRONMENT_GROUP
+      - key: SQUARE_PRODUCTION_RECONCILIATION_JOBS_ENABLED
+        value: "false"
+      - key: SQUARE_PRODUCTION_RENEWAL_JOBS_ENABLED
+        value: "false"
+      - key: SQUARE_PRODUCTION_RENEWALS_ENABLED
+        value: "false"
+  - type: cron
+    name: kingdom-kids-billing-renew-template
+    runtime: docker
+    plan: 0.5c-512mb
+    region: virginia
+    branch: main
+    rootDir: Backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    autoDeployTrigger: "off"
+    schedule: "*/5 * * * *"
+    dockerCommand: python scripts/run_billing_jobs.py --environment production --stage renew --limit 5 --max-calls 80 --max-seconds 120
+    envVars:
+      - fromGroup: OWNER_APPROVED_SERVER_ONLY_ENVIRONMENT_GROUP
+      - key: SQUARE_PRODUCTION_RECONCILIATION_JOBS_ENABLED
+        value: "false"
+      - key: SQUARE_PRODUCTION_RENEWAL_JOBS_ENABLED
+        value: "false"
+      - key: SQUARE_PRODUCTION_RENEWALS_ENABLED
+        value: "false"

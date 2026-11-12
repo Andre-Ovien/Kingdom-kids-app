@@ -8,7 +8,37 @@ from django.db import models
 from django.utils import timezone
 
 
-class SquareCustomerIdentity(models.Model):
+PAYMENT_ENVIRONMENTS = (('sandbox', 'Sandbox'), ('production', 'Production'))
+
+
+def environment_constraint(name):
+    return models.CheckConstraint(condition=models.Q(environment__in=('sandbox', 'production')), name=name)
+
+
+class EnvironmentBoundModel(models.Model):
+    """Provider references never move between isolated payment environments."""
+    environment = models.CharField(max_length=16, choices=PAYMENT_ENVIRONMENTS, default='sandbox', db_index=True)
+    ENVIRONMENT_RELATIONS = ()
+
+    class Meta:
+        abstract = True
+
+    def save(self, *args, **kwargs):
+        if self.environment not in {'sandbox', 'production'}:
+            raise ValidationError('A known immutable payment environment is required.')
+        if not self._state.adding:
+            original = type(self).objects.filter(pk=self.pk).values_list('environment', flat=True).first()
+            if original is not None and original != self.environment:
+                raise ValidationError('A payment record cannot change environment.')
+        for name in self.ENVIRONMENT_RELATIONS:
+            identifier = getattr(self, name + '_id')
+            model = self._meta.get_field(name).remote_field.model
+            if identifier is not None and not model.objects.filter(pk=identifier, environment=self.environment).exists():
+                raise ValidationError('Related payment records must share one environment.')
+        return super().save(*args, **kwargs)
+
+
+class SquareCustomerIdentity(EnvironmentBoundModel):
     parent = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
                                related_name='square_sandbox_customers')
     merchant_id = models.CharField(max_length=192)
@@ -17,21 +47,27 @@ class SquareCustomerIdentity(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=('parent', 'merchant_id'), name='square_sbx_parent_merchant'),
-            models.UniqueConstraint(fields=('merchant_id', 'customer_id'), name='square_sbx_customer_identity'),
+            environment_constraint('square_customer_environment'),
+            models.UniqueConstraint(fields=('environment', 'parent', 'merchant_id'), name='square_sbx_parent_merchant'),
+            models.UniqueConstraint(fields=('environment', 'merchant_id', 'customer_id'), name='square_sbx_customer_identity'),
         ]
 
 
-class SquareSubscriptionIdentity(models.Model):
+class SquareSubscriptionIdentity(EnvironmentBoundModel):
+    ENVIRONMENT_RELATIONS = ('customer',)
     # Ownership derives through the customer; no second parent field to drift.
     customer = models.ForeignKey(SquareCustomerIdentity, on_delete=models.CASCADE,
                                  related_name='subscriptions')
-    subscription_id = models.CharField(max_length=192, unique=True)
+    subscription_id = models.CharField(max_length=192)
     provider_status = models.CharField(max_length=64, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        constraints = [environment_constraint('square_subscription_environment'),
+            models.UniqueConstraint(fields=('environment', 'subscription_id'), name='square_env_subscription_id')]
 
-class SquareSandboxOperation(models.Model):
+
+class SquareSandboxOperation(EnvironmentBoundModel):
     parent = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
                                related_name='square_sandbox_operations')
     merchant_id = models.CharField(max_length=192)
@@ -43,11 +79,12 @@ class SquareSandboxOperation(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        constraints = [models.UniqueConstraint(fields=('parent', 'merchant_id', 'operation_id'),
+        constraints = [environment_constraint('square_operation_environment'),
+                      models.UniqueConstraint(fields=('environment', 'parent', 'merchant_id', 'operation_id'),
                                                name='square_sbx_parent_operation')]
 
 
-class SquareWebhookReceipt(models.Model):
+class SquareWebhookReceipt(EnvironmentBoundModel):
     # Minimal durable inbox metadata only: no raw payload, card or customer PII.
     merchant_id = models.CharField(max_length=192)
     event_id = models.CharField(max_length=128)
@@ -64,7 +101,8 @@ class SquareWebhookReceipt(models.Model):
     outcome_code = models.CharField(max_length=64, blank=True)
 
     class Meta:
-        constraints = [models.UniqueConstraint(fields=('merchant_id', 'event_id'),
+        constraints = [environment_constraint('square_webhook_environment'),
+                      models.UniqueConstraint(fields=('environment', 'merchant_id', 'event_id'),
                                                name='square_sbx_event_identity')]
 
 
@@ -128,11 +166,15 @@ class ParentContentEntitlement(models.Model):
                 raise ValidationError('Paid-period timestamps must be timezone-aware.')
 
     def save(self, *args, **kwargs):
+        if not self._state.adding:
+            original = type(self).objects.filter(pk=self.pk).values_list('environment', flat=True).first()
+            if original is not None and original != self.environment:
+                raise ValidationError('A paid proof cannot change environment.')
         self.full_clean()
         return super().save(*args, **kwargs)
 
 
-class SquareCheckoutIntent(models.Model):
+class SquareCheckoutIntent(EnvironmentBoundModel):
     """Server-owned purchase intent. Provider customer details are not ownership.
 
     Open includes uncertain requests and bound subscriptions. No client endpoint
@@ -177,19 +219,21 @@ class SquareCheckoutIntent(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=('parent', 'policy_id'), condition=models.Q(is_open=True),
+            environment_constraint('square_checkout_environment'),
+            models.UniqueConstraint(fields=('environment', 'parent', 'policy_id'), condition=models.Q(is_open=True),
                                     name='square_one_open_parent_policy'),
-            *[models.UniqueConstraint(fields=('merchant_id', field), condition=~models.Q(**{field: ''}),
+            *[models.UniqueConstraint(fields=('environment', 'merchant_id', field), condition=~models.Q(**{field: ''}),
                                       name='square_checkout_' + suffix)
               for field, suffix in [('payment_link_id', 'link'), ('order_template_id', 'template'),
                                     ('subscription_id', 'subscription')]],
-            models.UniqueConstraint(fields=('merchant_id', 'customer_id'),
+            models.UniqueConstraint(fields=('environment', 'merchant_id', 'customer_id'),
                 condition=models.Q(checkout_mode='direct') & ~models.Q(customer_id=''),
                 name='square_direct_owned_customer'),
         ]
 
 
-class SquareInvoiceEvidence(models.Model):
+class SquareInvoiceEvidence(EnvironmentBoundModel):
+    ENVIRONMENT_RELATIONS = ('intent',)
     """Minimal canonical observations; a paid invoice alone is not coverage.
 
     No provider body, customer PII, card/token data or arbitrary service dates
@@ -218,12 +262,13 @@ class SquareInvoiceEvidence(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=('merchant_id', 'invoice_id'), name='square_invoice_proof'),
-            models.UniqueConstraint(fields=('merchant_id', 'charge_order_id'), name='square_invoice_order'),
+            environment_constraint('square_invoice_environment'),
+            models.UniqueConstraint(fields=('environment', 'merchant_id', 'invoice_id'), name='square_invoice_proof'),
+            models.UniqueConstraint(fields=('environment', 'merchant_id', 'charge_order_id'), name='square_invoice_order'),
         ]
 
 
-class SquareCancellationOutbox(models.Model):
+class SquareCancellationOutbox(EnvironmentBoundModel):
     """Survives account deletion; only provider references needed to stop billing.
 
     No User FK, parent identifier, contact data, token or provider body. Verified
@@ -253,8 +298,12 @@ class SquareCancellationOutbox(models.Model):
     outcome_code = models.CharField(max_length=64, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        constraints = [environment_constraint('square_cancellation_environment')]
 
-class SquareContentAgreement(models.Model):
+
+class SquareContentAgreement(EnvironmentBoundModel):
+    ENVIRONMENT_RELATIONS = ('intent',)
     """App-owned recurring mandate; never runs an automatic Square Subscription."""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     parent = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
@@ -280,7 +329,8 @@ class SquareContentAgreement(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        constraints = [models.UniqueConstraint(fields=('parent',), condition=models.Q(renewals_enabled=True),
+        constraints = [environment_constraint('square_agreement_environment'),
+                      models.UniqueConstraint(fields=('environment', 'parent'), condition=models.Q(renewals_enabled=True),
                                                name='square_one_renewing_parent')]
 
     def save(self, *args, **kwargs):
@@ -295,7 +345,8 @@ class SquareContentAgreement(models.Model):
         return super().save(*args, **kwargs)
 
 
-class SquareBillingTerm(models.Model):
+class SquareBillingTerm(EnvironmentBoundModel):
+    ENVIRONMENT_RELATIONS = ('agreement',)
     """Immutable app-contract coverage tied to Payment.reference_id == this UUID.
 
     No provider due date determines these bounds. A term is written before
@@ -320,7 +371,7 @@ class SquareBillingTerm(models.Model):
     payment_source_mode = models.CharField(max_length=32, default='saved_card')
     verification_sha256 = models.CharField(max_length=64, blank=True)
     request_sha256 = models.CharField(max_length=64)
-    payment_id = models.CharField(max_length=192, blank=True, unique=True, null=True)
+    payment_id = models.CharField(max_length=192, blank=True, null=True)
     order_id = models.CharField(max_length=192, blank=True)
     state = models.CharField(max_length=32, default='reserved')
     dispatched_at = models.DateTimeField(null=True, blank=True)
@@ -342,6 +393,10 @@ class SquareBillingTerm(models.Model):
 
     class Meta:
         constraints = [
+            environment_constraint('square_term_environment'),
+            models.UniqueConstraint(fields=('environment', 'payment_id'),
+                condition=models.Q(payment_id__isnull=False) & ~models.Q(payment_id=''),
+                name='square_env_term_payment_id'),
             models.UniqueConstraint(fields=('agreement', 'valid_from'), name='square_one_term_start'),
             models.UniqueConstraint(fields=('agreement','request_not_before'),
                 condition=~models.Q(coverage_rule=''), name='square_one_pending_term_request'),
@@ -384,7 +439,8 @@ class SquareBillingTerm(models.Model):
         return super().save(*args, **kwargs)
 
 
-class SquarePaymentCardBinding(models.Model):
+class SquarePaymentCardBinding(EnvironmentBoundModel):
+    ENVIRONMENT_RELATIONS = ('agreement', 'source_term')
     """Verified card created from one exact paid term, never a second nonce.
 
     Kept separate so neither the initial immutable request nor the mandate is
@@ -393,16 +449,27 @@ class SquarePaymentCardBinding(models.Model):
     agreement = models.OneToOneField(SquareContentAgreement, on_delete=models.PROTECT,
                                     related_name='payment_card_binding')
     source_term = models.OneToOneField(SquareBillingTerm, on_delete=models.PROTECT)
-    payment_id = models.CharField(max_length=192, unique=True)
+    payment_id = models.CharField(max_length=192)
     card_id = models.CharField(max_length=255)
     customer_id = models.CharField(max_length=192)
     canonical_sha256 = models.CharField(max_length=64)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        constraints = [environment_constraint('square_binding_environment'),
+            models.UniqueConstraint(fields=('environment', 'payment_id'), name='square_env_card_payment_id')]
+
     def save(self, *args, **kwargs):
+        if self.source_term_id and self.agreement_id and not SquareBillingTerm.objects.filter(
+                pk=self.source_term_id, agreement_id=self.agreement_id, environment=self.environment).exists():
+            raise ValidationError('A card binding requires its own environment-bound agreement term.')
         if not self._state.adding:
             old = type(self).objects.filter(pk=self.pk).values().first()
             fields = ('agreement_id', 'source_term_id', 'payment_id', 'card_id', 'customer_id', 'canonical_sha256')
             if old is not None and any(getattr(self, key) != old[key] for key in fields):
                 raise ValidationError('An exact-payment card binding cannot be reassigned.')
         return super().save(*args, **kwargs)
+
+
+from .job_models import SquareBillingJobState  # noqa: E402,F401
+from .handoff_models import ParentCheckoutHandoff  # noqa: E402,F401

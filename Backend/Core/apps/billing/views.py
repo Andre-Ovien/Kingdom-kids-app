@@ -1,4 +1,6 @@
 from django.conf import settings
+from apps.accounts.authentication import VerifiedEmailJWTAuthentication
+from .checkout_auth import CheckoutSessionAuthentication
 from rest_framework.exceptions import NotFound
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.throttling import ScopedRateThrottle, UserRateThrottle
@@ -7,7 +9,7 @@ from rest_framework.views import APIView
 from django.views.decorators.debug import sensitive_variables
 
 from .configuration import SquareConfigurationError, SquareDisabled, square_configuration
-from .configuration import checkout_configuration, configured_client, require_sandbox_test_parent
+from .configuration import checkout_configuration, configured_client, require_payment_parent, active_billing_environment, require_checkout_enabled, environment_prefix
 from .checkout import (CheckoutBusy, CheckoutConflict, CheckoutRejected, checkout_status,
                        confirm_direct_checkout, public_terms, reserve_checkout)
 from .client import SquareClientError
@@ -30,7 +32,7 @@ class SquareSandboxWebhookView(APIView):
     @sensitive_variables()
     def post(self, request):
         try:
-            config = square_configuration(webhook=True)
+            config = square_configuration(webhook=True, environment=active_billing_environment())
         except SquareDisabled:
             return self.reply({'detail': 'Not found.'}, 404)
         except SquareConfigurationError:
@@ -62,20 +64,23 @@ class SquareSandboxWebhookView(APIView):
 
 
 class SquareCheckoutBase(APIView):
+    authentication_classes = (CheckoutSessionAuthentication, VerifiedEmailJWTAuthentication)
     permission_classes = (IsAuthenticated,)
     throttle_classes = (ScopedRateThrottle, UserRateThrottle)
     throttle_scope = 'billing_checkout'
-    requires_sandbox_enrollment = True
+    requires_purchase = True
 
     def initial(self, request, *args, **kwargs):
-        if not getattr(settings, 'SQUARE_SANDBOX_TERM_BILLING_ENABLED', False):
-            raise NotFound()
         super().initial(request, *args, **kwargs)
-        if self.requires_sandbox_enrollment:
-            try:
-                require_sandbox_test_parent(request.user)
-            except SquareDisabled:
-                raise NotFound() from None
+        try:
+            self.environment = active_billing_environment()
+            if self.requires_purchase:
+                require_payment_parent(request.user, environment=self.environment)
+                require_checkout_enabled(environment=self.environment)
+                if getattr(settings, environment_prefix(self.environment) + '_TERM_BILLING_ENABLED', False) is not True:
+                    raise SquareDisabled()
+        except (SquareDisabled, SquareConfigurationError):
+            raise NotFound() from None
 
     def finalize_response(self, request, response, *args, **kwargs):
         response = super().finalize_response(request, response, *args, **kwargs)
@@ -88,7 +93,7 @@ class SquareCheckoutBase(APIView):
         if isinstance(error, SquareDisabled):
             return Response({'detail': 'Not found.'}, status=404)
         if isinstance(error, SquareConfigurationError):
-            return Response({'detail': 'Square Sandbox checkout is not configured.'}, status=503)
+            return Response({'detail': 'Checkout is not configured.'}, status=503)
         if isinstance(error, SquareClientError):
             return Response({'code': 'checkout_uncertain', 'detail': 'Retain this purchase intent and try its status; do not start another purchase.'}, status=503)
         if isinstance(error, (CheckoutBusy, CheckoutConflict)):
@@ -99,20 +104,20 @@ class SquareCheckoutBase(APIView):
 class SquareCheckoutIntentsView(SquareCheckoutBase):
     def get(self, request):
         try:
-            config = term_configuration()
-            return Response(term_disclosure(verify_payment_location(configured_client(), config),
-                billing_period=request.query_params.get('billing_period', 'monthly')))
+            config = term_configuration(environment=self.environment)
+            return Response(term_disclosure(verify_payment_location(configured_client(environment=self.environment), config),
+                billing_period=request.query_params.get('billing_period', 'monthly'), environment=self.environment))
         except (SquareDisabled, SquareConfigurationError, SquareClientError, CheckoutRejected) as error:
             return self.error(error)
 
     @sensitive_variables()
     def post(self, request):
         try:
-            term_configuration()
-            client = configured_client()  # Missing explicit transport reserves nothing.
+            term_configuration(environment=self.environment)
+            client = configured_client(environment=self.environment)  # Missing explicit transport reserves nothing.
             serializer = TermCheckoutConsentSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
-            intent = reserve_term_checkout(parent=request.user, client=client, **serializer.validated_data)
+            intent = reserve_term_checkout(parent=request.user, client=client, environment=self.environment, **serializer.validated_data)
             return Response(checkout_status(intent), status=200)
         except (SquareDisabled, SquareConfigurationError, SquareClientError, CheckoutRejected) as error:
             return self.error(error)
@@ -120,27 +125,31 @@ class SquareCheckoutIntentsView(SquareCheckoutBase):
 
 class SquareCheckoutStatusView(SquareCheckoutBase):
     throttle_scope = 'billing_status'
-    requires_sandbox_enrollment = False
+    requires_purchase = False
 
     def get(self, request, intent_id):
         try:
-            config = term_configuration()
-            intent = SquareCheckoutIntent.objects.get(pk=intent_id, parent=request.user,
-                                                       merchant_id=config.provider.merchant_id)
+            intent = SquareCheckoutIntent.objects.get(pk=intent_id, parent=request.user, environment=self.environment)
             return Response(checkout_status(intent))
         except (SquareDisabled, SquareConfigurationError, SquareCheckoutIntent.DoesNotExist) as error:
             return self.error(error)
 
 
 class SquareCheckoutConfirmView(SquareCheckoutBase):
+    requires_purchase = False
     @sensitive_variables()
     def post(self, request, intent_id):
         try:
-            term_configuration()
             serializer = TermCheckoutCardSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
+            SquareCheckoutIntent.objects.get(pk=intent_id, parent=request.user, environment=self.environment)
+            if any(serializer.validated_data.get(field) is not None
+                   for field in ('source_id', 'verification_token', 'charge_source_id')):
+                require_payment_parent(request.user, environment=self.environment)
+                require_checkout_enabled(environment=self.environment)
             intent = confirm_term_checkout(parent=request.user, intent_id=intent_id,
-                client=configured_client(), **serializer.validated_data)
+                client=configured_client(environment=self.environment), environment=self.environment,
+                allow_card_setup=getattr(request.auth, 'purpose', None) != 'manage', **serializer.validated_data)
             return Response(checkout_status(intent))
         except (SquareDisabled, SquareConfigurationError, CheckoutRejected, SquareClientError,
                 SquareCheckoutIntent.DoesNotExist) as error:
@@ -151,11 +160,11 @@ class SquareCheckoutPrepareCardView(SquareCheckoutBase):
     @sensitive_variables()
     def post(self, request, intent_id):
         try:
-            term_configuration()
+            term_configuration(environment=self.environment)
             serializer = TermPrepareCardSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             intent = confirm_term_checkout(parent=request.user, intent_id=intent_id, prepare_only=True,
-                client=configured_client(), **serializer.validated_data)
+                client=configured_client(environment=self.environment), environment=self.environment, **serializer.validated_data)
             return Response({**checkout_status(intent), 'buyer_verification': {
                 'card_id': intent.card_id, 'amount': term_plan_for_policy(intent.policy_id).amount_display,
                 'currency': 'USD', 'intent': 'CHARGE',
@@ -166,13 +175,13 @@ class SquareCheckoutPrepareCardView(SquareCheckoutBase):
 
 
 class SquareCheckoutCancelView(SquareCheckoutBase):
-    requires_sandbox_enrollment = False
+    requires_purchase = False
     @sensitive_variables()
     def post(self, request, intent_id):
         try:
             serializer = StopRenewalSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
-            agreement = cancel_agreement(parent=request.user, intent_id=intent_id, **serializer.validated_data)
+            agreement = cancel_agreement(parent=request.user, intent_id=intent_id, environment=self.environment, **serializer.validated_data)
             return Response({'renewals_enabled': agreement.renewals_enabled,
                              'detail': 'Future renewals are stopped; already-paid coverage keeps its original end.'})
         except (SquareDisabled, SquareConfigurationError, CheckoutRejected, SquareContentAgreement.DoesNotExist) as error:
@@ -186,7 +195,7 @@ class SquareCheckoutRestartView(SquareCheckoutBase):
             serializer = TermCheckoutConsentSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             intent = restart_unpaid_checkout(parent=request.user, intent_id=intent_id,
-                client=configured_client(), **serializer.validated_data)
+                client=configured_client(environment=self.environment), environment=self.environment, **serializer.validated_data)
             return Response(checkout_status(intent))
         except (SquareDisabled, SquareConfigurationError, CheckoutRejected, SquareClientError,
                 SquareCheckoutIntent.DoesNotExist) as error:

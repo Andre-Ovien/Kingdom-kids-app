@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import include, path
 from .access_status import ParentContentAccessView
 
 from .views import (SquareCheckoutCancelView, SquareCheckoutConfirmView, SquareCheckoutIntentsView,
@@ -6,6 +6,7 @@ from .views import (SquareCheckoutCancelView, SquareCheckoutConfirmView, SquareC
                     SquareCheckoutRestartView, SquareSandboxWebhookView)
 
 urlpatterns = [
+    path('', include('apps.billing.handoff_urls')),
     path('content-access/', ParentContentAccessView.as_view(), name='parent-content-access'),
     path('square/webhook/', SquareSandboxWebhookView.as_view(), name='square-sandbox-webhook'),
     path('square/checkout-intents/', SquareCheckoutIntentsView.as_view(), name='square-checkout-intents'),

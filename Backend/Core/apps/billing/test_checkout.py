@@ -145,7 +145,7 @@ class CheckoutTests(TestCase):
     def test_disabled_missing_config_and_missing_transport_reserve_nothing(self):
         api=APIClient();api.force_authenticate(self.parent)
         for override,status in [({'SQUARE_SANDBOX_TERM_BILLING_ENABLED':False},404),
-                ({'SQUARE_SANDBOX_LOCATION_ID':''},503),({'SQUARE_ENVIRONMENT':'production'},503),({},503)]:
+                ({'SQUARE_SANDBOX_LOCATION_ID':''},503),({'SQUARE_ENVIRONMENT':'production'},404),({},503)]:
             with override_settings(**override):
                 response=api.post(BASE,{'password':PASSWORD,'accepted':True},format='json')
                 self.assertEqual(response.status_code,status);self.assertEqual(response['Cache-Control'],'no-store')

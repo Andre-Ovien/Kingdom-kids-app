@@ -1,4 +1,4 @@
-"""Explicit opt-in, fixed-origin TLS transport for Square SANDBOX only.
+"""Explicit opt-in, fixed-origin TLS transports with disjoint environments.
 
 Promoted from the reviewed component-canary adapter. No import-time connection,
 proxy environment, redirects or retry. Every send also checks the default-off
@@ -16,17 +16,19 @@ from django.views.decorators.debug import sensitive_variables
 from .client import SquareClientError, SquareHttpResult
 
 
-class SandboxTransport:
+class _SquareTLSTransport:
     @sensitive_variables()
     def send(self, *, method, url, headers, body, timeout_seconds, max_response_bytes):
         connection = None
         deadline = None
         try:
-            if (getattr(settings, 'SQUARE_SANDBOX_HTTP_TRANSPORT_ENABLED', False) is not True
-                    or settings.SQUARE_SANDBOX_ENABLED is not True or settings.SQUARE_ENVIRONMENT != 'sandbox'):
+            prefix = 'SQUARE_' + self.environment.upper()
+            if (getattr(settings, prefix + '_HTTP_TRANSPORT_ENABLED', False) is not True
+                    or getattr(settings, prefix + '_ENABLED', False) is not True
+                    or settings.SQUARE_ENVIRONMENT != self.environment):
                 raise ValueError
             parsed = urlsplit(url)
-            if (parsed.scheme != 'https' or parsed.hostname != 'connect.squareupsandbox.com'
+            if (parsed.scheme != 'https' or parsed.hostname != self.hostname
                     or parsed.port not in (None, 443) or parsed.username or parsed.password
                     or parsed.fragment or not parsed.path.startswith('/v2/')
                     or any(part in {'.', '..'} for part in parsed.path.split('/'))
@@ -42,7 +44,7 @@ class SandboxTransport:
                     or not re.fullmatch(r'[0-9]{4}-[0-9]{2}-[0-9]{2}', headers['Square-Version'])
                     or headers['Content-Type'] != 'application/json' or headers['Accept'] != 'application/json'):
                 raise ValueError
-            connection = http.client.HTTPSConnection('connect.squareupsandbox.com',
+            connection = http.client.HTTPSConnection(self.hostname,
                 timeout=timeout_seconds, context=ssl.create_default_context())
             connection.set_debuglevel(0)
             sockets = []
@@ -73,6 +75,16 @@ class SandboxTransport:
                 deadline.cancel()
             if connection is not None:
                 connection.close()
+
+
+class SandboxTransport(_SquareTLSTransport):
+    environment = 'sandbox'
+    hostname = 'connect.squareupsandbox.com'
+
+
+class ProductionTransport(_SquareTLSTransport):
+    environment = 'production'
+    hostname = 'connect.squareup.com'
 
 
 def make_transport():

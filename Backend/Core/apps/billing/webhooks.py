@@ -57,7 +57,7 @@ def record_notification(*, raw_body, configuration):
         raise SquareWebhookInvalid('Invalid signed Square event envelope.') from None
     digest = hashlib.sha256(raw_body).hexdigest()
     receipt, created = SquareWebhookReceipt.objects.get_or_create(
-        merchant_id=metadata['merchant_id'], event_id=metadata['event_id'],
+        environment=configuration.environment, merchant_id=metadata['merchant_id'], event_id=metadata['event_id'],
         defaults={'event_type': metadata['type'], 'object_id': object_id, 'body_sha256': digest})
     if receipt.body_sha256 != digest:
         raise SquareWebhookConflict('Conflicting duplicate event requires reconciliation.')

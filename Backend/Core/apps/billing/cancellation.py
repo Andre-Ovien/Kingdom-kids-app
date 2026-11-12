@@ -29,22 +29,22 @@ def enqueue_account_cancellations(parent):
     # no autonomous remote subscription exists for this mode.
     SquareContentAgreement.objects.filter(parent=parent).update(renewals_enabled=False,
         canceled_at=timezone.now(), outcome_code='account_deleted', customer_id='', card_id='')
-    query = SquareCheckoutIntent.objects.select_for_update().filter(parent=parent).exclude(checkout_mode='payments')
+    query = SquareCheckoutIntent.objects.select_for_update().filter(parent=parent, environment='sandbox').exclude(checkout_mode='payments')
     with closing(query.iterator(chunk_size=100)) as rows:
         for intent in rows:
-            SquareCancellationOutbox.objects.get_or_create(intent_reference=intent.pk, defaults={
+            SquareCancellationOutbox.objects.get_or_create(intent_reference=intent.pk, environment='sandbox', defaults={
                 'checkout_mode': intent.checkout_mode, 'merchant_id': intent.merchant_id,
                 'location_id': intent.location_id, 'variation_id': intent.variation_id,
                 'customer_id': intent.customer_id, 'card_id': intent.card_id,
                 'subscription_id': intent.subscription_id, 'payment_link_id': intent.payment_link_id,
                 'order_template_id': intent.order_template_id})
     # Preserve the original server-only observation/binding seam as well.
-    legacy = SquareSubscriptionIdentity.objects.filter(customer__parent=parent).select_related('customer')
+    legacy = SquareSubscriptionIdentity.objects.filter(customer__parent=parent, environment='sandbox', customer__environment='sandbox').select_related('customer')
     with closing(legacy.iterator(chunk_size=100)) as rows:
         for identity in rows:
             reference = uuid5(NAMESPACE_URL, 'kingdom-kids/deleted-subscription/'
                              + identity.customer.merchant_id + '/' + identity.subscription_id)
-            SquareCancellationOutbox.objects.get_or_create(intent_reference=reference, defaults={
+            SquareCancellationOutbox.objects.get_or_create(intent_reference=reference, environment='sandbox', defaults={
                 'checkout_mode': 'legacy', 'merchant_id': identity.customer.merchant_id,
                 'customer_id': identity.customer.customer_id, 'subscription_id': identity.subscription_id})
 
@@ -57,7 +57,7 @@ def cancellation_configuration():
 
 def _checkpoint(job, **changes):
     with transaction.atomic():
-        current = SquareCancellationOutbox.objects.select_for_update().get(pk=job.pk)
+        current = SquareCancellationOutbox.objects.select_for_update().get(pk=job.pk, environment='sandbox')
         if (current.processing_lease != job.processing_lease or not current.lease_until
                 or current.lease_until <= timezone.now()):
             raise CheckoutRejected('Cancellation lease ownership changed.')
@@ -98,7 +98,7 @@ def process_cancellation(*, outbox_id, client=None):
     client = client or configured_client()
     now = timezone.now()
     with transaction.atomic():
-        job = SquareCancellationOutbox.objects.select_for_update().get(pk=outbox_id,
+        job = SquareCancellationOutbox.objects.select_for_update().get(pk=outbox_id, environment='sandbox',
                                                                       merchant_id=config.merchant_id)
         if job.state == 'verified': return 'verified'
         if job.processing_lease and job.lease_until and job.lease_until > now: return 'busy'

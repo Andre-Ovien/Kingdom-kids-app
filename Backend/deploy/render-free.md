@@ -52,7 +52,7 @@ enforcement and parent checkout/status switches initially stay OFF. Square Sandb
 credentials may be held privately for later qualification; storing credentials
 does not enable a provider call, financial worker or charge.
 
-The sole financial startup exception is an operator's explicit
+The staging financial startup exception is an operator's explicit
 `RENDER_SANDBOX_CHECKOUT_QUALIFICATION_ENABLED=true` on the exact
 `kingdom-kids-checkout-staging.onrender.com` service. It requires the complete
 reviewed, enrolled-parent Sandbox configuration in [parent-checkout.md](parent-checkout.md),
@@ -62,6 +62,12 @@ legacy automatic-subscription switch or enabled global paid-content gate still
 fails closed. The default is false, and no flag is enabled in the Blueprint by
 this exception. It does not create a worker, contact Square or replace any
 original strict settings/migration/readiness checks.
+
+A separate, default-OFF [production startup contract](production-checkout-startup.md)
+now exists for a newly owner-approved production origin and qualified operations.
+It rejects this Sandbox hostname, requires all reconciliation/renewal gates and
+explicit operations/release qualification, and retains every original guard.
+The Free staging Blueprint does not opt into that path or provision its hosting.
 
 The approved Cloudinary delivery switch is now enabled in the Blueprint, with
 `DJANGO_CONTENT_MEDIA_HOSTS=api.cloudinary.com`, TTL300 and frozen map SHA256

@@ -6,8 +6,8 @@
 </head><body>
 <header class="page-header"><a class="brand" href="#main">Kingdom Kids</a></header>
 <main id="main" class="checkout-shell"><section class="checkout" aria-label="Secure parent checkout">
-<h1 id="page-title">{% if selected_plan %}Parent sign in{% else %}Choose your plan{% endif %}</h1>
-{% if not selected_plan %}<section id="plan-step" aria-label="Choose your plan">
+<h1 id="page-title">{% if manage_only %}Manage plan{% elif selected_plan %}Parent sign in{% else %}Choose your plan{% endif %}</h1>
+{% if not selected_plan and not manage_only %}<section id="plan-step" aria-label="Choose your plan">
 <div class="plan-options" role="group" aria-label="Billing period">
 <button id="monthly" type="button" class="plan-option" aria-pressed="true"><span>Monthly</span><strong>$9.99 <small>/ 30 days</small></strong></button>
 <button id="yearly" type="button" class="plan-option" aria-pressed="false"><span>Yearly</span><strong>$99.90 <small>/ year</small></strong></button>

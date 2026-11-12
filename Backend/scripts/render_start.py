@@ -1,4 +1,4 @@
-"""Free Render staging: strict settings, serialized migrations, then Gunicorn.
+"""Render startup: strict settings, explicit billing qualification, then Gunicorn.
 
 No credentials are generated locally or printed. Render's independently generated
 256-bit seeds are expanded to meet the application's existing string-length rules.
@@ -26,15 +26,167 @@ DISABLED_FLAGS = (
     'PARENT_CHECKOUT_SANDBOX_ENABLED', 'PARENT_CONTENT_ACCESS_STATUS_ENABLED',
 )
 SANDBOX_QUALIFICATION_HOST = 'kingdom-kids-checkout-staging.onrender.com'
+PRODUCTION_CUSTOM_HOST = 'api.kingdom-kids.app'
+PRODUCTION_CUSTOM_ORIGIN = 'https://' + PRODUCTION_CUSTOM_HOST
 SANDBOX_QUALIFICATION_FLAGS = (
     'SQUARE_SANDBOX_ENABLED', 'SQUARE_SANDBOX_TERM_BILLING_ENABLED',
     'SQUARE_SANDBOX_TERM_RECONCILIATION_ENABLED', 'SQUARE_SANDBOX_HTTP_TRANSPORT_ENABLED',
     'PARENT_CHECKOUT_SANDBOX_ENABLED', 'PARENT_CONTENT_ACCESS_STATUS_ENABLED',
 )
+PRODUCTION_ONLY_FLAGS = (
+    'SQUARE_PRODUCTION_ENABLED', 'SQUARE_PRODUCTION_CHECKOUT_ENABLED',
+    'SQUARE_PRODUCTION_TERM_BILLING_ENABLED', 'SQUARE_PRODUCTION_TERM_RECONCILIATION_ENABLED',
+    'SQUARE_PRODUCTION_HTTP_TRANSPORT_ENABLED', 'SQUARE_PRODUCTION_RELEASE_QUALIFIED',
+    'SQUARE_PRODUCTION_RENEWALS_ENABLED', 'PARENT_CHECKOUT_PRODUCTION_ENABLED',
+    'SQUARE_PRODUCTION_RECONCILIATION_JOBS_ENABLED', 'SQUARE_PRODUCTION_RENEWAL_JOBS_ENABLED',
+)
+SANDBOX_ONLY_FLAGS = tuple(flag for flag in DISABLED_FLAGS if flag not in {
+    'PAID_CONTENT_ENFORCEMENT_ENABLED', 'PARENT_CONTENT_ACCESS_STATUS_ENABLED'}) + (
+    'SQUARE_SANDBOX_RECONCILIATION_JOBS_ENABLED', 'SQUARE_SANDBOX_RENEWAL_JOBS_ENABLED',
+)
+PRODUCTION_QUALIFICATION_FLAGS = PRODUCTION_ONLY_FLAGS + (
+    'PAID_CONTENT_ENFORCEMENT_ENABLED', 'PARENT_CONTENT_ACCESS_STATUS_ENABLED',
+    'PARENT_CHECKOUT_HANDOFF_ENABLED', 'DJANGO_EMAIL_DELIVERY_ENABLED',
+    'CLOUDINARY_PRIVATE_DELIVERY_ENABLED',
+)
+SANDBOX_CONFIGURATION_SLOTS = (
+    'SQUARE_SANDBOX_ACCESS_TOKEN', 'SQUARE_SANDBOX_MERCHANT_ID', 'SQUARE_SANDBOX_LOCATION_ID',
+    'SQUARE_SANDBOX_APPLICATION_ID', 'SQUARE_SANDBOX_WEBHOOK_SIGNATURE_KEY',
+    'SQUARE_SANDBOX_WEBHOOK_NOTIFICATION_URL', 'SQUARE_SANDBOX_PLAN_VARIATION_ID',
+    'SQUARE_SANDBOX_TEST_PARENT_IDS',
+)
+SANDBOX_IMPORT_SLOTS = (
+    'KK_TEST_FAMILY_IMPORT_ZLIB_B64', 'KK_TEST_FAMILY_IMPORT_SHA256', 'KK_TEST_FAMILY_IMPORT_EMAIL',
+    'KK_SANDBOX_TEST_PARENT_LOOKUP_EMAIL',
+)
 
 
 class StartupRejected(RuntimeError):
     pass
+
+
+def _production_origin_matches(environ):
+    host = environ.get('RENDER_EXTERNAL_HOSTNAME', '')
+    if not isinstance(host, str) or not re.fullmatch(r'[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.onrender\.com', host):
+        return False
+    label = host.removesuffix('.onrender.com')
+    placeholder_words = ('example', 'placeholder', 'replace', 'changeme', 'your')
+    if (len(label) > 63 or label in {'localhost', 'test'}
+            or any(word in label.split('-') for word in placeholder_words)):
+        return False
+    custom_verified = environ.get('RENDER_PRODUCTION_CUSTOM_DOMAIN_VERIFIED', 'false')
+    if environ.get('RENDER_PRODUCTION_APPROVED_ORIGIN') == PRODUCTION_CUSTOM_ORIGIN:
+        hosts = environ.get('DJANGO_ALLOWED_HOSTS', '').split(',')
+        return (custom_verified == 'true' and len(hosts) == 2
+            and set(hosts) == {host, PRODUCTION_CUSTOM_HOST}
+            and environ.get('PARENT_CHECKOUT_ORIGIN') == PRODUCTION_CUSTOM_ORIGIN
+            and environ.get('SQUARE_PRODUCTION_WEBHOOK_NOTIFICATION_URL') ==
+                PRODUCTION_CUSTOM_ORIGIN + '/api/billing/square/webhook/')
+    if custom_verified != 'false' or host == SANDBOX_QUALIFICATION_HOST:
+        return False
+    if (label in {'example', 'localhost', 'production', 'staging', 'sandbox', 'test'}
+            or any(word in label.split('-') for word in ('example', 'placeholder', 'replace', 'changeme', 'your', 'sandbox', 'staging'))):
+        return False
+    origin = 'https://' + host
+    return (environ.get('RENDER_PRODUCTION_APPROVED_ORIGIN') == origin
+            and environ.get('PARENT_CHECKOUT_ORIGIN') == origin
+            and environ.get('DJANGO_ALLOWED_HOSTS', host) == host
+            and environ.get('SQUARE_PRODUCTION_WEBHOOK_NOTIFICATION_URL') == origin + '/api/billing/square/webhook/')
+
+
+def production_checkout_checks(environ):
+    """Pure, redacted configuration checks; no provider/DB/runtime readiness claim."""
+    def credential(name, minimum, maximum):
+        value = environ.get(name, '')
+        return (isinstance(value, str) and minimum <= len(value) <= maximum and value.isascii()
+                and not value.lower().startswith('sandbox')
+                and all(32 < ord(char) < 127 for char in value))
+    application = environ.get('SQUARE_PRODUCTION_APPLICATION_ID', '')
+    return {
+        'production_startup_opt_in': environ.get('RENDER_PRODUCTION_CHECKOUT_QUALIFICATION_ENABLED') == 'true',
+        'production_release_and_billing_flags': all(environ.get(flag) == 'true' for flag in PRODUCTION_QUALIFICATION_FLAGS),
+        'production_environment_and_entitlement': (environ.get('SQUARE_ENVIRONMENT') == 'production'
+            and environ.get('PAID_CONTENT_ENTITLEMENT_ENVIRONMENT') == 'production'),
+        'custom_domain_attestation': environ.get('RENDER_PRODUCTION_CUSTOM_DOMAIN_VERIFIED', 'false') == (
+            'true' if environ.get('RENDER_PRODUCTION_APPROVED_ORIGIN') == PRODUCTION_CUSTOM_ORIGIN else 'false'),
+        'approved_same_origin_and_callback': _production_origin_matches(environ),
+        'reviewed_provider_api_version': environ.get('SQUARE_API_VERSION', '2026-09-16') == '2026-09-16',
+        'production_public_application_id': isinstance(application, str)
+            and re.fullmatch(r'sq0id[pb]-[A-Za-z0-9_-]{8,160}', application) is not None,
+        'production_credential_shapes': all(credential(*item) for item in (
+            ('SQUARE_PRODUCTION_ACCESS_TOKEN', 16, 4096), ('SQUARE_PRODUCTION_MERCHANT_ID', 1, 192),
+            ('SQUARE_PRODUCTION_LOCATION_ID', 1, 192), ('SQUARE_PRODUCTION_WEBHOOK_SIGNATURE_KEY', 16, 512))),
+        'sandbox_flags_disabled': environ.get('RENDER_SANDBOX_CHECKOUT_QUALIFICATION_ENABLED', 'false') == 'false'
+            and all(environ.get(flag, 'false') == 'false' for flag in SANDBOX_ONLY_FLAGS),
+        'sandbox_configuration_absent': all(environ.get(name, '') == '' for name in SANDBOX_CONFIGURATION_SLOTS)
+            and not any(name in environ for name in SANDBOX_IMPORT_SLOTS),
+        'reviewed_render_proxy': environ.get('DJANGO_TRUST_X_FORWARDED_PROTO') == 'true'
+            and environ.get('DJANGO_API_NUM_PROXIES') == '1',
+        'operations_explicitly_qualified': environ.get('RENDER_PRODUCTION_OPERATIONS_QUALIFIED') == 'true',
+    }
+
+
+def qualify_production_checkout(environ):
+    if not all(production_checkout_checks(environ).values()):
+        raise StartupRejected('Production checkout requires an approved isolated origin, complete production configuration and explicitly qualified billing operations.')
+
+
+def qualify_checkout(environ):
+    """Mutually exclusive, default-OFF exceptions to the original financial guard."""
+    sandbox = environ.get('RENDER_SANDBOX_CHECKOUT_QUALIFICATION_ENABLED', 'false')
+    production = environ.get('RENDER_PRODUCTION_CHECKOUT_QUALIFICATION_ENABLED', 'false')
+    operations = environ.get('RENDER_PRODUCTION_OPERATIONS_QUALIFIED', 'false')
+    custom_verified = environ.get('RENDER_PRODUCTION_CUSTOM_DOMAIN_VERIFIED', 'false')
+    handoff = environ.get('PARENT_CHECKOUT_HANDOFF_ENABLED', 'false')
+    if any(not isinstance(value, str) or value not in {'true', 'false'}
+            for value in (sandbox, production, operations, handoff, custom_verified)):
+        raise StartupRejected('Checkout and operations qualification must be explicitly enabled or disabled.')
+    if production == 'true':
+        qualify_production_checkout(environ)
+        return
+    if operations != 'false' or custom_verified != 'false' or any(
+            environ.get(flag, 'false') != 'false' for flag in PRODUCTION_ONLY_FLAGS):
+        raise StartupRejected('Production billing and operations must remain disabled without explicit startup qualification.')
+    if sandbox == 'false' and (handoff != 'false' or any(
+            environ.get(flag, 'false') != 'false' for flag in SANDBOX_ONLY_FLAGS)):
+        raise StartupRejected('Financial and checkout features must remain disabled without explicit qualification.')
+    qualify_sandbox_checkout(environ)
+
+
+def production_preflight_report(environ):
+    """Offline contract only. Passing never establishes public release readiness.
+
+    A copy may expand configured signing seeds during the unchanged local
+    startup guards. The caller's environment and runtime gates are not changed.
+    Original Django production checks, DB/cache readiness, backups, scheduler
+    heartbeats and canonical provider qualification remain separate evidence.
+    """
+    checks = production_checkout_checks(environ)
+    local_shape = False
+    if all(checks.values()):
+        try:
+            prepare_environment(dict(environ))
+            local_shape = True
+        except (StartupRejected, ValueError, TypeError, OSError):
+            pass
+    checks['original_local_startup_guards'] = local_shape
+    disabled_draft = all(environ.get(flag, 'false') == 'false' for flag in PRODUCTION_ONLY_FLAGS) and (
+        environ.get('RENDER_PRODUCTION_CHECKOUT_QUALIFICATION_ENABLED', 'false') == 'false'
+        and environ.get('RENDER_PRODUCTION_OPERATIONS_QUALIFIED', 'false') == 'false'
+        and environ.get('RENDER_PRODUCTION_CUSTOM_DOMAIN_VERIFIED', 'false') == 'false')
+    return {'schema_version': 1, 'kind': 'offline_production_checkout_configuration',
+        'status': 'local_configuration_valid' if all(checks.values()) else 'disabled_draft' if disabled_draft else 'blocked',
+        'local_configuration_valid': all(checks.values()), 'public_release_ready': False,
+        'activation_performed': False, 'provider_operations': 0, 'database_operations': 0,
+        'environment_mutations': 0, 'checks': checks,
+        'custom_domain_dns_ca_proof': 'external_evidence_required_not_checked' if
+            environ.get('RENDER_PRODUCTION_APPROVED_ORIGIN') == PRODUCTION_CUSTOM_ORIGIN else 'not_selected',
+        'failed_checks': sorted(name for name, passed in checks.items() if not passed),
+        'runtime_qualification_required': ['original_django_production_checks', 'qualified_non_sleeping_hosting',
+            'custom_domain_dns_mapping_and_certificate_if_selected',
+            'durable_database_restore_test_and_cache', 'canonical_production_merchant_and_location',
+            'signed_webhook_delivery_and_reconciliation', 'scheduled_reconciliation_and_renewal_heartbeats',
+            'monitoring_and_incident_response', 'approved_mobile_storefront_release']}
 
 
 def qualify_sandbox_checkout(environ):
@@ -195,7 +347,7 @@ def prepare_environment(environ):
                 raise ValueError
         except (ValueError, TypeError):
             raise StartupRejected('Enabled email requires configured Resend HTTPS and a verified sender domain.') from None
-    qualify_sandbox_checkout(environ)
+    qualify_checkout(environ)
     qualify_private_media(environ)
     for target, seed_name in (
         ('DJANGO_SECRET_KEY', 'RENDER_DJANGO_SECRET_SEED'),
@@ -217,8 +369,13 @@ def prepare_environment(environ):
     if not re.fullmatch(r'[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.onrender\.com', host):
         raise StartupRejected('The exact Render public hostname is required.')
     if environ.get('DJANGO_ALLOWED_HOSTS', host) != host:
-        raise StartupRejected('Only the exact Render public hostname is permitted.')
-    environ['DJANGO_ALLOWED_HOSTS'] = host
+        custom_qualified = (environ.get('RENDER_PRODUCTION_CHECKOUT_QUALIFICATION_ENABLED') == 'true'
+            and environ.get('RENDER_PRODUCTION_APPROVED_ORIGIN') == PRODUCTION_CUSTOM_ORIGIN
+            and _production_origin_matches(environ))
+        if not custom_qualified:
+            raise StartupRejected('Only exact qualified public hostnames are permitted.')
+    else:
+        environ['DJANGO_ALLOWED_HOSTS'] = host
     # The Blueprint uses only Render's same-region private Key Value URL and
     # blocks every external cache IP. Never opt out of TLS for an arbitrary URL.
     from urllib.parse import urlsplit
