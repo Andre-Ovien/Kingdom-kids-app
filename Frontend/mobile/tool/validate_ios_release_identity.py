@@ -12,6 +12,11 @@ DEV_TEAM = 'VTV9889TNF'
 DEV_BUNDLE = 'com.andreovien.kingdomkids'
 CONFIGS = {'Release': '97C147071CF9000F007C117D', 'Debug': '97C147061CF9000F007C117D',
            'Profile': '249021D4217E4FDB00AE95B9'}
+PRIVACY_PATH = MOBILE / 'ios/Runner/PrivacyInfo.xcprivacy'
+REVIEWED_PRIVACY_TYPES = {
+    'Name', 'EmailAddress', 'UserID', 'GameplayContent', 'ProductInteraction',
+    'PurchaseHistory', 'PaymentInfo', 'OtherDiagnosticData', 'OtherDataTypes',
+}
 
 
 def runner_settings(project, configuration):
@@ -55,5 +60,24 @@ def load_source():
             plistlib.loads((MOBILE/'ios/Runner/Runner.entitlements').read_bytes()))
 
 
+def validate_privacy_manifest(document):
+    if document.get('NSPrivacyTracking') is not False or document.get('NSPrivacyTrackingDomains') != []:
+        raise ValueError('Reviewed App Store source does not use tracking.')
+    rows = document.get('NSPrivacyCollectedDataTypes', [])
+    expected = {'NSPrivacyCollectedDataType' + name for name in REVIEWED_PRIVACY_TYPES}
+    if (not isinstance(rows, list) or len(rows) != len(expected)
+            or any(not isinstance(row, dict) for row in rows)
+            or {row.get('NSPrivacyCollectedDataType') for row in rows} != expected):
+        raise ValueError('Privacy declarations must cover the reviewed account, learning, payment and diagnostic data.')
+    for row in rows:
+        if (row.get('NSPrivacyCollectedDataTypeLinked') is not True
+                or row.get('NSPrivacyCollectedDataTypeTracking') is not False
+                or row.get('NSPrivacyCollectedDataTypePurposes') != ['NSPrivacyCollectedDataTypePurposeAppFunctionality']):
+            raise ValueError('Reviewed data is linked for app functionality and is not used for tracking.')
+    return {'source_privacy_manifest_consistent': True, 'declared_privacy_type_count': len(rows),
+            'app_store_privacy_answers_submitted': False}
+
+
 if __name__ == '__main__':
-    print(json.dumps(validate(*load_source()), sort_keys=True))
+    print(json.dumps({**validate(*load_source()),
+                      **validate_privacy_manifest(plistlib.loads(PRIVACY_PATH.read_bytes()))}, sort_keys=True))

@@ -2,6 +2,7 @@
 from copy import deepcopy
 import importlib.util
 from pathlib import Path
+import plistlib
 import unittest
 
 spec=importlib.util.spec_from_file_location('ios_identity',Path(__file__).resolve().parents[1]/'validate_ios_release_identity.py')
@@ -9,6 +10,28 @@ identity=importlib.util.module_from_spec(spec);spec.loader.exec_module(identity)
 
 
 class ClientReleaseIdentityTests(unittest.TestCase):
+    def test_actual_source_privacy_covers_payment_and_diagnostics_without_tracking(self):
+        result=identity.validate_privacy_manifest(plistlib.loads(identity.PRIVACY_PATH.read_bytes()))
+        self.assertTrue(result['source_privacy_manifest_consistent'])
+        self.assertFalse(result['app_store_privacy_answers_submitted'])
+
+    def test_removed_declarations_duplicates_tracking_and_purpose_drift_are_refused(self):
+        current=plistlib.loads(identity.PRIVACY_PATH.read_bytes())
+        cases=[]
+        for name in ['PaymentInfo','OtherDiagnosticData']:
+            changed=deepcopy(current)
+            changed['NSPrivacyCollectedDataTypes']=[row for row in changed['NSPrivacyCollectedDataTypes']
+                if row['NSPrivacyCollectedDataType']!='NSPrivacyCollectedDataType'+name]
+            cases.append(changed)
+        changed=deepcopy(current);changed['NSPrivacyCollectedDataTypes'].append(deepcopy(changed['NSPrivacyCollectedDataTypes'][0]));cases.append(changed)
+        for key,value in [('NSPrivacyTracking',True),('NSPrivacyTrackingDomains',['example.test'])]:
+            changed=deepcopy(current);changed[key]=value;cases.append(changed)
+        for key,value in [('NSPrivacyCollectedDataTypeLinked',False),('NSPrivacyCollectedDataTypeTracking',True),
+                          ('NSPrivacyCollectedDataTypePurposes',['NSPrivacyCollectedDataTypePurposeAnalytics'])]:
+            changed=deepcopy(current);changed['NSPrivacyCollectedDataTypes'][0][key]=value;cases.append(changed)
+        for changed in cases:
+            with self.subTest(document=changed),self.assertRaises(ValueError):identity.validate_privacy_manifest(changed)
+
     def test_actual_client_release_and_existing_development_return_boundaries(self):
         result=identity.validate(*identity.load_source())
         self.assertTrue(result['source_identity_consistent'])

@@ -6,7 +6,7 @@
   "contact_email": "kingdomkidshq@gmail.com",
   "contact_is_provisional": false,
   "source_sha256": {
-    "privacy.astro": "0dd9067785e5122b57b8303d4d2743c6dcdc523928e1603837d9ca77111767d2",
+    "privacy.astro": "527e7ef29fc957c12f1ead67573cd7732b90f8a7cf33a1d743d8d4fd78c19cc2",
     "site.ts": "791af7332056e4613994c55ee5542ed7c374c50888af4c5610d88568e93606af"
   },
   "sections": [
@@ -82,7 +82,39 @@
         },
         {
           "kind": "bullet",
-          "text": "Standard technical request information—such as IP address, request time, browser type, and error or security events—may be processed by the production host, reverse proxy, or API to deliver and protect the service."
+          "text": "Standard technical request information—such as IP address, request time, browser type, and error or security events—may be processed by the production host, reverse proxy, or API to deliver and protect the service. API access logs include the remote address, response status and request duration. The remote address can be a hosting proxy."
+        },
+        {
+          "kind": "heading",
+          "text": "Payments and subscription records"
+        },
+        {
+          "kind": "paragraph",
+          "text": "A parent who purchases access enters payment details on Square’s hosted checkout. Kingdom Kids does not ask a child for payment information and does not store a full payment-card number or card security code."
+        },
+        {
+          "kind": "bullet",
+          "text": "We keep the selected plan, price and currency, the accepted billing terms, checkout operation references, and Square customer, checkout-link, order, subscription, invoice and payment identifiers."
+        },
+        {
+          "kind": "bullet",
+          "text": "We receive and verify the form of payment, payment and card-payment status, capture times, refunds, subscription and cancellation status, and the period of access supported by a verified payment."
+        },
+        {
+          "kind": "bullet",
+          "text": "Square can return masked card information, such as card type and last four digits, with a payment record."
+        },
+        {
+          "kind": "bullet",
+          "text": "Separately authorized complimentary access has its own grant, expiry and revocation records."
+        },
+        {
+          "kind": "heading",
+          "text": "Messages to our team"
+        },
+        {
+          "kind": "paragraph",
+          "text": "The website contact form sends the subject, reply email address and message to our support inbox through our email provider. Contact messages are not saved in an application contact-message database. Please do not include passwords, verification codes, payment details or a child’s personal information in a message."
         },
         {
           "kind": "heading",
@@ -91,6 +123,10 @@
         {
           "kind": "paragraph",
           "text": "Session tokens, the selected profile, preferences, first-launch state, and optional reminder settings are stored using the device’s protected storage. Reminder notifications are scheduled locally after a grown-up grants notification permission."
+        },
+        {
+          "kind": "paragraph",
+          "text": "Some games use device motion locally for game controls. The motion readings are not sent to the Kingdom Kids API. Narration is playback or text-to-speech; the app does not record a child’s voice."
         }
       ]
     },
@@ -146,6 +182,14 @@
         },
         {
           "kind": "bullet",
+          "text": "Open an owned checkout, verify purchases and refunds, manage subscription cancellation, and apply access."
+        },
+        {
+          "kind": "bullet",
+          "text": "Deliver contact messages and reply to requests for help."
+        },
+        {
+          "kind": "bullet",
           "text": "Prevent abuse, investigate errors, protect accounts, and operate the service."
         },
         {
@@ -168,7 +212,7 @@
         },
         {
           "kind": "bullet",
-          "text": "Vendors operating the production infrastructure, such as hosting, database, content-delivery, security, and transactional-email providers, under appropriate data-protection terms."
+          "text": "Service providers used to host and deliver the website, API, database, media, payments and email, as described below."
         },
         {
           "kind": "bullet",
@@ -179,8 +223,32 @@
           "text": "Complete a merger, financing, acquisition, or sale of assets, subject to notice and continued protection of the information."
         },
         {
+          "kind": "bullet",
+          "text": "Render hosts the API, application database and shared rate-limit cache."
+        },
+        {
+          "kind": "bullet",
+          "text": "Vercel hosts the public website and forwards its supported form requests to the API."
+        },
+        {
+          "kind": "bullet",
+          "text": "Cloudinary delivers private story and narration media."
+        },
+        {
+          "kind": "bullet",
+          "text": "Resend delivers account-security, waitlist and contact email."
+        },
+        {
+          "kind": "bullet",
+          "text": "Square hosts parent checkout and processes payments and provider-managed subscription billing."
+        },
+        {
+          "kind": "bullet",
+          "text": "Contact messages are delivered to the operator’s Google Gmail inbox."
+        },
+        {
           "kind": "paragraph",
-          "text": "Production vendors have not yet been named in this pre-launch policy. Their identities, regions, contracts, and any international transfer safeguards must be reviewed and this policy updated before launch."
+          "text": "Provider-specific storage regions, retention periods, contracts and any international-transfer safeguards have not yet been fully documented in this policy. Naming a provider does not promise that all processing stays in one country."
         }
       ]
     },
@@ -209,8 +277,20 @@
           "text": "Email-verification, password-reset, and account-deletion challenges are short-lived and retained only as needed for account security."
         },
         {
+          "kind": "bullet",
+          "text": "Family-account deletion does not erase all financial records. Hosted checkout, payment-proof and cancellation records remain with the parent-account link removed so an unresolved payment or request to stop future billing is not lost. These records include provider identifiers, billing terms, amounts, payment and refund evidence, access dates and cancellation state."
+        },
+        {
+          "kind": "bullet",
+          "text": "Account deletion requests cancellation of future subscription billing. If the provider is unavailable, the cancellation request remains pending until it can be verified; deleting an account alone is not proof that provider cancellation has completed."
+        },
+        {
+          "kind": "bullet",
+          "text": "Contact messages sent to our inbox and copies held by email or payment providers are not automatically erased by the family-account deletion flow."
+        },
+        {
           "kind": "paragraph",
-          "text": "Production log and backup schedules are not yet finalized. They must be documented before launch. Once configured, deleted information may remain temporarily in access-restricted backups until their normal rotation, and must not be restored to the active service except for disaster recovery."
+          "text": "An expired security challenge can no longer authorize an action; expiry does not mean its record is immediately erased. A fixed retention period for financial records, support email, production logs and any backups has not yet been set. These records may remain after family-account deletion."
         }
       ]
     },
