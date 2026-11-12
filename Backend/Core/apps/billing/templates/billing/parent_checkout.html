@@ -4,7 +4,7 @@
 <link rel="stylesheet" href="{% static 'billing/parent_checkout.css' %}">
 <script type="module" src="{% static 'billing/parent_checkout.js' %}"></script>
 </head><body>
-<header class="page-header"><a class="brand" href="#main">Kingdom Kids</a><span class="sandbox">Sandbox · Test cards only</span></header>
+<header class="page-header"><a class="brand" href="#main">Kingdom Kids</a></header>
 <main id="main" class="checkout-shell"><section class="checkout" aria-label="Secure parent checkout">
 <h1 id="page-title">{% if selected_plan %}Parent sign in{% else %}Choose your plan{% endif %}</h1>
 {% if not selected_plan %}<section id="plan-step" aria-label="Choose your plan">
