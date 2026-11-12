@@ -381,6 +381,7 @@ const description =
           );
 
           if (response.status === 204) {
+            setStatus(confirmStatus, 'success', 'Your account and connected family data have been deleted.');
             deletionChallengeId = '';
             requestForm?.reset();
             confirmForm.reset();

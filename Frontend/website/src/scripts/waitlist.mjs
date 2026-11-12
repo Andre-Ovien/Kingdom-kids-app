@@ -39,7 +39,9 @@ export function initWaitlistForm(form, request = postPublicForm) {
       const result = await request('/api/accounts/waitlist/', { email: address });
       if (result.kind === 'success') {
         succeeded = true;
-        setState('success', 'You’re on the list. We’ll let you know when the beta is ready.', 'Joined');
+        setState('success', 'You’re on the list. Check your inbox for confirmation—we’ll email you when Kingdom Kids is ready.', 'Joined');
+      } else if (result.kind === 'email_pending') {
+        setState('error', 'You’re on the list, but confirmation couldn’t be sent yet. Try again to request it.', 'Retry confirmation');
       } else {
         const messages = {
           invalid: 'Enter a valid email address, such as name@example.com.',

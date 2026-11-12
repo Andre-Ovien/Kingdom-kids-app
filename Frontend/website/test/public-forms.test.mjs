@@ -76,6 +76,24 @@ test('validation, throttling and unavailable mail map to controlled retry states
   }
 });
 
+test('only the waitlist delayed-confirmation contract says the address was already saved', async () => {
+  const delayed = () => Response.json({ code: 'waitlist_confirmation_delayed', detail: 'Private server wording is not displayed.' }, { status: 503 });
+  assert.deepEqual(await postPublicForm(endpoint, {}, { fetchImpl: async () => delayed() }), { kind: 'email_pending' });
+  assert.deepEqual(await postPublicForm('/api/accounts/contact/', {}, { fetchImpl: async () => delayed() }), { kind: 'unavailable' });
+  assert.deepEqual(await postPublicForm(endpoint, {}, { fetchImpl: async () => Response.json({ code: 'different' }, { status: 503 }) }), { kind: 'unavailable' });
+});
+
+test('a saved waitlist entry can explicitly retry confirmation without losing its email', async () => {
+  const ui = fixture('waitlist'); ui.email.value = 'parent@example.com'; let calls = 0;
+  initWaitlistForm(ui.form, async () => { calls++; return { kind: calls === 1 ? 'email_pending' : 'success' }; });
+  await ui.form.emit('submit');
+  assert.equal(ui.email.value, 'parent@example.com'); assert.equal(ui.submit.disabled, false);
+  assert.equal(ui['button-label'].textContent, 'Retry confirmation');
+  assert.match(ui.status.textContent, /You’re on the list/);
+  await ui.form.emit('submit'); assert.equal(calls, 2); assert.equal(ui.form.dataset.state, 'success');
+  assert.match(ui.status.textContent, /Check your inbox/);
+});
+
 test('offline avoids fetch; network and bounded timeout are recoverable without automatic retry', async () => {
   let calls = 0;
   assert.deepEqual(await postPublicForm(endpoint, {}, { online: () => false, fetchImpl: () => { calls++; } }), { kind: 'offline' });

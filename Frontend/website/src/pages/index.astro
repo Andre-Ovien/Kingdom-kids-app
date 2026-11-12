@@ -84,6 +84,8 @@ const faqs = [
     <meta name="twitter:description" content={siteConfig.description} />
     <script>
       import { initWaitlistForms } from '../scripts/waitlist.mjs';
+      import { initFormToasts } from '../scripts/form-toasts.mjs';
+      initFormToasts();
       initWaitlistForms();
     </script>
 

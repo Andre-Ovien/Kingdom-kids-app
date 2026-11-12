@@ -29,7 +29,8 @@ export async function postPublicForm(endpoint, payload, {
     if (response.status === 400) return { kind: 'invalid' };
     if (response.status === 429) return { kind: 'throttled' };
     // Both public endpoints intentionally acknowledge duplicate-safe requests with 202.
-    if (response.status !== 202 ||
+    const delayedConfirmation = endpoint === '/api/accounts/waitlist/' && response.status === 503;
+    if ((response.status !== 202 && !delayedConfirmation) ||
         !/^application\/json(?:\s*;|$)/i.test(response.headers.get('content-type') ?? '')) {
       return { kind: 'unavailable' };
     }
@@ -49,6 +50,10 @@ export async function postPublicForm(endpoint, payload, {
     let body;
     try { body = JSON.parse(new TextDecoder().decode(bytes)); }
     catch { return { kind: 'unavailable' }; }
+    if (delayedConfirmation) {
+      return body?.code === 'waitlist_confirmation_delayed'
+        ? { kind: 'email_pending' } : { kind: 'unavailable' };
+    }
     return body && typeof body.detail === 'string' && body.detail.trim()
       ? { kind: 'success' }
       : { kind: 'unavailable' };
