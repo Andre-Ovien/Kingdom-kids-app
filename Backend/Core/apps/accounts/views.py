@@ -142,7 +142,7 @@ class RegisterView(EmailDependentViewMixin, NoStoreResponseMixin, APIView):
         )
 
 
-class WaitlistSignupView(APIView):
+class WaitlistSignupView(NoStoreResponseMixin, APIView):
     """Accept a footer signup without disclosing existing subscribers."""
 
     permission_classes = (AllowAny,)

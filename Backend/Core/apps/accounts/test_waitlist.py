@@ -49,6 +49,8 @@ class WaitlistApiTests(APITestCase):
         self.assertEqual(second.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(first.data, ACCEPTED_RESPONSE)
         self.assertEqual(second.data, ACCEPTED_RESPONSE)
+        self.assertEqual(first['Cache-Control'], 'no-store')
+        self.assertEqual(second['Cache-Control'], 'no-store')
         self.assertEqual(WaitlistSubscriber.objects.count(), 1)
         subscriber.refresh_from_db()
         self.assertEqual(subscriber.consented_at, original_consent_time)
@@ -57,6 +59,7 @@ class WaitlistApiTests(APITestCase):
         response = self.post('not-an-email')
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response['Cache-Control'], 'no-store')
         self.assertEqual(WaitlistSubscriber.objects.count(), 0)
 
     def test_database_constraint_is_case_insensitive(self):
@@ -77,7 +80,6 @@ class WaitlistApiTests(APITestCase):
                 self.post(f'parent-{index}@example.com').status_code,
                 status.HTTP_202_ACCEPTED,
             )
-        self.assertEqual(
-            self.post('rate-limited@example.com').status_code,
-            status.HTTP_429_TOO_MANY_REQUESTS,
-        )
+        rejected = self.post('rate-limited@example.com')
+        self.assertEqual(rejected.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+        self.assertEqual(rejected['Cache-Control'], 'no-store')
