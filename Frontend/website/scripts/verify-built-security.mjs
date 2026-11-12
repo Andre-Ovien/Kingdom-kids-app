@@ -88,3 +88,26 @@ for (const path of ['index.html', 'privacy/index.html', 'account-deletion/index.
   if (!html.includes('href="/contact/"')) throw new Error('Public footer must expose the contact page.');
 }
 console.log('Built contact form fallback is inert; public footers expose Contact.');
+
+const returnPage = await readFile(new URL('../dist/payments/return/index.html', import.meta.url), 'utf8');
+const association = JSON.parse(await readFile(new URL('../dist/.well-known/apple-app-site-association', import.meta.url), 'utf8'));
+const claimed = association.applinks?.details;
+if (claimed?.length !== 1 || claimed[0].appIDs?.length !== 1 ||
+    claimed[0].appIDs[0] !== 'VTV9889TNF.com.andreovien.kingdomkids' ||
+    claimed[0].components?.length !== 1 || claimed[0].components[0]['/'] !== '/payments/return/') {
+  throw new Error('Built AASA must claim only the exact payment return path and reviewed development app.');
+}
+if (!/name="referrer" content="no-referrer"/.test(returnPage) ||
+    !returnPage.includes("history.replaceState(null, '', '/payments/return/')")) {
+  throw new Error('Built return page must clear correlation early and suppress referrers.');
+}
+if (/<a[^>]+id="open-app"[^>]+href=/.test(returnPage) || /payment (confirmed|successful)/i.test(returnPage)) {
+  throw new Error('Static return page must neither open an unvalidated app link nor claim payment success.');
+}
+const config = JSON.parse(await readFile(new URL('../vercel.json', import.meta.url), 'utf8'));
+const associationHeaders = config.headers.find((item) => item.source === '/.well-known/apple-app-site-association')?.headers;
+if (!associationHeaders?.some((item) => item.key === 'Content-Type' && item.value === 'application/json') ||
+    (config.redirects ?? []).some((item) => item.source.includes('well-known'))) {
+  throw new Error('AASA requires an exact JSON response without redirects.');
+}
+console.log('Built payment return is generic and inert; exact AASA copied with JSON serving contract.');

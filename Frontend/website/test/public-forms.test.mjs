@@ -168,8 +168,9 @@ test('Vercel proxies only the four exact public paths to the verified HTTPS back
     const url = new URL(destination); assert.equal(url.origin, 'https://kingdom-kids-checkout-staging.onrender.com');
     assert.equal(url.pathname, source); assert.equal(url.search, ''); assert.equal(url.hash, '');
   }
-  assert.equal(config.headers[0].source, '/api/:path*');
-  for (const header of config.headers[0].headers) assert.equal(header.value, 'no-store');
+  const apiHeaders = config.headers.find((entry) => entry.source === '/api/:path*');
+  assert.ok(apiHeaders);
+  for (const header of apiHeaders.headers) assert.equal(header.value, 'no-store');
 });
 
 test('editing a failed contact message creates a new in-memory request ID; no storage is used', async () => {

@@ -1,0 +1,49 @@
+---
+import '@fontsource-variable/bricolage-grotesque/wght.css';
+import '../../styles/payment-return.css';
+import '../../styles/form-toasts.css';
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <meta name="robots" content="noindex,nofollow" />
+    <meta name="referrer" content="no-referrer" />
+    <script is:inline>
+      (() => {
+        // Clear the address before loading our modules. These UUIDs only
+        // correlate a return; neither can authenticate or grant paid access.
+        const query = new URLSearchParams(location.search);
+        const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        const keys = [...query.keys()];
+        const attempt = query.get('attempt'), state = query.get('state');
+        const valid = location.origin === 'https://kingdom-kids.app' && location.pathname === '/payments/return/' && !location.hash &&
+          location.search.length <= 200 && keys.length === 2 &&
+          keys.includes('attempt') && keys.includes('state') && uuid.test(attempt || '') && uuid.test(state || '');
+        globalThis.__kkPaymentReturn = valid ? { attempt: attempt.toLowerCase(), state: state.toLowerCase() } : null;
+        history.replaceState(null, '', '/payments/return/');
+      })();
+    </script>
+    <meta name="theme-color" content="#f7f8fa" />
+    <title>Return to Kingdom Kids</title>
+  </head>
+  <body>
+    <header class="return-header"><a class="return-brand" href="/">Kingdom Kids</a></header>
+    <main class="return-shell">
+      <section class="return-card" aria-labelledby="return-title">
+        <div class="return-icon" aria-hidden="true">↗</div>
+        <p class="return-eyebrow">Your next adventure is waiting</p>
+        <h1 id="return-title">Back to Kingdom Kids.</h1>
+        <p class="return-copy">Open the app to securely check your payment and continue.</p>
+        <a id="open-app" class="return-action" hidden>Open Kingdom Kids</a>
+        <p id="return-status" class="return-status" role="status" aria-live="polite" aria-atomic="true" tabindex="-1">You can also open Kingdom Kids from your home screen. The app will check your payment securely.</p>
+        <noscript><p>Open Kingdom Kids from your home screen to check your payment.</p></noscript>
+      </section>
+    </main>
+    <script>
+      import { initPaymentReturn } from '../../scripts/payment-return.mjs';
+      initPaymentReturn();
+    </script>
+  </body>
+</html>

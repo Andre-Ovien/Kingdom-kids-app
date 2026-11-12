@@ -13,6 +13,7 @@
     "preview": "astro preview",
     "check": "astro check",
     "verify:security": "node scripts/verify-built-security.mjs",
+    "sync:notifications:check": "node scripts/sync-page-notifications.mjs --check",
     "test": "node --test test/*.test.mjs"
   },
   "dependencies": {
