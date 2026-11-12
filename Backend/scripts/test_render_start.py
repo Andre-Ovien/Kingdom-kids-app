@@ -26,7 +26,94 @@ def environment():
         'PORT':'10000'}
 
 
+def sandbox_environment():
+    values = environment()
+    origin = 'https://' + startup.SANDBOX_QUALIFICATION_HOST
+    values.update(RENDER_SANDBOX_CHECKOUT_QUALIFICATION_ENABLED='true',
+        RENDER_EXTERNAL_HOSTNAME=startup.SANDBOX_QUALIFICATION_HOST,
+        PARENT_CHECKOUT_ORIGIN=origin, SQUARE_ENVIRONMENT='sandbox',
+        PAID_CONTENT_ENTITLEMENT_ENVIRONMENT='sandbox',
+        DJANGO_TRUST_X_FORWARDED_PROTO='true', DJANGO_API_NUM_PROXIES='1',
+        SQUARE_SANDBOX_TEST_PARENT_IDS='41, 42', SQUARE_API_VERSION='2026-09-16',
+        SQUARE_SANDBOX_APPLICATION_ID='sandbox-synthetic-application',
+        SQUARE_SANDBOX_ACCESS_TOKEN='synthetic-not-a-provider-token',
+        SQUARE_SANDBOX_MERCHANT_ID='synthetic-merchant',
+        SQUARE_SANDBOX_LOCATION_ID='synthetic-location',
+        SQUARE_SANDBOX_WEBHOOK_SIGNATURE_KEY='synthetic-not-a-webhook-secret',
+        SQUARE_SANDBOX_WEBHOOK_NOTIFICATION_URL=origin + '/api/billing/square/webhook/')
+    values.update({flag:'true' for flag in startup.SANDBOX_QUALIFICATION_FLAGS})
+    return values
+
+
 class RenderStartupTests(unittest.TestCase):
+    def test_exact_explicit_sandbox_qualification_preserves_existing_startup_validation(self):
+        values = sandbox_environment()
+        with patch.object(startup.os, 'open', side_effect=AssertionError('Unexpected file/credential read')):
+            self.assertEqual(startup.prepare_environment(values), '10000')
+        self.assertEqual(values['DJANGO_ALLOWED_HOSTS'], startup.SANDBOX_QUALIFICATION_HOST)
+        self.assertEqual(values['SQUARE_SANDBOX_TEST_PARENT_IDS'], '41, 42')
+        self.assertNotIn('RENDER_DJANGO_SECRET_SEED', values)
+        self.assertNotIn('RENDER_JWT_SIGNING_SEED', values)
+
+    def test_without_explicit_opt_in_all_previous_financial_guards_remain(self):
+        for opt_in in (None, 'false', '', 'TRUE', 'yes', '1'):
+            values = sandbox_environment()
+            if opt_in is None:
+                values.pop('RENDER_SANDBOX_CHECKOUT_QUALIFICATION_ENABLED')
+            else:
+                values['RENDER_SANDBOX_CHECKOUT_QUALIFICATION_ENABLED'] = opt_in
+            with self.subTest(opt_in=opt_in), self.assertRaises(startup.StartupRejected):
+                startup.prepare_environment(values)
+
+    def test_sandbox_qualification_rejects_wrong_host_origin_production_or_missing_enrollment(self):
+        variants = [
+            ('RENDER_EXTERNAL_HOSTNAME', 'kingdom-kids-production.onrender.com'),
+            ('RENDER_EXTERNAL_HOSTNAME', startup.SANDBOX_QUALIFICATION_HOST + '.attacker.test'),
+            ('PARENT_CHECKOUT_ORIGIN', 'http://' + startup.SANDBOX_QUALIFICATION_HOST),
+            ('PARENT_CHECKOUT_ORIGIN', 'https://' + startup.SANDBOX_QUALIFICATION_HOST + '/'),
+            ('PARENT_CHECKOUT_ORIGIN', 'https://' + startup.SANDBOX_QUALIFICATION_HOST + '?test=1'),
+            ('PARENT_CHECKOUT_ORIGIN', 'https://user:password@' + startup.SANDBOX_QUALIFICATION_HOST),
+            ('SQUARE_ENVIRONMENT', 'production'),
+            ('PAID_CONTENT_ENTITLEMENT_ENVIRONMENT', 'production'),
+            ('SQUARE_SANDBOX_TEST_PARENT_IDS', ''), ('SQUARE_SANDBOX_TEST_PARENT_IDS', '*'),
+            ('SQUARE_SANDBOX_TEST_PARENT_IDS', '41,'), ('SQUARE_SANDBOX_TEST_PARENT_IDS', '41,01'),
+            ('SQUARE_SANDBOX_TEST_PARENT_IDS', '0'), ('SQUARE_SANDBOX_TEST_PARENT_IDS', '-1'),
+            ('SQUARE_SANDBOX_TEST_PARENT_IDS', '9223372036854775808'),
+            ('SQUARE_SANDBOX_TEST_PARENT_IDS', ','.join(str(value) for value in range(1, 102))),
+            ('SQUARE_SANDBOX_TEST_PARENT_IDS', None),
+            ('SQUARE_SANDBOX_APPLICATION_ID', 'sq0idp-production-application'),
+            ('SQUARE_SANDBOX_WEBHOOK_NOTIFICATION_URL', 'https://different.example/api/billing/square/webhook/'),
+            ('SQUARE_SANDBOX_WEBHOOK_NOTIFICATION_URL', 'https://' + startup.SANDBOX_QUALIFICATION_HOST + '/api/billing/square/webhook'),
+            ('DJANGO_TRUST_X_FORWARDED_PROTO', 'false'), ('DJANGO_API_NUM_PROXIES', '0'),
+            ('SQUARE_API_VERSION', '2026-01-22'),
+        ]
+        for flag in startup.SANDBOX_QUALIFICATION_FLAGS:
+            variants.extend(((flag, 'false'), (flag, 'TRUE')))
+        for flag in startup.DISABLED_FLAGS:
+            if flag not in startup.SANDBOX_QUALIFICATION_FLAGS:
+                variants.append((flag, 'true'))
+        for name in ('SQUARE_SANDBOX_APPLICATION_ID', 'SQUARE_SANDBOX_ACCESS_TOKEN',
+                     'SQUARE_SANDBOX_MERCHANT_ID', 'SQUARE_SANDBOX_LOCATION_ID',
+                     'SQUARE_SANDBOX_WEBHOOK_SIGNATURE_KEY'):
+            variants.extend(((name, ''), (name, None), (name, 'synthetic private value')))
+        for name, value in variants:
+            values = sandbox_environment(); values[name] = value
+            with self.subTest(name=name, value=value), self.assertRaises(startup.StartupRejected) as caught:
+                startup.prepare_environment(values)
+            self.assertNotIn('synthetic private value', str(caught.exception))
+            self.assertNotIn('synthetic-not-a-provider-token', str(caught.exception))
+
+    def test_qualification_does_not_relax_debug_email_signing_host_cache_or_port_guards(self):
+        for name, value in [('DJANGO_DEBUG', 'true'), ('DJANGO_EMAIL_DELIVERY_ENABLED', ''),
+                            ('DJANGO_EMAIL_DELIVERY_ENABLED', 'true'),
+                            ('RENDER_DJANGO_SECRET_SEED', 'synthetic-invalid-seed'),
+                            ('DJANGO_ALLOWED_HOSTS', '*'),
+                            ('DJANGO_CACHE_URL', 'redis://attacker.example:6379'),
+                            ('DJANGO_CACHE_ALLOW_INSECURE', 'false'), ('PORT', '80')]:
+            values = sandbox_environment(); values[name] = value
+            with self.subTest(name=name), self.assertRaises(startup.StartupRejected):
+                startup.prepare_environment(values)
+
     def test_explicit_resend_https_email_is_allowed_without_relaxing_other_guards(self):
         values = environment()
         values.update(DJANGO_EMAIL_DELIVERY_ENABLED='true', DJANGO_EMAIL_BACKEND='Core.resend_backend.EmailBackend',
@@ -150,7 +237,7 @@ class RenderStartupTests(unittest.TestCase):
                 self.fail('Must not migrate without ownership')
         connection.__exit__.assert_called_once()
 
-    def run_start(self,fail_migration=False,private_media=False,fail_bootstrap=None,private_family=False):
+    def run_start(self,fail_migration=False,private_media=False,fail_bootstrap=None,private_family=False,sandbox_checkout=False):
         events=[]
         def command(name,**kwargs):
             events.append(name)
@@ -172,6 +259,8 @@ class RenderStartupTests(unittest.TestCase):
         old_path=list(sys.path)
         try:
             values=self.private_environment() if private_media else environment()
+            if sandbox_checkout:
+                values.update(sandbox_environment())
             if private_family:
                 values.update(RENDER_EXTERNAL_HOSTNAME='kingdom-kids-checkout-staging.onrender.com',
                     KK_TEST_FAMILY_IMPORT_ZLIB_B64='synthetic-private-payload',
@@ -208,6 +297,12 @@ class RenderStartupTests(unittest.TestCase):
         self.assertEqual(args[args.index('--workers')+1],'1')
         self.assertEqual(args[args.index('--control-socket')+1], '/tmp/fixture-private/control.sock')
         self.assertEqual(args[args.index('--control-socket-mode')+1], '384')
+
+    def test_authorized_sandbox_still_runs_original_django_checks_and_serialized_bootstrap(self):
+        events = self.run_start(sandbox_checkout=True)
+        self.assertEqual(events[:7], ['setup', 'check', 'lock', 'migrate',
+            'install_published_matching_release', 'unlock', 'close_connections'])
+        self.assertEqual(events[7][0], 'gunicorn')
 
     def test_failed_migration_never_starts_server(self):
         self.assertEqual(self.run_start(True),['setup','check','lock','migrate'])

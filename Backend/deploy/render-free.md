@@ -8,7 +8,7 @@ repository's `main` branch. It creates exactly three Free resources in Virginia:
 
 Render supplies the exact public hostname; no wildcard or guessed URL is used.
 The Docker command `python scripts/render_start.py` validates strict production
-settings, explicit email configuration, disabled financial actions and qualified private-media configuration,
+settings, explicit email configuration, default-disabled financial actions and qualified private-media configuration,
 takes a PostgreSQL session advisory lock,
 runs `check --deploy`, migrations and the reviewed five-game matching installer
 before one Gunicorn worker, then binds `$PORT`. When private delivery is enabled,
@@ -48,9 +48,20 @@ domain is verified, explicitly enable `DJANGO_EMAIL_DELIVERY_ENABLED=true` with
 relaxing any financial guards. Configure `DJANGO_CONTACT_RECIPIENT_EMAIL` as the
 monitored operator inbox for the contact form. SMTP is not a fallback on Free.
 Verified-parent login and password-based account deletion remain available. All Square, paid
-enforcement and parent checkout/status switches stay OFF. Square Sandbox
+enforcement and parent checkout/status switches initially stay OFF. Square Sandbox
 credentials may be held privately for later qualification; storing credentials
 does not enable a provider call, financial worker or charge.
+
+The sole financial startup exception is an operator's explicit
+`RENDER_SANDBOX_CHECKOUT_QUALIFICATION_ENABLED=true` on the exact
+`kingdom-kids-checkout-staging.onrender.com` service. It requires the complete
+reviewed, enrolled-parent Sandbox configuration in [parent-checkout.md](parent-checkout.md),
+including the exact HTTPS checkout origin and signed webhook callback. Any
+production environment, missing/invalid test-parent enrollment, different host,
+legacy automatic-subscription switch or enabled global paid-content gate still
+fails closed. The default is false, and no flag is enabled in the Blueprint by
+this exception. It does not create a worker, contact Square or replace any
+original strict settings/migration/readiness checks.
 
 The approved Cloudinary delivery switch is now enabled in the Blueprint, with
 `DJANGO_CONTENT_MEDIA_HOSTS=api.cloudinary.com`, TTL300 and frozen map SHA256

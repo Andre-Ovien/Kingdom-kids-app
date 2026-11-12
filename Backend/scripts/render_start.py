@@ -25,10 +25,73 @@ DISABLED_FLAGS = (
     'SQUARE_SANDBOX_HTTP_TRANSPORT_ENABLED', 'PAID_CONTENT_ENFORCEMENT_ENABLED',
     'PARENT_CHECKOUT_SANDBOX_ENABLED', 'PARENT_CONTENT_ACCESS_STATUS_ENABLED',
 )
+SANDBOX_QUALIFICATION_HOST = 'kingdom-kids-checkout-staging.onrender.com'
+SANDBOX_QUALIFICATION_FLAGS = (
+    'SQUARE_SANDBOX_ENABLED', 'SQUARE_SANDBOX_TERM_BILLING_ENABLED',
+    'SQUARE_SANDBOX_TERM_RECONCILIATION_ENABLED', 'SQUARE_SANDBOX_HTTP_TRANSPORT_ENABLED',
+    'PARENT_CHECKOUT_SANDBOX_ENABLED', 'PARENT_CONTENT_ACCESS_STATUS_ENABLED',
+)
 
 
 class StartupRejected(RuntimeError):
     pass
+
+
+def qualify_sandbox_checkout(environ):
+    """A local config check for one explicitly authorized staging origin only.
+
+    No SDK/provider calls or secret values in errors. Canonical account/location
+    matching remains a separate provider qualification, never a startup claim.
+    """
+    opted_in = environ.get('RENDER_SANDBOX_CHECKOUT_QUALIFICATION_ENABLED', 'false')
+    if opted_in not in {'true', 'false'}:
+        raise StartupRejected('Sandbox checkout qualification must be explicitly enabled or disabled.')
+    if opted_in == 'false':
+        if any(environ.get(flag, 'false') != 'false' for flag in DISABLED_FLAGS):
+            raise StartupRejected('Financial, paid enforcement and parent checkout features must stay disabled.')
+        return
+    try:
+        origin = 'https://' + SANDBOX_QUALIFICATION_HOST
+        if (environ.get('RENDER_EXTERNAL_HOSTNAME') != SANDBOX_QUALIFICATION_HOST
+                or environ.get('PARENT_CHECKOUT_ORIGIN') != origin
+                or environ.get('SQUARE_ENVIRONMENT') != 'sandbox'
+                or environ.get('PAID_CONTENT_ENTITLEMENT_ENVIRONMENT') != 'sandbox'
+                or environ.get('DJANGO_TRUST_X_FORWARDED_PROTO') != 'true'
+                or environ.get('DJANGO_API_NUM_PROXIES') != '1'
+                or environ.get('SQUARE_API_VERSION', '2026-09-16') != '2026-09-16'
+                or any(environ.get(flag) != 'true' for flag in SANDBOX_QUALIFICATION_FLAGS)
+                or any(environ.get(flag, 'false') != 'false' for flag in DISABLED_FLAGS
+                       if flag not in SANDBOX_QUALIFICATION_FLAGS)
+                or environ.get('SQUARE_SANDBOX_WEBHOOK_NOTIFICATION_URL') != origin + '/api/billing/square/webhook/'):
+            raise ValueError
+        application = environ.get('SQUARE_SANDBOX_APPLICATION_ID', '')
+        if not isinstance(application, str) or not re.fullmatch(r'sandbox-[A-Za-z0-9_-]{8,160}', application):
+            raise ValueError
+        for name, minimum, maximum in (
+            ('SQUARE_SANDBOX_ACCESS_TOKEN', 16, 4096),
+            ('SQUARE_SANDBOX_MERCHANT_ID', 1, 192),
+            ('SQUARE_SANDBOX_LOCATION_ID', 1, 192),
+            ('SQUARE_SANDBOX_WEBHOOK_SIGNATURE_KEY', 16, 512),
+        ):
+            value = environ.get(name, '')
+            if (not isinstance(value, str) or not minimum <= len(value) <= maximum
+                    or not value.isascii() or any(ord(char) <= 32 or ord(char) == 127 for char in value)):
+                raise ValueError
+        # Match the application enrollment parser without loading Django before
+        # its original production settings checks have run.
+        raw_ids = environ.get('SQUARE_SANDBOX_TEST_PARENT_IDS', '')
+        if not isinstance(raw_ids, str) or not raw_ids.strip() or len(raw_ids) > 2100:
+            raise ValueError
+        identifiers = raw_ids.split(',')
+        if len(identifiers) > 100:
+            raise ValueError
+        for identifier in identifiers:
+            identifier = identifier.strip()
+            if (not re.fullmatch(r'[1-9][0-9]{0,18}', identifier)
+                    or int(identifier) > 9223372036854775807):
+                raise ValueError
+    except (ValueError, TypeError, AttributeError):
+        raise StartupRejected('Sandbox checkout qualification requires the exact approved staging origin, enrolled test parents and complete Sandbox configuration.') from None
 
 
 def qualify_private_media(environ):
@@ -88,8 +151,7 @@ def prepare_environment(environ):
                 raise ValueError
         except (ValueError, TypeError):
             raise StartupRejected('Enabled email requires configured Resend HTTPS and a verified sender domain.') from None
-    if any(environ.get(flag, 'false') != 'false' for flag in DISABLED_FLAGS):
-        raise StartupRejected('Financial, paid enforcement and parent checkout features must stay disabled.')
+    qualify_sandbox_checkout(environ)
     qualify_private_media(environ)
     for target, seed_name in (
         ('DJANGO_SECRET_KEY', 'RENDER_DJANGO_SECRET_SEED'),

@@ -91,6 +91,7 @@ and email protections. Do not use live Square credentials or a real card.
 
 | Environment name | Sandbox staging value or requirement |
 | --- | --- |
+| `RENDER_SANDBOX_CHECKOUT_QUALIFICATION_ENABLED` | Explicit `true` only on this exact approved Render staging service; defaults `false` |
 | `SQUARE_ENVIRONMENT` | `sandbox` |
 | `SQUARE_SANDBOX_ENABLED` | `true` |
 | `SQUARE_SANDBOX_TERM_BILLING_ENABLED` | `true` for the reviewed test checkout |
@@ -111,6 +112,19 @@ and email protections. Do not use live Square credentials or a real card.
 | `SQUARE_API_VERSION` | Existing reviewed pinned `2026-09-16` |
 | `SQUARE_HTTP_TIMEOUT_SECONDS` | Existing bounded value, default `5` |
 | `SQUARE_WEBHOOK_MAX_BODY_BYTES` | Existing bounded value, default `262144` |
+
+Render's startup guard retains the original financial-feature denial unless the
+qualification opt-in is exactly `true`. The exception requires this exact
+`RENDER_EXTERNAL_HOSTNAME`, the exact checkout origin above without a trailing
+slash, the callback above with its trailing slash, all six current
+Sandbox/term/transport/parent flags enabled, nonempty valid numeric enrollment,
+Sandbox provider and entitlement environments, and all required provider inputs.
+It also requires the existing trusted Render HTTPS proxy setting
+`DJANGO_TRUST_X_FORWARDED_PROTO=true`, `DJANGO_API_NUM_PROXIES=1`, and the pinned
+API version. A different host, production environment, empty enrollment, enabled
+legacy switch or enabled global paid gate prevents startup. It does not contact
+Square or prove account/location matching. Original Django production,
+PostgreSQL, Redis, signing, email and deployment checks still run unchanged.
 
 Keep legacy automatic-subscription switches
 `SQUARE_SANDBOX_CHECKOUT_ENABLED`, `SQUARE_SANDBOX_RECONCILIATION_ENABLED` and
