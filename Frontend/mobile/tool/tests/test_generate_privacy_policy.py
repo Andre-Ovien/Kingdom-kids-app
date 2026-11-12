@@ -30,13 +30,13 @@ class CanonicalPrivacyPolicyTests(unittest.TestCase):
         for expected in [
             'iOS and Android apps', 'prerecorded synthetic character narration',
             'Square’s hosted checkout', 'payment-card number or card security code',
-            'Contact messages are not saved in an application contact-message database',
-            'Render hosts the API', 'Vercel hosts the public website',
+            'We handle these messages through email',
+            'Render hosts the app’s servers', 'Vercel hosts the public website',
             'Cloudinary delivers private story and narration media',
             'Resend delivers account-security', 'Google Gmail inbox',
-            'parent-account link removed', 'cancellation request remains pending',
-            'fixed retention period for financial records',
-            'motion readings are not sent to the Kingdom Kids API',
+            'link to the deleted account removed', 'cancellation request remains pending',
+            'Financial records, support email, security logs and any backup copies may remain',
+            'Motion readings stay on the device', 'We use encrypted HTTPS connections',
             'Kingdom Kids LLC operates Kingdom Kids', 'ages 3–10',
             'kingdomkidshq@gmail.com',
         ]:
@@ -47,6 +47,10 @@ class CanonicalPrivacyPolicyTests(unittest.TestCase):
         self.assertNotIn('This privacy inbox is provisional', text)
         self.assertNotIn('Production vendors have not yet been named', text)
         self.assertNotIn('under appropriate data-protection terms', text)
+        for forbidden in ['pre-release', 'pre-launch', 'provisional', 'intended to',
+                          'must be provisioned', 'not yet', 'not finalized', 'before launch']:
+            self.assertNotIn(forbidden, self.policy.lower())
+            self.assertNotIn(forbidden, text.lower())
         self.assertEqual(document['last_updated'], '12 November 2026')
         self.assertEqual(document['canonical_url'], 'https://kingdom-kids.app/privacy/')
 

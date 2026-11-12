@@ -43,6 +43,9 @@ class ClientReleaseIdentityTests(unittest.TestCase):
         project,defines,association,entitlements=identity.load_source()
         for old,new in [('DEVELOPMENT_TEAM = GG228DP7G6;','DEVELOPMENT_TEAM = VTV9889TNF;'),
                         ('PRODUCT_BUNDLE_IDENTIFIER = app.kingdom-kids.kingdomkids;','PRODUCT_BUNDLE_IDENTIFIER = com.andreovien.kingdomkids;'),
+                        ('CODE_SIGN_STYLE = Manual;','CODE_SIGN_STYLE = Automatic;'),
+                        ('CODE_SIGN_IDENTITY = "Apple Distribution";','CODE_SIGN_IDENTITY = "Apple Development";'),
+                        ('PROVISIONING_PROFILE_SPECIFIER = "Kingdom Kids App Store 2026";','PROVISIONING_PROFILE_SPECIFIER = "Wrong profile";'),
                         ('DEVELOPMENT_TEAM = VTV9889TNF;','DEVELOPMENT_TEAM = GG228DP7G6;'),
                         ('CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;','CODE_SIGN_ENTITLEMENTS = Runner/Runner-DevPreview.entitlements;')]:
             with self.subTest(old=old),self.assertRaises(ValueError):identity.validate(project.replace(old,new),defines,association,entitlements)

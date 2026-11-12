@@ -6,7 +6,7 @@
   "contact_email": "kingdomkidshq@gmail.com",
   "contact_is_provisional": false,
   "source_sha256": {
-    "privacy.astro": "527e7ef29fc957c12f1ead67573cd7732b90f8a7cf33a1d743d8d4fd78c19cc2",
+    "privacy.astro": "13c328d26718a2e18b0f77a432b9ba3e03eac249c3059c746138151ba018458f",
     "site.ts": "791af7332056e4613994c55ee5542ed7c374c50888af4c5610d88568e93606af"
   },
   "sections": [
@@ -16,15 +16,15 @@
       "blocks": [
         {
           "kind": "paragraph",
-          "text": "Kingdom Kids LLC operates Kingdom Kids. This policy applies to the Kingdom Kids website, iOS and Android apps, and supporting API. The app offers Bible stories, read-aloud features, games, and progress views for children ages 3–10, while a parent or guardian creates and manages the family account."
+          "text": "Kingdom Kids LLC operates Kingdom Kids. This policy applies to the Kingdom Kids website, iOS and Android apps, and supporting services. The app offers Bible stories, read-aloud features, games, and progress views for children ages 3–10, while a parent or guardian creates and manages the family account."
         },
         {
           "kind": "paragraph",
-          "text": "Read-aloud features can use a device voice or prerecorded synthetic character narration delivered from controlled media hosts. The app does not require a child to record their voice."
+          "text": "Read-aloud features can use a device voice or prerecorded synthetic character narration delivered from our media providers. The app does not record a child’s voice."
         },
         {
           "kind": "paragraph",
-          "text": "A child is not asked to create an account or provide an email address or password. Parents should use a nickname—not a full legal name—when creating a child profile."
+          "text": "A child is not asked to create an account or provide an email address or password. Parents should use a nickname when creating a child profile."
         }
       ]
     },
@@ -42,11 +42,11 @@
         },
         {
           "kind": "bullet",
-          "text": "A one-way password hash; the service does not store the readable account password."
+          "text": "A protected password hash. We do not store the readable account password."
         },
         {
           "kind": "bullet",
-          "text": "Email-verification, password-reset, and account-deletion challenge records, attempt counts, expiry times, and security lockouts."
+          "text": "Verification, password-reset and account-deletion records, including code expiry, failed attempts and security lockouts."
         },
         {
           "kind": "bullet",
@@ -82,7 +82,7 @@
         },
         {
           "kind": "bullet",
-          "text": "Standard technical request information—such as IP address, request time, browser type, and error or security events—may be processed by the production host, reverse proxy, or API to deliver and protect the service. API access logs include the remote address, response status and request duration. The remote address can be a hosting proxy."
+          "text": "Technical request information used to deliver and protect the service, including IP or hosting-proxy address, request time, response status, request duration, browser information and security events."
         },
         {
           "kind": "heading",
@@ -94,7 +94,7 @@
         },
         {
           "kind": "bullet",
-          "text": "We keep the selected plan, price and currency, the accepted billing terms, checkout operation references, and Square customer, checkout-link, order, subscription, invoice and payment identifiers."
+          "text": "We keep the selected plan, price and currency, accepted billing terms, checkout references, and Square customer, checkout-link, order, subscription, invoice and payment identifiers."
         },
         {
           "kind": "bullet",
@@ -106,7 +106,7 @@
         },
         {
           "kind": "bullet",
-          "text": "Separately authorized complimentary access has its own grant, expiry and revocation records."
+          "text": "Complimentary access, when provided, has separate access, expiry and revocation records."
         },
         {
           "kind": "heading",
@@ -114,7 +114,7 @@
         },
         {
           "kind": "paragraph",
-          "text": "The website contact form sends the subject, reply email address and message to our support inbox through our email provider. Contact messages are not saved in an application contact-message database. Please do not include passwords, verification codes, payment details or a child’s personal information in a message."
+          "text": "The website contact form sends the subject, reply email address and message to our support inbox through our email provider. We handle these messages through email, rather than a contact-message database. Please do not include passwords, verification codes, payment details or a child’s personal information in a message."
         },
         {
           "kind": "heading",
@@ -126,17 +126,17 @@
         },
         {
           "kind": "paragraph",
-          "text": "Some games use device motion locally for game controls. The motion readings are not sent to the Kingdom Kids API. Narration is playback or text-to-speech; the app does not record a child’s voice."
+          "text": "Some games use device motion locally for game controls. Motion readings stay on the device. Narration is playback or text-to-speech; the app does not record a child’s voice."
         }
       ]
     },
     {
       "id": "not-collect-title",
-      "title": "3. What the current product does not collect",
+      "title": "3. Information we do not collect",
       "blocks": [
         {
           "kind": "paragraph",
-          "text": "The current app does not ask for or integrate:"
+          "text": "The app does not ask for or use:"
         },
         {
           "kind": "bullet",
@@ -148,11 +148,7 @@
         },
         {
           "kind": "bullet",
-          "text": "Third-party advertising, behavioural advertising, or third-party analytics SDKs."
-        },
-        {
-          "kind": "paragraph",
-          "text": "If a future release changes these practices, this policy and the relevant app-store disclosures must be updated before that release is made available."
+          "text": "Third-party advertising, behavioural advertising, or analytics services embedded in the app."
         }
       ]
     },
@@ -182,7 +178,7 @@
         },
         {
           "kind": "bullet",
-          "text": "Open an owned checkout, verify purchases and refunds, manage subscription cancellation, and apply access."
+          "text": "Open checkout, verify purchases and refunds, manage subscription cancellation, and provide access."
         },
         {
           "kind": "bullet",
@@ -212,7 +208,7 @@
         },
         {
           "kind": "bullet",
-          "text": "Service providers used to host and deliver the website, API, database, media, payments and email, as described below."
+          "text": "Service providers used to host and deliver the website, app services, database, media, payments and email, as described below."
         },
         {
           "kind": "bullet",
@@ -220,15 +216,11 @@
         },
         {
           "kind": "bullet",
-          "text": "Complete a merger, financing, acquisition, or sale of assets, subject to notice and continued protection of the information."
+          "text": "Render hosts the app’s servers, database and service-protection systems."
         },
         {
           "kind": "bullet",
-          "text": "Render hosts the API, application database and shared rate-limit cache."
-        },
-        {
-          "kind": "bullet",
-          "text": "Vercel hosts the public website and forwards its supported form requests to the API."
+          "text": "Vercel hosts the public website and forwards supported form requests to our servers."
         },
         {
           "kind": "bullet",
@@ -245,10 +237,6 @@
         {
           "kind": "bullet",
           "text": "Contact messages are delivered to the operator’s Google Gmail inbox."
-        },
-        {
-          "kind": "paragraph",
-          "text": "Provider-specific storage regions, retention periods, contracts and any international-transfer safeguards have not yet been fully documented in this policy. Naming a provider does not promise that all processing stays in one country."
         }
       ]
     },
@@ -262,35 +250,35 @@
         },
         {
           "kind": "bullet",
-          "text": "The self-service deletion flow removes the parent account, child profiles, preferences, story activity, streak history, game progress and attempts, and a waitlist entry using the same email from the active service."
+          "text": "Deleting the family account removes the parent account, child profiles, preferences, story activity, streak history, game progress and attempts, and a waitlist entry using the same email from the active service."
         },
         {
           "kind": "bullet",
-          "text": "Deletion requests submitted through the public page are completed only after the requester verifies control of the grown-up email address using a short-lived code. This process can be used for both verified accounts and accounts still waiting for email verification."
+          "text": "Requests through the account-deletion page require a short-lived code sent to the parent email address. This option is also available for accounts waiting for email verification."
         },
         {
           "kind": "bullet",
-          "text": "Waitlist-only information is kept until launch communications are complete or the grown-up asks for removal."
+          "text": "You can ask us to remove waitlist-only information by contacting us."
         },
         {
           "kind": "bullet",
-          "text": "Email-verification, password-reset, and account-deletion challenges are short-lived and retained only as needed for account security."
+          "text": "Verification, password-reset and account-deletion codes expire. Related security records can remain after a code can no longer be used."
         },
         {
           "kind": "bullet",
-          "text": "Family-account deletion does not erase all financial records. Hosted checkout, payment-proof and cancellation records remain with the parent-account link removed so an unresolved payment or request to stop future billing is not lost. These records include provider identifiers, billing terms, amounts, payment and refund evidence, access dates and cancellation state."
+          "text": "Checkout, payment and cancellation records remain after family-account deletion, with the link to the deleted account removed. This lets us resolve payments and requests to stop future billing. These records include provider identifiers, billing terms, amounts, payment and refund evidence, access dates and cancellation state."
         },
         {
           "kind": "bullet",
-          "text": "Account deletion requests cancellation of future subscription billing. If the provider is unavailable, the cancellation request remains pending until it can be verified; deleting an account alone is not proof that provider cancellation has completed."
+          "text": "Deleting an account also requests cancellation of future subscription billing. If Square is unavailable, the cancellation request remains pending until we can verify that it has completed."
         },
         {
           "kind": "bullet",
-          "text": "Contact messages sent to our inbox and copies held by email or payment providers are not automatically erased by the family-account deletion flow."
+          "text": "Contact messages sent to our inbox and copies held by email or payment providers are not automatically erased when a family account is deleted."
         },
         {
           "kind": "paragraph",
-          "text": "An expired security challenge can no longer authorize an action; expiry does not mean its record is immediately erased. A fixed retention period for financial records, support email, production logs and any backups has not yet been set. These records may remain after family-account deletion."
+          "text": "Financial records, support email, security logs and any backup copies may remain after family-account deletion. Contact us if you have a question about information that remains associated with a purchase or support request."
         }
       ]
     },
@@ -304,7 +292,7 @@
         },
         {
           "kind": "paragraph",
-          "text": "If a parent believes a child supplied information beyond what the app requests, they should delete the account or contact the privacy address below so it can be investigated and removed."
+          "text": "If a child supplies information beyond what the app requests, contact us so we can investigate and help remove it."
         }
       ]
     },
@@ -314,7 +302,7 @@
       "blocks": [
         {
           "kind": "paragraph",
-          "text": "The production service is intended to require HTTPS, hash passwords with Django’s password-security system, restrict data to the authenticated parent account, throttle sensitive endpoints, and store mobile session data in protected device storage. No security control can guarantee absolute protection, so suspected incidents should be reported promptly."
+          "text": "We use encrypted HTTPS connections, password hashing, parent-account access controls, limits on sensitive requests, and protected device storage for mobile sessions. No security measure provides absolute protection. Please contact us promptly about suspected account misuse or a security issue."
         }
       ]
     },
@@ -353,7 +341,7 @@
       "blocks": [
         {
           "kind": "paragraph",
-          "text": "This page will show a revised date when the policy changes. Material changes affecting family data should be communicated in the app, by email, or through another appropriate notice before they take effect."
+          "text": "The revised date above shows when this policy was last updated. Please review the policy when you use our services."
         }
       ]
     },

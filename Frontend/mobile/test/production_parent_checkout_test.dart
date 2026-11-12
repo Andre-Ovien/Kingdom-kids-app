@@ -1028,37 +1028,71 @@ void main() {
     },
   );
 
-  testWidgets('paid parent has Manage and never a new-charge action', (
-    tester,
-  ) async {
-    final controller = SandboxCheckoutController(
-      configuration: _configuration,
-      repository: _Repository(
-        SandboxContentAccess.fromJson(
-          _access(state: 'paid', purchase: false),
-          expectedParentId: '42',
-          expectedEnvironment: 'production',
-        ),
-      ),
-    );
-    addTearDown(controller.dispose);
-    await controller.refresh();
-    expect(controller.canOpen, isFalse);
-    expect(controller.canManage, isTrue);
-    await tester.pumpWidget(
-      MaterialApp(home: SubscriptionScreen(sandboxCheckout: controller)),
-    );
-    expect(find.text('Access active'), findsOneWidget);
-    expect(find.text('Manage subscription'), findsOneWidget);
-    expect(
-      tester
-          .widget<FilledButton>(
-            find.byKey(const Key('subscription-parent-continue')),
-          )
-          .onPressed,
-      isNull,
-    );
-  });
+  testWidgets(
+    'unpaid footer stays simple while paid management remains available',
+    (tester) async {
+      for (final state in ['unpaid', 'paid']) {
+        final controller = SandboxCheckoutController(
+          configuration: _configuration,
+          repository: _Repository(
+            SandboxContentAccess.fromJson(
+              _access(state: state, purchase: false),
+              expectedParentId: '42',
+              expectedEnvironment: 'production',
+            ),
+          ),
+        );
+        addTearDown(controller.dispose);
+        await controller.refresh();
+        expect(controller.canOpen, isFalse);
+        // Owned management capability is unchanged even when the unpaid plans
+        // footer intentionally shows only the two informational links.
+        expect(controller.canManage, isTrue);
+        await tester.pumpWidget(
+          MaterialApp(home: SubscriptionScreen(sandboxCheckout: controller)),
+        );
+        expect(
+          find.byKey(const Key('subscription-billing-details')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const Key('subscription-privacy-policy')),
+          findsOneWidget,
+        );
+        if (state == 'paid') {
+          expect(find.text('Access active'), findsOneWidget);
+          expect(find.text('Check access'), findsNothing);
+          expect(find.text('Manage subscription'), findsOneWidget);
+          expect(
+            tester
+                .widget<TextButton>(
+                  find.byKey(const Key('subscription-manage')),
+                )
+                .onPressed,
+            isNotNull,
+          );
+        } else {
+          expect(find.text('Check access'), findsNothing);
+          expect(find.text('Manage subscription'), findsNothing);
+          final footer = tester.widget<Wrap>(
+            find.ancestor(
+              of: find.byKey(const Key('subscription-billing-details')),
+              matching: find.byType(Wrap),
+            ),
+          );
+          expect(footer.children, hasLength(2));
+        }
+        expect(
+          tester
+              .widget<FilledButton>(
+                find.byKey(const Key('subscription-parent-continue')),
+              )
+              .onPressed,
+          isNull,
+        );
+      }
+    },
+  );
 
   testWidgets(
     'production monitor retains unexpired paid access on transient failure and blocks at original term end',

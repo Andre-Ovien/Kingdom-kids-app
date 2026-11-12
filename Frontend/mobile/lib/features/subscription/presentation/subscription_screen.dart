@@ -468,18 +468,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                       Wrap(
                         alignment: WrapAlignment.center,
                         children: [
-                          if (_checkout != null)
-                            TextButton(
-                              key: const Key('subscription-check-access'),
-                              onPressed: _checkout!.busy
-                                  ? null
-                                  : _checkout!.refresh,
-                              child: Text(
-                                'Check access',
-                                style: _type(11, color: _muted),
-                              ),
-                            ),
-                          if (_checkout?.access?.managementAvailable == true)
+                          if (_checkout?.access?.managementAvailable == true &&
+                              _checkout!.access?.state ==
+                                  SandboxAccessState.paid)
                             TextButton(
                               key: const Key('subscription-manage'),
                               onPressed: _checkout!.canManage

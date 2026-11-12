@@ -382,6 +382,16 @@ void main() {
       );
       await _pump(tester);
       _expectLockedPlans();
+      expect(find.byKey(const Key('subscription-check-access')), findsNothing);
+      expect(find.byKey(const Key('subscription-manage')), findsNothing);
+      expect(
+        find.byKey(const Key('subscription-billing-details')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('subscription-privacy-policy')),
+        findsOneWidget,
+      );
       final route = fixture.topRoute;
       expect(await fixture.navigator.currentState!.maybePop(), isTrue);
       await tester.binding.handlePopRoute();
@@ -396,7 +406,7 @@ void main() {
 
   for (final offline in [false, true]) {
     testWidgets(
-      '${offline ? 'offline' : 'unknown'} stays on neutral real plans with retry and account options',
+      '${offline ? 'offline' : 'unknown'} stays neutral with automatic resume refresh and account options',
       (tester) async {
         final fixture = await _fixture(
           state: SandboxAccessState.unknown,
@@ -416,11 +426,14 @@ void main() {
               .onPressed,
           isNull,
         );
-        final retry = find.text('Check access');
-        expect(retry, findsOneWidget);
+        expect(find.text('Check access'), findsNothing);
+        expect(find.text('Manage subscription'), findsNothing);
         final reads = fixture.repository.reads;
-        await tester.ensureVisible(retry);
-        await tester.tap(retry);
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+        await _pump(tester);
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
         await _pump(tester);
         expect(fixture.repository.reads, greaterThan(reads));
         await _openAccountOptions(tester);

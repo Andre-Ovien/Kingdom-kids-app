@@ -33,7 +33,13 @@ def validate(project, defines, association, entitlements):
         team, bundle = (CLIENT_TEAM, CLIENT_BUNDLE) if name == 'Release' else (DEV_TEAM, DEV_BUNDLE)
         if settings.get('DEVELOPMENT_TEAM') != team or settings.get('PRODUCT_BUNDLE_IDENTIFIER') != bundle:
             raise ValueError('Runner identity does not match its release/development boundary.')
-        if settings.get('CODE_SIGN_STYLE') != 'Automatic': raise ValueError('Unexpected signing configuration.')
+        if name == 'Release':
+            if (settings.get('CODE_SIGN_STYLE') != 'Manual'
+                    or settings.get('CODE_SIGN_IDENTITY') != 'Apple Distribution'
+                    or settings.get('PROVISIONING_PROFILE_SPECIFIER') != 'Kingdom Kids App Store 2026'):
+                raise ValueError('Runner Release must select its verified distribution profile at target scope.')
+        elif settings.get('CODE_SIGN_STYLE') != 'Automatic' or settings.get('PROVISIONING_PROFILE_SPECIFIER'):
+            raise ValueError('Development signing must remain automatic without the App Store profile.')
     if runner_settings(project, 'Release').get('CODE_SIGN_ENTITLEMENTS') != 'Runner/Runner.entitlements':
         raise ValueError('App Store Release must use the normal Associated Domains entitlements.')
     if (defines.get('APP_STORE_TEAM_ID') != CLIENT_TEAM or defines.get('APP_STORE_BUNDLE_ID') != CLIENT_BUNDLE
