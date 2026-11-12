@@ -11,7 +11,7 @@ const later = () => new Promise((resolve) => setTimeout(resolve, 0));
 const deferred = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return {promise, resolve, reject}; };
 async function fixture(mode) {
   const handoff = mode.startsWith('handoff_');
-  const manage=mode.startsWith('manage_'), environment=mode==='production_card'?'production':'sandbox';
+  const manage=mode.startsWith('manage_'), environment=['production_card','controlled_card'].includes(mode)?'production':'sandbox';
   const elements = new Map(), staticIds = new Set();
   class Element {
     constructor(id = '') { this._id='';this.id=id;this.value='';this._text='';this.hidden=false;this.disabled=false;
@@ -39,7 +39,7 @@ async function fixture(mode) {
     staticIds.add(id); new Element(id);
   }
   el('consent').type='checkbox';el('country').value='US';
-  el('checkout-runtime').textContent=JSON.stringify({environment,purpose:manage?'manage':'purchase',origin:'https://localhost:18443',
+  el('checkout-runtime').textContent=JSON.stringify({environment,billing_mode:mode==='controlled_card'?'one_period':'recurring',purpose:manage?'manage':'purchase',origin:'https://localhost:18443',
     application_id:manage?'':environment==='production'?'sq0idp-synthetic-app':'sandbox-synthetic-app',location_id:'synthetic-location',selected_plan:mode==='plan_step'?null:mode==='yearly_card'?'yearly':'monthly'});
   const buttons=['monthly','yearly','proceed','pay','restart','recover','check','retry-access','stop-renewals','setup','sign-out','login'];
   const inputs=['consent','login-password','email','purchase-password','manage-password','given-name','family-name','address','city','region','country'];
@@ -56,6 +56,7 @@ async function fixture(mode) {
     first_renewal_at:null,billing_controller:'app_owned_terms',can_prorate:false,free_period:false,billing_timezone:'America/New_York',
     disclosure_version:'synthetic-version',disclosure_sha256:'a'.repeat(64),disclosure:'Synthetic terms',
     web_tokenization:{intent:'CHARGE_AND_STORE',amount:'9.99',currencyCode:'USD',customerInitiated:true,sellerKeyedIn:false}};
+  if(mode==='controlled_card')Object.assign(monthlyQuote,{billing_mode:'one_period',automatic_renewal:false,card_storage:'none',first_renewal_rule:null,web_tokenization:{...monthlyQuote.web_tokenization,intent:'CHARGE'}});
   const quoteFor=(period)=>period==='yearly'?{...monthlyQuote,billing_period:'yearly',amount_minor:9990,cadence:'ANNUAL',
     coverage_rule:'calendar_year_1',first_renewal_rule:'calendar_year_1',web_tokenization:{...monthlyQuote.web_tokenization,amount:'99.90'}}:monthlyQuote;
   let serverPeriod=mode==='yearly_card'?'yearly':'monthly';
@@ -72,6 +73,7 @@ async function fixture(mode) {
         async attach(selector) { const mount=el(selector.slice(1)); assert.ok(mount); if(mode==='late_attach'&&id===1) await oldAttach.promise;
           const frame=new Element();frame.sdkFrame=id;mount.appendChild(frame); },
         tokenize(details){tokenizations++;
+          if(mode==='controlled_card')assert.equal(details.intent,'CHARGE');
           assert.equal(details.billingContact.email,'parent-'+loginCount+'@example.test');
           assert.equal('postalCode' in details.billingContact,false);
           if(mode==='late_token'&&id===1)return oldToken.promise;
@@ -170,6 +172,15 @@ async function fixture(mode) {
     el('manage-password').value='synthetic-password';el('stop-renewals').onclick();await settle();
     assert.equal(cancelCalls,1);assert.equal(quoteCalls,0);assert.equal(created,0);
     return {management_remains_available_without_new_checkout:true,no_sdk_quote_reserve_or_payment:true,explicit_cancel_only:true};
+  }
+  if(mode==='controlled_card') {
+    assert.equal(el('payment-area').hidden,false);assert.equal(el('unit').textContent,'USD for 30 days');
+    el('consent').checked=true;el('purchase-password').value='synthetic-password';
+    for(const [id,value]of Object.entries({'given-name':'Test','family-name':'Buyer',address:'1 Test Street',city:'Test',region:'NY',country:'US'}))el(id).value=value;
+    el('pay').onclick();await settle();
+    assert.equal(confirmCalls,1);assert.equal(tokenizations,1);assert.equal(reserveCalls,1);
+    el('pay').onclick();await settle();assert.equal(confirmCalls,1);assert.equal(tokenizations,1);
+    return {one_period_amount_and_consent:true,charge_intent_without_card_storage:true,no_repeated_payment:true};
   }
   if(mode==='production_card') {
     assert.equal(el('payment-area').hidden,false);assert.equal(el('pay').textContent,'Pay $9.99');
@@ -273,6 +284,6 @@ async function fixture(mode) {
 const scenarios={};
 for(const name of ['rejected_destroy','late_attach','late_token','stale_401','sdk_invalid','sdk_thrown_invalid',
   'sdk_configuration','before_token_hidden','before_token_unchecked','after_token_hidden','uncertain_post',
-  'plan_step','paid_parent','yearly_card','payment_success','manage_paid','manage_unknown','production_card','handoff_success','handoff_late','handoff_wrong_plan'])scenarios[name]=await fixture(name);
+  'plan_step','paid_parent','yearly_card','payment_success','manage_paid','manage_unknown','production_card','controlled_card','handoff_success','handoff_late','handoff_wrong_plan'])scenarios[name]=await fixture(name);
 const result={source_sha256:sourceSha,fake_dom_sdk_only:true,real_network_requests:0,real_card_data:false,scenarios};
 console.log(JSON.stringify(result));

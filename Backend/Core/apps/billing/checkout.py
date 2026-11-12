@@ -68,7 +68,8 @@ def reserve_checkout(*, parent, password, disclosure_version, accepted, mode='di
     if mode != 'payments':
         raise CheckoutRejected('Historical automatic-subscription checkout is retired and read-only.')
     config = checkout_configuration(terms=True, environment=environment)
-    plan = content_term_plan(billing_period) if mode == 'payments' else confirmed_content_plan()
+    from .term_plans import checkout_term_plan
+    plan = checkout_term_plan(billing_period,environment=environment) if mode == 'payments' else confirmed_content_plan()
     policy_sha = plan.policy_sha256 if mode == 'payments' else POLICY_SHA256
     if mode not in {'direct', 'hosted', 'payments'}:
         raise CheckoutRejected('Unsupported checkout mode.')
@@ -300,7 +301,7 @@ def checkout_status(intent):
             paid = bool(intent.parent_id and verified_paid_coverage_until(intent.parent, environment='production', at=now))
         plan = term_plan_for_policy(intent.policy_id)
         terms = (term_disclosure(intent.billing_timezone,billing_period=plan.billing_period,
-            environment=intent.environment) if plan.purchasable else
+            environment=intent.environment,policy_id=intent.policy_id) if plan.purchasable else
             {'policy_id':intent.policy_id,'policy_sha256':intent.policy_sha256,'disclosure_version':intent.disclosure_version,
              'disclosure_sha256':intent.disclosure_sha256,'amount_minor':plan.amount_minor,'currency':'USD',
              'cadence':plan.cadence,'billing_period':plan.billing_period,'purchasable':False,

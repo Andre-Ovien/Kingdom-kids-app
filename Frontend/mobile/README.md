@@ -251,3 +251,22 @@ This checks build inputs; it does not certify App Store territory, legal
 readiness, backend qualification, or signing. The existing explicit Sandbox
 configuration remains separate. The detailed audit and source evidence are in
 `output/mobile-app-store-readiness-20261112/` at the repository root.
+
+## Controlled live checkout on the existing backend
+
+`tool/controlled_live_build_defines.json` is an explicit development build input
+for production Square checkout on the existing free HTTPS Render origin. It
+contains public configuration only. It requires the separate default-off
+`CONTROLLED_LIVE_PAYMENT_FLOW_ENABLED` opt-in, matching production environment,
+an enrolled parent capability from the server, and a single-use checkout
+handoff. Production links still require the current App Store storefront to be
+`USA`; unknown or other storefronts cannot launch them.
+
+This profile offers one full access period at the approved price and says
+automatic renewal is off. It enables neither general paid-content routing nor
+automatic renewal. Other parents cannot gain checkout availability from the
+build configuration alone. The App Store release preflight rejects this
+controlled profile. Existing Sandbox builds keep their explicit Sandbox
+configuration; changing backend payment keys cannot change their compiled
+expected environment. Build, signing and installation remain release-owner
+actions.

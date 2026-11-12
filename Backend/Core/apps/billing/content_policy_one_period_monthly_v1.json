@@ -1,0 +1,18 @@
+{
+  "access_feature": "all_stories_and_games",
+  "amount_minor": 999,
+  "billing_period": "monthly",
+  "cadence": "DAYS_30",
+  "card_storage": "none",
+  "country": "US",
+  "coverage_rule": "elapsed_days_30",
+  "coverage_start": "canonical_successful_payment_capture",
+  "currency": "USD",
+  "duration_elapsed_days": 30,
+  "first_charge": "full_immediately",
+  "free_period": false,
+  "policy_id": "all-content-one-period-monthly-usd-999-v1",
+  "proration": false,
+  "renewal": "none",
+  "version": 1
+}

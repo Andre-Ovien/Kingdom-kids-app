@@ -49,6 +49,8 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   late final DateTime _today = widget.previewDate ?? DateTime.now();
   SandboxCheckoutController? get _checkout =>
       widget.reviewMode ? null : widget.sandboxCheckout;
+  bool get _singlePeriod =>
+      _checkout?.configuration.isControlledProductionEnabled == true;
 
   @override
   void initState() {
@@ -135,12 +137,16 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
             Text('Billing details', style: _type(23, weight: FontWeight.w600)),
             const SizedBox(height: 16),
             Text(
-              r'Monthly: $9.99 USD today for a full 30 days of access, then $9.99 USD every 30 days.',
+              _singlePeriod
+                  ? r'Monthly: $9.99 USD for a full 30 days of access. Automatic renewal is off.'
+                  : r'Monthly: $9.99 USD today for a full 30 days of access, then $9.99 USD every 30 days.',
               style: _type(14, height: 1.5),
             ),
             const SizedBox(height: 14),
             Text(
-              r'Yearly: $99.90 USD today for 12 full calendar months, renewing on your purchase anniversary each year. A 29 February anniversary renews on 28 February in a non-leap year. Pay for 10 months and get 12 months of access, saving $19.98 compared with twelve $9.99 payments.',
+              _singlePeriod
+                  ? r'Yearly: $99.90 USD for 12 full calendar months of access. Automatic renewal is off. Pay for 10 months and get 12 months of access, saving $19.98 compared with twelve $9.99 payments.'
+                  : r'Yearly: $99.90 USD today for 12 full calendar months, renewing on your purchase anniversary each year. A 29 February anniversary renews on 28 February in a non-leap year. Pay for 10 months and get 12 months of access, saving $19.98 compared with twelve $9.99 payments.',
               style: _type(14, height: 1.5),
             ),
             const SizedBox(height: 14),
@@ -260,7 +266,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                         onChanged: (period) => setState(() => _period = period),
                       ),
                       const SizedBox(height: 16),
-                      _PlanCard(yearly: yearly),
+                      _PlanCard(yearly: yearly, singlePeriod: _singlePeriod),
                       const SizedBox(height: 20),
                       Text(
                         'How your plan works',
@@ -281,19 +287,28 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                       ),
                       _BillingStep(
                         icon: Icons.calendar_today_rounded,
-                        title: '$nextLabel · ${_period.price} USD',
-                        detail: yearly
+                        title: _singlePeriod
+                            ? yearly
+                                  ? '12 calendar months of access'
+                                  : '30 days of access'
+                            : '$nextLabel · ${_period.price} USD',
+                        detail: _singlePeriod
+                            ? 'Your full access period starts after payment is confirmed.'
+                            : yearly
                             ? 'Your next full yearly payment after 12 calendar months.'
                             : 'Your next full payment after 30 days of access.',
                         line: true,
                       ),
                       _BillingStep(
                         icon: Icons.autorenew_rounded,
-                        title: yearly
+                        title: _singlePeriod
+                            ? 'Automatic renewal is off'
+                            : yearly
                             ? 'Every year after that'
                             : 'Every 30 days',
-                        detail:
-                            '${_period.price} USD ${yearly ? 'yearly' : 'every 30 days'}. Stop future renewals anytime.',
+                        detail: _singlePeriod
+                            ? 'You will not be charged again automatically.'
+                            : '${_period.price} USD ${yearly ? 'yearly' : 'every 30 days'}. Stop future renewals anytime.',
                         line: false,
                       ),
                     ],
@@ -444,8 +459,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 }
 
 class _PlanCard extends StatelessWidget {
-  const _PlanCard({required this.yearly});
+  const _PlanCard({required this.yearly, this.singlePeriod = false});
   final bool yearly;
+  final bool singlePeriod;
   @override
   Widget build(BuildContext context) => Container(
     width: double.infinity,
@@ -492,7 +508,7 @@ class _PlanCard extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 15),
-        _SubscriptionPrice(yearly: yearly),
+        _SubscriptionPrice(yearly: yearly, singlePeriod: singlePeriod),
         const SizedBox(height: 16),
         const Divider(color: Color(0xFFEEF0F5), thickness: 1, height: 1),
         const SizedBox(height: 17),
@@ -507,13 +523,20 @@ class _PlanCard extends StatelessWidget {
 }
 
 class _SubscriptionPrice extends StatelessWidget {
-  const _SubscriptionPrice({required this.yearly});
+  const _SubscriptionPrice({required this.yearly, this.singlePeriod = false});
   final bool yearly;
+  final bool singlePeriod;
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
       final value = yearly ? r'$99.90' : r'$9.99';
-      final unit = yearly ? 'USD / year' : 'USD every 30 days';
+      final unit = singlePeriod
+          ? yearly
+                ? 'USD for 12 months'
+                : 'USD for 30 days'
+          : yearly
+          ? 'USD / year'
+          : 'USD every 30 days';
       final scaler = MediaQuery.textScalerOf(context);
       final style = _type(44, weight: FontWeight.w600, height: 1, spacing: -2);
       final unitStyle = _type(12, color: _muted, weight: FontWeight.w500);

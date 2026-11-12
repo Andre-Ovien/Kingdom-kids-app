@@ -50,12 +50,15 @@ class SquareSandboxClient:
         if method == 'GET':
             return
         from django.conf import settings
-        from .configuration import require_checkout_enabled, require_production_qualified
-        require_production_qualified()
+        from .configuration import require_checkout_enabled, require_production_billing_profile, controlled_production_checkout
+        require_production_billing_profile()
         if getattr(settings, 'SQUARE_PRODUCTION_TERM_BILLING_ENABLED', False) is not True:
             raise SquareDisabled('Production financial operations are disabled.')
         if method != 'POST' or path not in {'/v2/payments', '/v2/customers', '/v2/cards'}:
             raise SquareDisabled('Production operation is outside the reviewed payment adapter.')
+        if controlled_production_checkout() and (path == '/v2/cards' or (path == '/v2/payments'
+                and (not isinstance(payload,dict) or payload.get('customer_details',{}).get('customer_initiated') is not True))):
+            raise SquareDisabled('Controlled purchases cannot save a card or renew automatically.')
         if path == '/v2/payments' and isinstance(payload, dict) and payload.get('customer_details', {}).get('customer_initiated') is False:
             if getattr(settings, 'SQUARE_PRODUCTION_RENEWALS_ENABLED', False) is not True:
                 raise SquareDisabled('Production renewal dispatch is disabled.')

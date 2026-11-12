@@ -13,6 +13,12 @@ void validateAppStoreRelease(
   required String approvedCheckoutUrl,
 }) {
   String value(String key) => defines[key]?.toString() ?? '';
+  if (value('CONTROLLED_LIVE_PAYMENT_FLOW_ENABLED') != 'false' &&
+      value('CONTROLLED_LIVE_PAYMENT_FLOW_ENABLED').isNotEmpty) {
+    throw const ReleaseConfigurationException(
+      'Controlled live checkout is not an App Store release configuration.',
+    );
+  }
   if (value('SQUARE_SANDBOX_CHECKOUT_ENABLED') != 'false' &&
       value('SQUARE_SANDBOX_CHECKOUT_ENABLED').isNotEmpty) {
     throw const ReleaseConfigurationException(

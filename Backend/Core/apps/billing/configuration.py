@@ -31,11 +31,59 @@ def environment_prefix(environment):
     return 'SQUARE_' + payment_environment(environment).upper()
 
 
+CONTROLLED_PRODUCTION_ORIGIN = 'https://kingdom-kids-checkout-staging.onrender.com'
+
+
+def controlled_production_checkout():
+    return getattr(settings, 'SQUARE_PRODUCTION_CONTROLLED_CHECKOUT_ENABLED', False) is True
+
+
+def controlled_production_parent_ids():
+    return _enrolled_parent_ids('SQUARE_PRODUCTION_CONTROLLED_PARENT_IDS')
+
+
+def require_controlled_production():
+    required = ('SQUARE_PRODUCTION_ENABLED', 'SQUARE_PRODUCTION_CHECKOUT_ENABLED',
+        'SQUARE_PRODUCTION_TERM_BILLING_ENABLED', 'SQUARE_PRODUCTION_TERM_RECONCILIATION_ENABLED',
+        'PARENT_CHECKOUT_PRODUCTION_ENABLED', 'PARENT_CONTENT_ACCESS_STATUS_ENABLED')
+    disabled = ('SQUARE_PRODUCTION_RELEASE_QUALIFIED', 'PAID_CONTENT_ENFORCEMENT_ENABLED',
+        'SQUARE_PRODUCTION_RENEWALS_ENABLED', 'SQUARE_PRODUCTION_RECONCILIATION_JOBS_ENABLED',
+        'SQUARE_PRODUCTION_RENEWAL_JOBS_ENABLED', 'SQUARE_SANDBOX_RECONCILIATION_JOBS_ENABLED',
+        'SQUARE_SANDBOX_RENEWAL_JOBS_ENABLED', 'SQUARE_SANDBOX_ENABLED', 'SQUARE_SANDBOX_CHECKOUT_ENABLED',
+        'SQUARE_SANDBOX_TERM_BILLING_ENABLED', 'SQUARE_SANDBOX_CANCELLATION_ENABLED',
+        'SQUARE_SANDBOX_RECONCILIATION_ENABLED', 'SQUARE_SANDBOX_TERM_RECONCILIATION_ENABLED',
+        'SQUARE_SANDBOX_HTTP_TRANSPORT_ENABLED', 'PARENT_CHECKOUT_SANDBOX_ENABLED')
+    if (not controlled_production_checkout() or active_billing_environment() != 'production'
+            or getattr(settings, 'PARENT_CHECKOUT_ORIGIN', '') != CONTROLLED_PRODUCTION_ORIGIN
+            or getattr(settings, 'PAID_CONTENT_ENTITLEMENT_ENVIRONMENT', '') != 'production'
+            or not all(getattr(settings, name, False) is True for name in required)
+            or any(getattr(settings, name, False) is not False for name in disabled)
+            or not controlled_production_parent_ids()):
+        raise SquareDisabled('Controlled production checkout is not explicitly qualified.')
+    square_configuration(webhook=True, environment='production')
+    if getattr(settings, 'SQUARE_PRODUCTION_WEBHOOK_NOTIFICATION_URL', '') != CONTROLLED_PRODUCTION_ORIGIN + '/api/billing/square/webhook/':
+        raise SquareConfigurationError('Controlled production callback does not match its approved origin.')
+
+
+def require_production_billing_profile():
+    if controlled_production_checkout():
+        require_controlled_production()
+    else:
+        require_production_qualified()
+
+
 def parent_allowed(parent, *, environment='sandbox'):
     payment_environment(environment)
     if environment == 'sandbox':
         return sandbox_parent_allowed(parent)
-    return bool(parent is not None and parent.is_authenticated and parent.is_active and parent.is_email_verified)
+    eligible = bool(parent is not None and parent.is_authenticated and parent.is_active and parent.is_email_verified)
+    if eligible and controlled_production_checkout():
+        try:
+            require_controlled_production()
+            return parent.pk in controlled_production_parent_ids()
+        except (SquareDisabled, SquareConfigurationError):
+            return False
+    return eligible
 
 
 def require_payment_parent(parent, *, environment='sandbox'):
@@ -50,7 +98,7 @@ def assert_client_environment(client, *, environment='sandbox'):
 
 
 def require_production_qualified():
-    if (getattr(settings, 'SQUARE_PRODUCTION_RELEASE_QUALIFIED', False) is not True
+    if (controlled_production_checkout() or getattr(settings, 'SQUARE_PRODUCTION_RELEASE_QUALIFIED', False) is not True
             or getattr(settings, 'PAID_CONTENT_ENFORCEMENT_ENABLED', False) is not True
             or getattr(settings, 'PARENT_CONTENT_ACCESS_STATUS_ENABLED', False) is not True
             or getattr(settings, 'PAID_CONTENT_ENTITLEMENT_ENVIRONMENT', '') != 'production'):
@@ -59,7 +107,7 @@ def require_production_qualified():
 
 def require_checkout_enabled(*, environment='sandbox'):
     if environment == 'production':
-        require_production_qualified()
+        require_production_billing_profile()
         if (getattr(settings, 'SQUARE_PRODUCTION_CHECKOUT_ENABLED', False) is not True
                 or getattr(settings, 'PARENT_CHECKOUT_PRODUCTION_ENABLED', False) is not True):
             raise SquareDisabled('Production checkout is not explicitly release-qualified.')
@@ -68,7 +116,11 @@ def require_checkout_enabled(*, environment='sandbox'):
 
 def sandbox_test_parent_ids():
     """Bounded operator enrollment, independent of signup or client claims."""
-    raw = getattr(settings, 'SQUARE_SANDBOX_TEST_PARENT_IDS', '')
+    return _enrolled_parent_ids('SQUARE_SANDBOX_TEST_PARENT_IDS')
+
+
+def _enrolled_parent_ids(setting):
+    raw = getattr(settings, setting, '')
     if not isinstance(raw, str) or len(raw) > 2100:
         raise SquareConfigurationError('Invalid Sandbox test-parent enrollment.')
     if not raw.strip():

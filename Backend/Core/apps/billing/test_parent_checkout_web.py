@@ -86,4 +86,4 @@ class ParentCheckoutWebTests(SimpleTestCase):
 
     def test_public_config_never_returns_access_token_or_webhook_key(self):
         result = public_checkout_configuration()
-        self.assertEqual(set(result), {'environment', 'origin', 'purpose', 'application_id', 'location_id'})
+        self.assertEqual(set(result), {'environment', 'origin', 'purpose', 'application_id', 'location_id', 'billing_mode'})

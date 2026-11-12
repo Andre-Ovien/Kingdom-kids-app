@@ -20,10 +20,11 @@ from .client import SquareClientError
 from .configuration import (SquareDisabled, SquareConfigurationError, checkout_configuration, configured_client, provider_identifier,
                             require_payment_parent, parent_allowed, sandbox_test_parent_ids, payment_environment,
                             environment_prefix, assert_client_environment, require_checkout_enabled)
+from .configuration import controlled_production_checkout
 from .models import (ParentContentEntitlement, SquareBillingTerm, SquareCheckoutIntent,
                      SquareContentAgreement, SquareSubscriptionIdentity, SquarePaymentCardBinding)
 from .plans import ALL_CONTENT_FEATURE
-from .term_plans import content_term_plan, term_plan_for_policy, ACTIVE_POLICY_IDS
+from .term_plans import content_term_plan, checkout_term_plan, term_plan_for_policy, ACTIVE_POLICY_IDS
 from .coverage import coverage_end, coverage_hash
 from .reconciliation import CanonicalReader, _not_older_payments, _payment_identity, _payment_snapshot
 
@@ -33,8 +34,8 @@ TERM_DISCLOSURE_VERSION = 'usd999-30days-capture-v2'
 
 def term_configuration(*, readonly=False, environment='sandbox'):
     if environment == 'production' and not readonly:
-        from .configuration import require_production_qualified
-        require_production_qualified()
+        from .configuration import require_production_billing_profile
+        require_production_billing_profile()
     prefix = environment_prefix(environment)
     if readonly and not getattr(settings, prefix + '_TERM_RECONCILIATION_ENABLED', False):
         raise SquareDisabled('Square term reconciliation is disabled.')
@@ -80,10 +81,10 @@ def next_term_anchor(instant, billing_timezone, billing_period):
     return datetime(local.year + 1, local.month, 28, tzinfo=zone).astimezone(datetime_timezone.utc)
 
 
-def term_disclosure(billing_timezone, *, billing_period='monthly', at=None, environment='sandbox'):
+def term_disclosure(billing_timezone, *, billing_period='monthly', at=None, environment='sandbox', policy_id=None):
     payment_environment(environment)
     ZoneInfo(billing_timezone)
-    try: plan = content_term_plan(billing_period)
+    try: plan = term_plan_for_policy(policy_id) if policy_id else checkout_term_plan(billing_period,environment=environment)
     except ValueError: raise CheckoutRejected('Unsupported reviewed billing period.') from None
     if billing_period == 'monthly':
         duration = '30 consecutive elapsed days (720 hours) beginning at the successful payment capture'
@@ -109,6 +110,13 @@ def term_disclosure(billing_timezone, *, billing_period='monthly', at=None, envi
             'All stories and games are included. You can stop future renewals; already-paid access keeps its original end. '
             'Account deletion stops future app-scheduled payments; a previously authorized in-flight payment can still complete '
             'and must be reconciled.')}
+    if not plan.renewable:
+        data.update(billing_mode='one_period',automatic_renewal=False,card_storage='none',first_renewal_rule=None,
+            web_tokenization={**data['web_tokenization'],'intent':'CHARGE'},
+            disclosure=(f'You authorize one charge of ${plan.amount_display} USD for '+duration+'. '
+                'All stories and games are included. Automatic renewal is off. Your card will not be saved for future payments. '
+                'There is no free period or proration. Another paid period requires a new purchase and your approval. '
+                'Your exact access start and end are confirmed after successful payment.'))
     if billing_period == 'yearly': data.update(monthly_comparison_minor=999,annual_savings_minor=1998)
     data['disclosure_sha256'] = fingerprint(data)
     return data
@@ -157,6 +165,8 @@ def frozen_term_hash(term, agreement):
 def _new_term(agreement, start, *, buyer_present=False, verification_token=None, charge_source_id=None):
     plan = term_plan_for_policy(agreement.policy_id)
     if not plan.purchasable: raise CheckoutRejected('Historical billing policies cannot create new payment terms.')
+    if not plan.renewable and (not buyer_present or agreement.renewals_enabled or agreement.activated_at):
+        raise CheckoutRejected('A one-period purchase cannot create a renewal or stored-card mandate.')
     card_id = agreement.card_id
     if not buyer_present and not card_id:
         binding = SquarePaymentCardBinding.objects.filter(agreement=agreement,environment=agreement.environment).first()
@@ -165,7 +175,7 @@ def _new_term(agreement, start, *, buyer_present=False, verification_token=None,
     term = SquareBillingTerm(agreement=agreement,environment=agreement.environment,request_not_before=start,coverage_rule=plan.coverage_rule,
         amount_minor=plan.amount_minor,currency='USD',cadence=plan.cadence,customer_id=agreement.customer_id,
         card_id=card_id,location_id=agreement.location_id,buyer_present=buyer_present,
-        payment_source_mode='web_charge_and_store' if charge_source_id is not None else 'saved_card',
+        payment_source_mode=('web_charge_and_store' if plan.renewable else 'web_charge_only') if charge_source_id is not None else 'saved_card',
         verification_sha256=(fingerprint({'charge_source_id':charge_source_id}) if charge_source_id is not None
             else fingerprint({'token':verification_token}) if verification_token else ''))
     term.request_sha256 = frozen_term_hash(term,agreement)
@@ -191,12 +201,14 @@ def confirm_term_checkout(*, parent, intent_id, password, source_id=None, verifi
         if intent.checkout_mode != 'payments' or intent.subscription_id or intent.payment_link_id:
             raise CheckoutConflict('Automatic Square subscriptions cannot run alongside app-owned billing.')
         plan = term_plan_for_policy(intent.policy_id)
+        if environment == 'production' and controlled_production_checkout() and plan.renewable:
+            raise CheckoutRejected('This checkout requires fresh one-period consent; recurring billing is unavailable.')
         if not plan.purchasable:
             raise CheckoutRejected('Historical billing policies are read-only; fresh current consent is required.')
         modern = charge_source_id is not None
         prior = SquareBillingTerm.objects.filter(environment=environment,agreement__environment=environment,
             agreement__intent_reference=intent.pk, buyer_present=True).order_by('created_at','pk').first()
-        if prior is not None and prior.payment_source_mode == 'web_charge_and_store': modern = True
+        if prior is not None and prior.payment_source_mode in {'web_charge_and_store','web_charge_only'}: modern = True
         if modern and (prepare_only or source_id is not None or verification_token is not None or intent.card_id):
             raise CheckoutRejected('Modern charge-and-store cannot mix a prepared card or legacy proof.')
         if charge_source_id is not None:
@@ -222,7 +234,8 @@ def confirm_term_checkout(*, parent, intent_id, password, source_id=None, verifi
             raise CheckoutConflict('Existing autonomous billing must be verified closed before this billing mode.')
         zone = verify_payment_location(client, config)
         plan = term_plan_for_policy(intent.policy_id)
-        quote = term_disclosure(zone, billing_period=plan.billing_period, at=prior.valid_from if prior else None, environment=environment)
+        quote = term_disclosure(zone, billing_period=plan.billing_period, at=prior.valid_from if prior else None,
+            environment=environment,policy_id=intent.policy_id)
         if intent.billing_timezone != zone or intent.disclosure_sha256 != quote['disclosure_sha256']:
             raise CheckoutConflict('The accepted billing timezone or disclosure changed.')
         if modern and not intent.customer_id:
@@ -274,18 +287,19 @@ def confirm_term_checkout(*, parent, intent_id, password, source_id=None, verifi
                         or timezone.now() - current.consented_at > timedelta(minutes=10)):
                     raise CheckoutRejected('A fresh verified buyer charge and current consent are required.')
                 now = timezone.now()
-                if current.disclosure_sha256 != term_disclosure(zone, billing_period=plan.billing_period, at=now,environment=environment)['disclosure_sha256']:
+                if current.disclosure_sha256 != term_disclosure(zone, billing_period=plan.billing_period, at=now,
+                        environment=environment,policy_id=current.policy_id)['disclosure_sha256']:
                     raise CheckoutConflict('The quoted renewal date changed; fresh consent is required.')
                 agreement = SquareContentAgreement.objects.create(parent=locked_parent, intent=current,environment=environment,
                     intent_reference=current.pk, merchant_id=current.merchant_id, location_id=current.location_id,
                     customer_id=current.customer_id, card_id=current.card_id, policy_id=current.policy_id,
                     policy_sha256=plan.policy_sha256, disclosure_version=plan.disclosure_version,
                     disclosure_sha256=current.disclosure_sha256, billing_timezone=zone,
-                    consented_at=current.consented_at, next_term_start=None)
+                    consented_at=current.consented_at, next_term_start=None,renewals_enabled=plan.renewable)
                 term = _new_term(agreement, now, buyer_present=True, verification_token=verification_token,
                     charge_source_id=charge_source_id)
             else:
-                if agreement.parent_id != parent.pk or not agreement.renewals_enabled:
+                if agreement.parent_id != parent.pk or agreement.canceled_at or (plan.renewable and not agreement.renewals_enabled):
                     raise CheckoutConflict('This recurring agreement is stopped; no new payment is authorized.')
                 term = agreement.terms.filter(buyer_present=True,environment=environment).order_by('created_at','pk').first()
             current.state = 'term_reserved'; current.save(update_fields=('state', 'updated_at'))
@@ -304,6 +318,14 @@ def confirm_term_checkout(*, parent, intent_id, password, source_id=None, verifi
         raise SquareClientError('Square term checkout is unavailable or uncertain.') from None
 
 
+def _one_period_authorized(term, agreement):
+    return bool(term.environment == 'production' and term.buyer_present
+        and term.payment_source_mode == 'web_charge_only' and not term.card_id
+        and not term_plan_for_policy(agreement.policy_id).renewable
+        and not agreement.renewals_enabled and not agreement.canceled_at and not agreement.activated_at
+        and agreement.next_term_start is None)
+
+
 def _claim_term(term_id, *, for_dispatch, for_card_storage=False, environment='sandbox'):
     config = term_configuration(readonly=not (for_dispatch or for_card_storage),environment=environment)
     initial = SquareBillingTerm.objects.select_related('agreement').get(pk=term_id,environment=environment,agreement__environment=environment)
@@ -316,22 +338,31 @@ def _claim_term(term_id, *, for_dispatch, for_card_storage=False, environment='s
         agreement = SquareContentAgreement.objects.select_for_update().get(pk=initial.agreement_id,environment=environment)
         term = SquareBillingTerm.objects.select_for_update().get(pk=term_id,environment=environment)
         plan = term_plan_for_policy(agreement.policy_id)
+        if (for_dispatch or for_card_storage) and environment == 'production' and controlled_production_checkout():
+            if plan.renewable or not _one_period_authorized(term,agreement):
+                raise CheckoutRejected('Controlled checkout can authorize only its one-period payment.')
         if (agreement.merchant_id != config.provider.merchant_id or term.location_id != config.location_id
                 or agreement.policy_sha256 != plan.policy_sha256 or term.amount_minor != plan.amount_minor
                 or term.cadence != plan.cadence or frozen_term_hash(term, agreement) != term.request_sha256
-                or term.payment_source_mode not in {'saved_card', 'web_charge_and_store'}
+                or term.payment_source_mode not in {'saved_card', 'web_charge_and_store','web_charge_only'}
                 or term.coverage_rule != plan.coverage_rule
-                or (term.payment_source_mode == 'web_charge_and_store' and (not term.buyer_present or term.card_id))):
+                or (term.payment_source_mode in {'web_charge_and_store','web_charge_only'} and (not term.buyer_present or term.card_id))
+                or (not plan.renewable and (environment != 'production' or term.payment_source_mode != 'web_charge_only'
+                    or agreement.renewals_enabled or agreement.activated_at))
+                or (plan.renewable and term.payment_source_mode == 'web_charge_only')):
             raise CheckoutRejected('Frozen term ownership or contract evidence does not match.')
         now = timezone.now()
         if term.processing_lease and term.lease_until and term.lease_until > now:
             raise CheckoutBusy('This term is already being processed.')
         if (for_dispatch or for_card_storage) and (parent is None or not parent.is_active or not parent.email_verified_at
                 or not parent_allowed(parent,environment=environment)
-                or agreement.parent_id != parent_id or not agreement.renewals_enabled
+                or agreement.parent_id != parent_id
+                or (not agreement.renewals_enabled and not _one_period_authorized(term,agreement))
                 or not plan.purchasable
                 or (for_dispatch and now < term.request_not_before)):
             raise CheckoutRejected('No active current-term recurring authorization exists.')
+        if for_card_storage and not plan.renewable:
+            raise CheckoutRejected('This one-period purchase cannot save a card.')
         if environment == 'production' and (for_dispatch or for_card_storage):
             if for_card_storage or term.buyer_present:
                 require_checkout_enabled(environment=environment)
@@ -396,9 +427,12 @@ def _authorize_dispatch(term):
         agreement = SquareContentAgreement.objects.select_for_update().get(pk=term.agreement_id,environment=term.environment)
         current = SquareBillingTerm.objects.select_for_update().get(pk=term.pk,environment=term.environment)
         now = timezone.now()
+        if term.environment == 'production' and controlled_production_checkout() and not _one_period_authorized(current,agreement):
+            raise CheckoutRejected('Controlled checkout can authorize only its one-period payment.')
         if (parent is None or agreement.parent_id != parent_id or not parent.is_active
                 or not parent_allowed(parent,environment=term.environment)
-                or not parent.email_verified_at or not agreement.renewals_enabled
+                or not parent.email_verified_at
+                or (not agreement.renewals_enabled and not _one_period_authorized(current,agreement))
                 or not term_plan_for_policy(agreement.policy_id).purchasable
                 or now < current.request_not_before
                 or current.processing_lease != term.processing_lease or current.lease_until <= now
@@ -537,7 +571,9 @@ def _commit_payment(term, observed, order_id):
             current.state, current.outcome_code = 'paid', 'exact_term_payment_verified'
             if not plan.purchasable:
                 current.outcome_code = 'historical_policy_readonly_no_new_grant'
-            if plan.purchasable and parent_allowed(parent,environment=term.environment) and agreement.parent_id == parent_id:
+            verified_parent = bool(parent and parent.is_authenticated and parent.is_active and parent.is_email_verified)
+            can_record_paid = verified_parent if term.environment == 'production' else parent_allowed(parent,environment=term.environment)
+            if plan.purchasable and can_record_paid and agreement.parent_id == parent_id:
                 if existing and (existing.parent_id != parent.pk or existing.valid_from != current.valid_from
                                  or existing.valid_until != current.valid_until):
                     raise CheckoutRejected('A payment proof cannot move parent or covered term.')
@@ -548,7 +584,7 @@ def _commit_payment(term, observed, order_id):
                         payment_verified_at=now)
                 if current.buyer_present and current.payment_source_mode == 'saved_card' and agreement.activated_at is None and agreement.renewals_enabled:
                     agreement.activated_at = now
-                if ((current.buyer_present and agreement.next_term_start is None)
+                if plan.renewable and ((current.buyer_present and agreement.next_term_start is None)
                         or (not current.buyer_present and agreement.next_term_start == current.request_not_before)):
                     agreement.next_term_start = current.valid_until
                 agreement.save(update_fields=('activated_at','next_term_start'))
@@ -592,7 +628,7 @@ def dispatch_term_payment(*, term_id, verification_token=None, charge_source_id=
         if identifier is None and term.dispatched_at:
             identifier = _find_term_payment(reader, term)
         if identifier is None:
-            modern = term.payment_source_mode == 'web_charge_and_store'
+            modern = term.payment_source_mode in {'web_charge_and_store','web_charge_only'}
             proof = (fingerprint({'charge_source_id': charge_source_id}) if modern and charge_source_id is not None
                 else fingerprint({'token': verification_token}) if not modern and verification_token else '')
             if term.verification_sha256 != proof or (modern and verification_token is not None):
@@ -849,7 +885,7 @@ def prepare_due_term(*, agreement_id, environment='sandbox'):
         raise SquareDisabled('Production renewal dispatch is disabled.')
     initial = SquareContentAgreement.objects.get(pk=agreement_id,environment=environment)
     plan = term_plan_for_policy(initial.policy_id)
-    if not plan.purchasable or not initial.parent_id:
+    if not plan.purchasable or not plan.renewable or not initial.parent_id:
         raise CheckoutRejected('Historical/deleted agreements cannot renew.')
     from django.contrib.auth import get_user_model
     expired = False

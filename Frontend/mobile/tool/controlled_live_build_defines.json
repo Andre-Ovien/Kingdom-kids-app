@@ -1,0 +1,10 @@
+{
+  "API_BASE_URL": "https://kingdom-kids-checkout-staging.onrender.com/api",
+  "CONTENT_MEDIA_HOSTS": "api.cloudinary.com",
+  "SQUARE_SANDBOX_CHECKOUT_ENABLED": false,
+  "PRODUCTION_PAYMENT_FLOW_ENABLED": true,
+  "CONTROLLED_LIVE_PAYMENT_FLOW_ENABLED": true,
+  "PAYMENT_ENVIRONMENT": "production",
+  "PAYMENT_API_BASE_URL": "https://kingdom-kids-checkout-staging.onrender.com/api",
+  "PAYMENT_CHECKOUT_URL": "https://kingdom-kids-checkout-staging.onrender.com/parent/checkout/"
+}

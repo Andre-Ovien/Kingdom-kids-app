@@ -194,3 +194,23 @@ test('manage purpose permits only explicit read recovery/cancel and never quote/
   assert.deepEqual(calls.filter((r)=>r.method==='POST').map((r)=>r.body),[
     {password:'synthetic-password'},{password:'synthetic-password'}]);
 });
+
+test('explicit controlled production quote is CHARGE only, never a recurring/Sandbox quote', async () => {
+  const q={...quote(),environment:'production',billing_mode:'one_period',automatic_renewal:false,
+    card_storage:'none',first_renewal_rule:null,web_tokenization:{...quote().web_tokenization,intent:'CHARGE'}};
+  assert.equal(validQuote(q,'monthly','production','one_period'),true);
+  assert.equal(validQuote(q,'monthly','production'),false);
+  assert.equal(validQuote(q,'monthly','sandbox','one_period'),false);
+  assert.equal(validQuote({...q,automatic_renewal:true},'monthly','production','one_period'),false);
+  assert.equal(validQuote({...q,web_tokenization:{...q.web_tokenization,intent:'CHARGE_AND_STORE'}},'monthly','production','one_period'),false);
+  const calls=[];let tokenized=0;
+  const a={...access(),environment:'production',checkout:{state:'available',reason_code:'production_controlled',controlled_parent_eligible:true}};
+  const flow=new PurchaseFlow({parent,environment:'production',billingMode:'one_period',
+    tokenize:async(details)=>{tokenized++;assert.equal(details.intent,'CHARGE');return 'cnon:one-period';},
+    api:async(path,method,body)=>{calls.push({path,method,body});
+      if(path==='/api/billing/content-access/')return a;
+      if(path==='/api/billing/square/checkout-intents/')return{id,terms:q,current_term:null};return{};}});
+  flow.setQuote(q,'monthly');await flow.readAccess();await flow.purchase('synthetic-password',{});
+  await assert.rejects(flow.purchase('synthetic-password',{}));
+  assert.equal(tokenized,1);assert.equal(calls.filter(c=>c.path.endsWith('/confirm/')).length,1);
+});

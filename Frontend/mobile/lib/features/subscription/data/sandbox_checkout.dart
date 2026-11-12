@@ -45,6 +45,7 @@ class SandboxContentAccess {
     Map<String, dynamic> json, {
     required String expectedParentId,
     String expectedEnvironment = 'sandbox',
+    bool allowControlledProduction = false,
   }) {
     if (json['schema_version'] != 1 ||
         json['parent_id'] != expectedParentId ||
@@ -78,14 +79,18 @@ class SandboxContentAccess {
     final enforcement = json['content_enforcement_enabled'] == true;
     final routing = json['parent_plan_routing_enabled'] == true;
     final available =
-        routing &&
-        (expectedEnvironment != 'production' || enforcement) &&
         checkout is Map &&
         checkout['state'] == 'available' &&
-        checkout['reason_code'] ==
-            (expectedEnvironment == 'production'
-                ? 'production_qualified'
-                : 'sandbox_only');
+        (expectedEnvironment == 'production'
+            ? allowControlledProduction
+                  ? !routing &&
+                        !enforcement &&
+                        checkout['reason_code'] == 'production_controlled' &&
+                        checkout['controlled_parent_eligible'] == true
+                  : routing &&
+                        enforcement &&
+                        checkout['reason_code'] == 'production_qualified'
+            : routing && checkout['reason_code'] == 'sandbox_only');
     return SandboxContentAccess(
       parentId: expectedParentId,
       state: state,
@@ -180,6 +185,7 @@ class AuthenticatedSandboxContentAccessRepository
         payload,
         expectedParentId: origin.parent.id,
         expectedEnvironment: configuration.environment,
+        allowControlledProduction: configuration.isControlledProductionEnabled,
       );
     });
     // withAccessToken protects request/retry ownership. A successful response

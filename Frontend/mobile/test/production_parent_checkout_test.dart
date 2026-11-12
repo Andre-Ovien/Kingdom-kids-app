@@ -45,6 +45,14 @@ const _session = AuthSession(
   refreshToken: 'fixture-refresh',
   profiles: [],
 );
+const _controlledConfiguration = SandboxCheckoutConfiguration(
+  productionEnabled: true,
+  controlledLiveEnabled: true,
+  paymentEnvironment: 'production',
+  apiBaseUrl: SandboxCheckoutConfiguration.approvedApiBaseUrl,
+  productionApiBaseUrl: SandboxCheckoutConfiguration.approvedApiBaseUrl,
+  productionCheckoutUrl: SandboxCheckoutConfiguration.checkoutUrl,
+);
 
 Map<String, dynamic> _access({
   String state = 'unpaid',
@@ -82,6 +90,221 @@ Future<({AuthRepository auth, MemoryAuthSessionStore store})> _auth() async {
 class _AuthApi extends Fake implements AuthApi {}
 
 void main() {
+  Map<String, dynamic> controlledPayload() {
+    final payload = _access();
+    payload['content_enforcement_enabled'] = false;
+    payload['parent_plan_routing_enabled'] = false;
+    payload['checkout'] = <String, dynamic>{
+      ...payload['checkout'] as Map<String, dynamic>,
+      'reason_code': 'production_controlled',
+      'controlled_parent_eligible': true,
+    };
+    return payload;
+  }
+
+  test(
+    'controlled live mode requires its extra opt-in and the exact existing HTTPS origin',
+    () {
+      expect(_controlledConfiguration.isControlledProductionEnabled, isTrue);
+      expect(_controlledConfiguration.environment, 'production');
+      expect(
+        const SandboxCheckoutConfiguration(
+          controlledLiveEnabled: true,
+        ).isEnabled,
+        isFalse,
+      );
+      expect(
+        const SandboxCheckoutConfiguration(
+          productionEnabled: true,
+          controlledLiveEnabled: true,
+          paymentEnvironment: 'production',
+          apiBaseUrl: 'https://other.example.test/api',
+          productionApiBaseUrl: 'https://other.example.test/api',
+          productionCheckoutUrl: 'https://other.example.test/parent/checkout/',
+        ).isEnabled,
+        isFalse,
+      );
+      expect(_configuration.isControlledProductionEnabled, isFalse);
+    },
+  );
+
+  test(
+    'controlled server capability needs matching parent, production environment and explicit eligibility without global enforcement',
+    () {
+      SandboxContentAccess parse(
+        Map<String, dynamic> payload, {
+        bool controlled = true,
+      }) => SandboxContentAccess.fromJson(
+        payload,
+        expectedParentId: '42',
+        expectedEnvironment: 'production',
+        allowControlledProduction: controlled,
+      );
+      final payload = controlledPayload();
+      final allowed = parse(payload);
+      expect(allowed.checkoutAvailable, isTrue);
+      expect(allowed.enforcementEnabled, isFalse);
+      expect(allowed.routingEnabled, isFalse);
+      expect(parse(payload, controlled: false).checkoutAvailable, isFalse);
+      expect(parse(_access()).checkoutAvailable, isFalse);
+      for (final eligible in [null, false, 'true']) {
+        final denied = controlledPayload();
+        (denied['checkout'] as Map)['controlled_parent_eligible'] = eligible;
+        expect(parse(denied).checkoutAvailable, isFalse);
+      }
+      expect(
+        parse({
+          ...payload,
+          'content_enforcement_enabled': true,
+        }).checkoutAvailable,
+        isFalse,
+      );
+      expect(
+        () => parse({...payload, 'parent_id': 'other'}),
+        throwsFormatException,
+      );
+      expect(
+        () => parse({...payload, 'environment': 'sandbox'}),
+        throwsFormatException,
+      );
+      expect(
+        () => validateAppStoreRelease(
+          {
+            'API_BASE_URL': _configuration.apiBaseUrl,
+            'CONTENT_MEDIA_HOSTS': '',
+            'PRODUCTION_PAYMENT_FLOW_ENABLED': true,
+            'CONTROLLED_LIVE_PAYMENT_FLOW_ENABLED': true,
+            'PAYMENT_ENVIRONMENT': 'production',
+            'PAYMENT_API_BASE_URL': _configuration.productionApiBaseUrl,
+            'PAYMENT_CHECKOUT_URL': _configuration.productionCheckoutUrl,
+          },
+          approvedApiBaseUrl: _configuration.productionApiBaseUrl,
+          approvedCheckoutUrl: _configuration.productionCheckoutUrl,
+        ),
+        throwsA(isA<ReleaseConfigurationException>()),
+      );
+    },
+  );
+
+  test(
+    'controlled live checkout keeps production USA and single-use handoff requirements',
+    () async {
+      final fixture = await _auth();
+      final payload = controlledPayload();
+      var minted = 0;
+      final launched = <Uri>[];
+      final repository = AuthenticatedSandboxContentAccessRepository(
+        configuration: _controlledConfiguration,
+        authRepository: fixture.auth,
+        client: MockClient((request) async {
+          if (request.method == 'GET') {
+            return http.Response(jsonEncode(payload), 200);
+          }
+          minted++;
+          expect(request.url, _controlledConfiguration.handoffUri);
+          expect(request.headers['Authorization'], 'Bearer fixture-access');
+          expect(jsonDecode(request.body), {
+            'purpose': 'purchase',
+            'billing_period': 'monthly',
+          });
+          return http.Response(
+            jsonEncode({
+              'schema_version': 1,
+              'parent_id': '42',
+              'environment': 'production',
+              'purpose': 'purchase',
+              'billing_period': 'monthly',
+              'code': List.filled(43, 'a').join(),
+              'expires_in': 90,
+              'expires_at': DateTime.now()
+                  .toUtc()
+                  .add(const Duration(seconds: 89))
+                  .toIso8601String(),
+            }),
+            201,
+          );
+        }),
+      );
+      var country = 'CAN';
+      final controller = SandboxCheckoutController(
+        configuration: _controlledConfiguration,
+        repository: repository,
+        storefrontCountryProvider: () async => country,
+        launcher: (uri) async {
+          launched.add(uri);
+          return true;
+        },
+      );
+      addTearDown(controller.dispose);
+      addTearDown(repository.dispose);
+      await controller.refresh();
+      expect(controller.canOpen, isTrue);
+      await controller.openCheckout(
+        billingPeriod: SubscriptionBillingPeriod.monthly,
+      );
+      expect(minted, 0);
+      expect(launched, isEmpty);
+      country = 'USA';
+      await controller.openCheckout(
+        billingPeriod: SubscriptionBillingPeriod.monthly,
+      );
+      expect(minted, 1);
+      expect(
+        launched.single.origin,
+        'https://kingdom-kids-checkout-staging.onrender.com',
+      );
+      expect(launched.single.queryParameters, {'plan': 'monthly'});
+      expect(launched.single.fragment, startsWith('handoff='));
+      (payload['checkout'] as Map)['handoff_available'] = false;
+      await controller.refresh();
+      expect(controller.canOpen, isFalse);
+    },
+  );
+
+  testWidgets(
+    'controlled plan copy keeps prices and full periods while disclosing no automatic renewal',
+    (tester) async {
+      final controller = SandboxCheckoutController(
+        configuration: _controlledConfiguration,
+        repository: _Repository(
+          SandboxContentAccess.fromJson(
+            controlledPayload(),
+            expectedParentId: '42',
+            expectedEnvironment: 'production',
+            allowControlledProduction: true,
+          ),
+        ),
+      );
+      addTearDown(controller.dispose);
+      await controller.refresh();
+      await tester.pumpWidget(
+        MaterialApp(home: SubscriptionScreen(sandboxCheckout: controller)),
+      );
+      expect(find.text(r'$9.99'), findsOneWidget);
+      expect(find.text('USD for 30 days'), findsOneWidget);
+      expect(find.text('Automatic renewal is off'), findsOneWidget);
+      expect(find.text('Every 30 days'), findsNothing);
+      await tester.tap(find.byKey(const Key('subscription-yearly')));
+      await tester.pumpAndSettle();
+      expect(find.text(r'$99.90'), findsOneWidget);
+      expect(find.text('USD for 12 months'), findsOneWidget);
+      expect(find.text('12 calendar months of access'), findsOneWidget);
+      expect(find.text('Every year after that'), findsNothing);
+      await tester.ensureVisible(
+        find.byKey(const Key('subscription-billing-details')),
+      );
+      await tester.tap(find.byKey(const Key('subscription-billing-details')));
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining('renewing on your purchase anniversary'),
+        findsNothing,
+      );
+      expect(
+        find.textContaining('Automatic renewal is off.'),
+        findsNWidgets(2),
+      );
+    },
+  );
   test(
     'paid parent can mint only a management handoff while new purchases are paused',
     () async {

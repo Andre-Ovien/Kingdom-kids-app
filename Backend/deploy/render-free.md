@@ -7,6 +7,17 @@ repository's `main` branch. It creates exactly three Free resources in Virginia:
 `main`. Existing undeployed dashboard drafts are not required by this Blueprint.
 
 Render supplies the exact public hostname; no wildcard or guessed URL is used.
+The ten declared Square Sandbox/paid-enforcement/parent checkout-status values
+are operator-owned `sync: false` entries. Per the
+[Blueprint reference](https://render.com/docs/blueprint-spec#prompting-for-secret-values),
+Render ignores these entries when syncing an existing Blueprint, so a future
+source sync cannot overwrite the explicitly selected restricted runtime profile.
+Other profile fields not declared in the Blueprint are preserved too. The
+application/startup defaults remain OFF and fail closed without the separate
+qualification contract. A new Blueprint prompts for these values; supply false
+unless a separately authorized exact profile is being configured. This source
+change supplies no true flag, credential, new resource, job or paid plan.
+
 The Docker command `python scripts/render_start.py` validates strict production
 settings, explicit email configuration, default-disabled financial actions and qualified private-media configuration,
 takes a PostgreSQL session advisory lock,
@@ -63,11 +74,16 @@ fails closed. The default is false, and no flag is enabled in the Blueprint by
 this exception. It does not create a worker, contact Square or replace any
 original strict settings/migration/readiness checks.
 
-A separate, default-OFF [production startup contract](production-checkout-startup.md)
-now exists for a newly owner-approved production origin and qualified operations.
-It rejects this Sandbox hostname, requires all reconciliation/renewal gates and
-explicit operations/release qualification, and retains every original guard.
-The Free staging Blueprint does not opt into that path or provision its hosting.
+A separate, default-OFF [controlled production profile](production-checkout-startup.md)
+can use live Square credentials on this same exact HTTPS Free service for an
+explicit numeric parent allowlist. It requires production-only provider slots,
+signed callback configuration and a separate startup/core opt-in. Public release,
+paid enforcement, automatic renewals, all scheduled jobs and Sandbox runtime
+flags stay OFF. Its one-period agreements never save a card or become renewable.
+No paid hosting or custom domain is required simply to call production Square.
+The full public recurring-release profile remains separate and still requires
+its approved origin and qualified reconciliation/renewal operations. Both paths
+retain every original security/startup guard; this Blueprint activates neither.
 
 The approved Cloudinary delivery switch is now enabled in the Blueprint, with
 `DJANGO_CONTENT_MEDIA_HOSTS=api.cloudinary.com`, TTL300 and frozen map SHA256

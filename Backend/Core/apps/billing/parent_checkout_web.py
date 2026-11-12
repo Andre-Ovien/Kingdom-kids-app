@@ -38,14 +38,15 @@ def _origin(value):
 
 @sensitive_variables()
 def public_checkout_configuration(*, purpose='purchase'):
-    from .configuration import active_billing_environment, environment_prefix, require_checkout_enabled
+    from .configuration import active_billing_environment, environment_prefix, require_checkout_enabled, controlled_production_checkout
     environment = active_billing_environment()
     if (purpose not in {'purchase', 'manage'}
             or getattr(settings, 'PARENT_CONTENT_ACCESS_STATUS_ENABLED', False) is not True
             or settings.PAID_CONTENT_ENTITLEMENT_ENVIRONMENT != environment):
         raise ParentCheckoutUnavailable
     public = {'environment': environment, 'origin': _origin(settings.PARENT_CHECKOUT_ORIGIN),
-              'purpose': purpose, 'application_id': '', 'location_id': ''}
+              'purpose': purpose, 'application_id': '', 'location_id': '',
+              'billing_mode': 'one_period' if environment == 'production' and controlled_production_checkout() else 'recurring'}
     if purpose == 'manage':
         # Local owned status/cancellation survives a new-payment pause and does
         # not require provider credentials, card setup or a transport.
@@ -69,13 +70,13 @@ def public_checkout_configuration(*, purpose='purchase'):
 
 @sensitive_variables()
 def checkout_capability(parent, *, purpose='purchase'):
-    from .configuration import active_billing_environment, parent_allowed
+    from .configuration import active_billing_environment, parent_allowed, controlled_production_checkout
     from .models import SquareContentAgreement
     environment = active_billing_environment()
     result = {'state': 'unavailable', 'reason_code': 'not_configured',
               'management_state': 'unavailable', 'management_reason_code': 'no_owned_purchase',
               'handoff_available': False, 'management_handoff_available': False,
-              'management_recovery': None}
+              'management_recovery': None, 'controlled_parent_eligible': False}
     # Management is owner-bound, independent of new-charge enrollment/flags.
     try:
         public_checkout_configuration(purpose='manage')
@@ -97,7 +98,9 @@ def checkout_capability(parent, *, purpose='purchase'):
     else:
         try:
             public_checkout_configuration()
-            result.update(state='available', reason_code='sandbox_only' if environment == 'sandbox' else 'production_qualified')
+            controlled = environment == 'production' and controlled_production_checkout()
+            result.update(state='available', controlled_parent_eligible=controlled,
+                reason_code='sandbox_only' if environment == 'sandbox' else 'production_controlled' if controlled else 'production_qualified')
         except (ParentCheckoutUnavailable, SquareDisabled, SquareConfigurationError):
             pass
     available = result['management_state'] == 'available' if purpose == 'manage' else result['state'] == 'available'

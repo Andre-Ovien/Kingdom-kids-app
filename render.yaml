@@ -1,4 +1,4 @@
-# Free staging only. Approved private media is opt-in; payments stay disabled.
+# Free hosted backend. Payment profile values are supplied privately by the owner.
 services:
   - type: web
     name: kingdom-kids-checkout-staging
@@ -63,26 +63,28 @@ services:
       # Render internal Key Value uses redis://; only private same-region URLs.
       - key: DJANGO_CACHE_ALLOW_INSECURE
         value: "true"
+      # Preserve the owner-selected runtime profile on existing Blueprint syncs.
+      # Application/startup defaults remain OFF without explicit qualification.
       - key: SQUARE_SANDBOX_ENABLED
-        value: "false"
+        sync: false
       - key: SQUARE_SANDBOX_CHECKOUT_ENABLED
-        value: "false"
+        sync: false
       - key: SQUARE_SANDBOX_RECONCILIATION_ENABLED
-        value: "false"
+        sync: false
       - key: SQUARE_SANDBOX_CANCELLATION_ENABLED
-        value: "false"
+        sync: false
       - key: SQUARE_SANDBOX_TERM_BILLING_ENABLED
-        value: "false"
+        sync: false
       - key: SQUARE_SANDBOX_TERM_RECONCILIATION_ENABLED
-        value: "false"
+        sync: false
       - key: SQUARE_SANDBOX_HTTP_TRANSPORT_ENABLED
-        value: "false"
+        sync: false
       - key: PAID_CONTENT_ENFORCEMENT_ENABLED
-        value: "false"
+        sync: false
       - key: PARENT_CHECKOUT_SANDBOX_ENABLED
-        value: "false"
+        sync: false
       - key: PARENT_CONTENT_ACCESS_STATUS_ENABLED
-        value: "false"
+        sync: false
       - key: CLOUDINARY_PRIVATE_DELIVERY_ENABLED
         value: "true"
       - key: DJANGO_CONTENT_MEDIA_HOSTS

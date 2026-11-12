@@ -37,7 +37,7 @@
 <button id="check" type="button" class="secondary">Check payment</button></section>
 <div id="authorization" hidden>
 <details id="agreement"><summary>Billing agreement</summary><p id="terms"></p></details>
-<label class="consent"><input id="consent" type="checkbox"><span>I accept the billing agreement, saving my card and the disclosed recurring charges. I can stop future renewals.</span></label>
+<label class="consent"><input id="consent" type="checkbox"><span id="consent-copy">{% if runtime.billing_mode == 'one_period' %}I approve one payment for this paid period. Automatic renewal is off and my card will not be saved.{% else %}I accept the billing agreement, saving my card and the disclosed recurring charges. I can stop future renewals.{% endif %}</span></label>
 </div>
 <div id="password-area" hidden><label>Confirm parent password<input id="purchase-password" type="password" autocomplete="current-password" maxlength="1024"></label></div>
 <button id="pay" type="button" class="primary" hidden disabled>Pay $9.99</button>

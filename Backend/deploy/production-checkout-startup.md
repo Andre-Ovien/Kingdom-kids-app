@@ -1,5 +1,106 @@
 # Production checkout startup qualification
 
+Square production checkout can run on the existing Free backend. A paid Render
+plan or custom domain is not required to call Square's production API. There
+are two separate default-OFF startup profiles: restricted, explicitly enrolled
+one-period checkout on the existing host, and full public recurring release.
+Credential presence activates neither profile.
+
+## Controlled production on the existing Free backend
+
+This profile is limited to the exact existing public origin
+`https://kingdom-kids-checkout-staging.onrender.com`. Despite the service name,
+`SQUARE_ENVIRONMENT` and `PAID_CONTENT_ENTITLEMENT_ENVIRONMENT` must both be
+`production`, and only the production credential slots are used. It does not
+require a hosting upgrade, custom-domain/DNS change, scheduler, operations
+attestation or public-release qualification. Existing family data, signing
+identity, API origin, email, private media, DB and cache remain on that service.
+
+Set these literal booleans to `true` only for the authorized restricted activation:
+
+```text
+RENDER_CONTROLLED_PRODUCTION_CHECKOUT_ENABLED
+SQUARE_PRODUCTION_CONTROLLED_CHECKOUT_ENABLED
+SQUARE_PRODUCTION_ENABLED
+SQUARE_PRODUCTION_CHECKOUT_ENABLED
+SQUARE_PRODUCTION_TERM_BILLING_ENABLED
+SQUARE_PRODUCTION_TERM_RECONCILIATION_ENABLED
+SQUARE_PRODUCTION_HTTP_TRANSPORT_ENABLED
+PARENT_CHECKOUT_PRODUCTION_ENABLED
+PARENT_CONTENT_ACCESS_STATUS_ENABLED
+DJANGO_EMAIL_DELIVERY_ENABLED
+CLOUDINARY_PRIVATE_DELIVERY_ENABLED
+```
+
+`SQUARE_PRODUCTION_CONTROLLED_PARENT_IDS` must be an explicit nonempty list of
+approved positive numeric parent IDs: at most 100 signed-64-bit IDs, comma
+separated. No wildcard, email or automatic enrollment is accepted. The payment
+core independently checks current verified-parent eligibility and enrollment at
+capability and final financial boundaries; the startup parser alone grants
+nothing. Keep this setting absent/empty in every other startup profile.
+
+These gates must stay `false` (or absent where the application defaults false):
+
+```text
+RENDER_PRODUCTION_CHECKOUT_QUALIFICATION_ENABLED
+RENDER_PRODUCTION_OPERATIONS_QUALIFIED
+RENDER_PRODUCTION_CUSTOM_DOMAIN_VERIFIED
+SQUARE_PRODUCTION_RELEASE_QUALIFIED
+PAID_CONTENT_ENFORCEMENT_ENABLED
+SQUARE_PRODUCTION_RENEWALS_ENABLED
+SQUARE_PRODUCTION_RECONCILIATION_JOBS_ENABLED
+SQUARE_PRODUCTION_RENEWAL_JOBS_ENABLED
+SQUARE_SANDBOX_RECONCILIATION_JOBS_ENABLED
+SQUARE_SANDBOX_RENEWAL_JOBS_ENABLED
+RENDER_SANDBOX_CHECKOUT_QUALIFICATION_ENABLED
+```
+
+All other Sandbox/legacy financial flags must also remain false and all Sandbox
+credential, callback, plan and test-parent slots must be absent/empty. Temporary
+test-family import and Sandbox lookup variables are forbidden. The two startup
+production profiles and Sandbox qualification cannot be combined. Public
+release explicitly rejects the controlled flags and enrollment; its broader
+renewal/operations requirements below remain unchanged.
+
+`RENDER_EXTERNAL_HOSTNAME` and the sole `DJANGO_ALLOWED_HOSTS` entry must be
+`kingdom-kids-checkout-staging.onrender.com`. `PARENT_CHECKOUT_ORIGIN` must be the
+exact HTTPS origin above, with no suffix/path/query/credentials. Leave
+`RENDER_PRODUCTION_APPROVED_ORIGIN` empty or set it to that same exact origin;
+the custom-domain attestation is false. Require the existing trusted HTTPS proxy
+configuration (`true` and `1`), reviewed Square API `2026-09-16`, production
+application ID/token/merchant/location, and a signed production webhook key with
+the exact callback ending `/api/billing/square/webhook/`. Missing either signed
+callback field fails closed. Startup makes no provider call or webhook change.
+The owner verifies canonical production merchant/location and callback identity
+separately. `PARENT_CHECKOUT_HANDOFF_ENABLED` is a separate explicit boolean;
+enabling it preserves the same parent-only scope and exact-origin boundaries.
+
+Controlled plans are distinct one-period policies. They never save a payment
+card or create a renewable agreement/next term, even if a full public recurring
+profile is enabled later. The browser/mobile offer must disclose that automatic
+renewal is off. No renewal worker or job is started, no automatic recovery charge
+is promised, and global content enforcement/routing remains off. A startup or
+offline preflight is not a charge test and does not authorize charging a card.
+
+The same noncharging command below selects this profile when its startup opt-in
+is present. A passing report identifies `profile: controlled_production`, leaves
+`public_release_ready`, `activation_performed`, `automatic_renewals_enabled` and
+`scheduled_jobs_claimed` false, and requires actual Django/DB/cache readiness,
+canonical provider identity, signed delivery and manual canonical recovery
+qualification separately. It does not require paid hosting or custom-domain
+proof. All original debug/signing/peppers/PostgreSQL/TLS/cache/email/private-media
+guards, deploy check, locked migrations/bootstrap and Gunicorn launch remain.
+
+Free web can sleep, Free PostgreSQL has an expiry lifecycle, and no unattended
+reconciliation service is asserted by this profile. Those operational limits
+remain relevant to the owner; they do not prevent controlled production API
+use. See [Render's Free limitations](https://render.com/docs/free). The paid
+promotion patch, jobs template and inactive custom-domain rewrite example below
+are optional future public-release preparation, not prerequisites for this
+restricted activation. Do not apply them after a declined hosting upgrade.
+
+## Separate full public recurring release
+
 This is source preparation only. The selected custom-origin target is
 `https://api.kingdom-kids.app`; its DNS, Render custom-domain mapping and CA
 certificate are not created or verified by this work. No paid service is created,
@@ -8,11 +109,11 @@ private file or used against a provider by this work. The existing Sandbox
 deployment remains on its separate reviewed exception. Live credential presence
 alone cannot qualify production checkout or its hosting and billing operations.
 
-## Default-off startup boundary
+### Default-off full-release startup boundary
 
 `scripts/render_start.py` preserves the original strict Django security checks,
 deployment check, PostgreSQL migration lock, reviewed content bootstrap and
-Gunicorn launch. The new production exception is mutually exclusive with the
+Gunicorn launch. The full production exception is mutually exclusive with the
 existing Sandbox exception and requires all of the following explicitly:
 
 | Contract | Required value |
@@ -67,8 +168,8 @@ PAID_CONTENT_ENFORCEMENT_ENABLED
 ```
 
 Reconciliation and both renewal gates are required for the full public startup
-because the offer promises automatic renewal. A consistently disabled draft can
-be reported offline but cannot start the production paid flow. Startup does not
+because that offer promises automatic renewal. A consistently disabled draft can
+be reported offline but cannot start the full public recurring flow. Startup does not
 create jobs or infer that a scheduler runs from these flags. Email delivery and
 the reviewed private-media delivery must also be enabled; their existing exact
 sender/Resend, pinned map, private credential and URL-TTL checks still apply.
@@ -116,7 +217,7 @@ never secret values, URLs or provider/account IDs.
 Exit `2` means a disabled draft or blocked local contract; credential presence
 does not change that result. Exit `0` means only that local flag/shape/startup
 guards passed. **Every report has `public_release_ready: false` and
-`activation_performed: false`.** It explicitly lists original Django production
+`activation_performed: false`.** For the full public-release profile it explicitly lists original Django production
 checks, hosting, durable DB/cache and restore testing, canonical production
 merchant/location qualification, signed webhook processing, actual scheduled
 reconciliation/renewal heartbeats, monitoring and approved mobile release as
@@ -207,7 +308,8 @@ proxy: browser checkout/handoff stays directly on the exact API/checkout origin.
    deployment from the tested main branch; cutover's temporary OFF setting must
    not remain as the operating configuration.
 
-Until those owner actions and acceptance checks are complete, all production
-startup/custom-domain/operations and billing activation gates remain OFF and the
-existing Sandbox origin/website rewrites remain active. No DNS, website, Render
-or runtime change was performed by this preparation.
+Until those optional full-release owner actions and acceptance checks are
+complete, the full public-release/custom-domain/operations gates remain OFF.
+The separately authorized controlled profile can use production credentials on
+the unchanged existing origin with its narrow gates and enrolled parents. No
+DNS, website, Render or runtime change is performed by these source examples.

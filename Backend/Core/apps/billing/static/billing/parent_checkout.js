@@ -50,18 +50,21 @@ export function tokenizationFailure(value) {
     return new BeforePayment('verification_configuration');
   return new BeforePayment('tokenization_unavailable');
 }
-export function validQuote(q, period, environment = 'sandbox') {
+export function validQuote(q, period, environment = 'sandbox', billingMode = 'recurring') {
   const p = plans[period];
   return Boolean(p && q && ['sandbox', 'production'].includes(environment) && q.environment === environment && q.country === 'US' && q.purchasable === true &&
     q.billing_period === period && q.currency === 'USD' && q.amount_minor === p.amount &&
-    q.cadence === p.cadence && q.coverage_rule === p.rule && q.first_renewal_rule === p.rule &&
+    q.cadence === p.cadence && q.coverage_rule === p.rule &&
+    (billingMode === 'one_period' ? environment === 'production' && q.billing_mode === 'one_period' &&
+      q.automatic_renewal === false && q.card_storage === 'none' && q.first_renewal_rule === null :
+      billingMode === 'recurring' && q.billing_mode !== 'one_period' && q.first_renewal_rule === p.rule) &&
     q.coverage_start === 'canonical_successful_payment_capture' && q.first_renewal_at === null &&
     q.billing_controller === 'app_owned_terms' && q.can_prorate === false && q.free_period === false &&
     typeof q.billing_timezone === 'string' && q.billing_timezone.length <= 64 &&
     typeof q.disclosure_version === 'string' && q.disclosure_version.length > 0 && q.disclosure_version.length <= 96 &&
     /^[a-f0-9]{64}$/.test(q.disclosure_sha256 || '') && typeof q.disclosure === 'string' &&
     q.disclosure.length > 0 && q.disclosure.length <= 16000 && !('renewal_anchor_day' in q) &&
-    q.web_tokenization?.intent === 'CHARGE_AND_STORE' &&
+    q.web_tokenization?.intent === (billingMode === 'one_period' ? 'CHARGE' : 'CHARGE_AND_STORE') &&
     q.web_tokenization.amount === (p.amount / 100).toFixed(2) && q.web_tokenization.currencyCode === 'USD' &&
     q.web_tokenization.customerInitiated === true && q.web_tokenization.sellerKeyedIn === false);
 }
@@ -73,16 +76,18 @@ export function validAccess(data, parent, environment = 'sandbox') {
     Date.parse(data.access_until) > Date.parse(data.evaluated_at));
 }
 export class PurchaseFlow {
-  constructor({ api, tokenize, parent, canCharge = () => true, environment = 'sandbox', purpose = 'purchase' }) {
+  constructor({ api, tokenize, parent, canCharge = () => true, environment = 'sandbox', purpose = 'purchase', billingMode = 'recurring' }) {
     this.api = api; this.tokenize = tokenize; this.parent = parent;
-    if (!['sandbox', 'production'].includes(environment) || !['purchase', 'manage'].includes(purpose)) throw new Refused();
+    if (!['sandbox', 'production'].includes(environment) || !['purchase', 'manage'].includes(purpose) ||
+        !['recurring', 'one_period'].includes(billingMode) || (billingMode === 'one_period' && environment !== 'production')) throw new Refused();
+    this.billingMode = billingMode;
     this.environment = environment; this.purpose = purpose;
     this.period = 'monthly'; this.quote = null; this.intent = ''; this.attempted = false;
     this.reserveAttempted = false; this.sourceAllowed = false; this.access = null;
     this.canCharge = canCharge; this.busy = false;
   }
   setQuote(quote, period) {
-    if (this.purpose !== 'purchase' || !validQuote(quote, period, this.environment) || (this.intent && this.period !== period)) throw new Refused();
+    if (this.purpose !== 'purchase' || !validQuote(quote, period, this.environment, this.billingMode) || (this.intent && this.period !== period)) throw new Refused();
     this.period = period; this.quote = quote;
   }
   async readAccess() {
@@ -103,14 +108,14 @@ export class PurchaseFlow {
     return result;
   }
   consent(password) {
-    if (this.purpose !== 'purchase' || !password || password.length > 1024 || !validQuote(this.quote, this.period, this.environment)) throw new Refused();
+    if (this.purpose !== 'purchase' || !password || password.length > 1024 || !validQuote(this.quote, this.period, this.environment, this.billingMode)) throw new Refused();
     return { password, accepted: true, billing_period: this.period,
       disclosure_version: this.quote.disclosure_version, disclosure_sha256: this.quote.disclosure_sha256 };
   }
   acceptIntent(result) {
     if (!uuid.test(result?.id || '')) throw new Refused();
     this.intent = result.id; // Preserve the owned reference even if later validation fails.
-    if (!validQuote(result.terms, this.period, this.environment) || result.terms.disclosure_sha256 !== this.quote.disclosure_sha256) throw new Refused();
+    if (!validQuote(result.terms, this.period, this.environment, this.billingMode) || result.terms.disclosure_sha256 !== this.quote.disclosure_sha256) throw new Refused();
     if (result.current_term) { this.attempted = true; this.sourceAllowed = false; throw new Refused(); }
     this.sourceAllowed = true;
   }
@@ -165,6 +170,7 @@ function attachPage() {
   const $ = (id) => document.getElementById(id);
   const runtime = JSON.parse($('checkout-runtime').textContent);
   const manageOnly = runtime.purpose === 'manage';
+  const billingMode = runtime.billing_mode || 'recurring';
   const requestedPeriod = Object.hasOwn(plans, runtime.selected_plan) ? runtime.selected_plan : null;
   let access = '', signedInEmail = '', flow = null, card = null, busy = false, generation = 0;
   let selectedPeriod = requestedPeriod || 'monthly', planChosen = manageOnly || Boolean(requestedPeriod);
@@ -290,7 +296,7 @@ function attachPage() {
     const period = flow?.period || selectedPeriod, p = plans[period];
     for (const option of ['monthly', 'yearly']) $(option)?.setAttribute('aria-pressed', String(period === option));
     $('plan-name').textContent = p.label; $('price').textContent = '$' + (p.amount / 100).toFixed(2);
-    $('unit').textContent = p.unit;
+    $('unit').textContent = billingMode === 'one_period' ? period === 'monthly' ? 'USD for 30 days' : 'USD for 12 months' : p.unit;
     $('pay').textContent = 'Pay $' + (p.amount / 100).toFixed(2);
     const paid = Boolean(access) && flow?.access?.access_state === 'paid';
     const recovery = flow?.recovery;
@@ -319,7 +325,7 @@ function attachPage() {
     $('retry-access').textContent = ready ? 'Reload secure card form' : 'Check access';
     $('complete').hidden = !paid;
     if (manageOnly && access) $('manage-plan').open = true;
-    $('access-date').textContent = paid ? 'Your subscription is active.' : '';
+    $('access-date').textContent = paid ? billingMode === 'one_period' ? 'Your paid access is active. Automatic renewal is off.' : 'Your subscription is active.' : '';
     $('manage-plan').hidden = !access || (manageOnly ? !flow?.intent : !recovery?.renewals_enabled && !recovery?.setup_required);
     $('setup').hidden = manageOnly ? !flow?.intent || paid : !paid || recovery?.setup_required !== true;
     $('setup').textContent = manageOnly ? 'Check existing payment' : 'Complete card setup';
@@ -340,7 +346,7 @@ function attachPage() {
         typeof result.user.email !== 'string' || !result.user.email || result.user.email.length > 254) throw new Refused();
     access = result.access;
     signedInEmail = result.user.email;
-    flow = new PurchaseFlow({ environment: runtime.environment, purpose: manageOnly ? 'manage' : 'purchase', api: async (...args) => { active(scope); const value = await api(...args); active(scope); return value; },
+    flow = new PurchaseFlow({ environment: runtime.environment, billingMode, purpose: manageOnly ? 'manage' : 'purchase', api: async (...args) => { active(scope); const value = await api(...args); active(scope); return value; },
       parent: String(result.user.id), canCharge: () => {
         active(scope);
         if (!$('consent').checked) throw new BeforePayment('consent_required');

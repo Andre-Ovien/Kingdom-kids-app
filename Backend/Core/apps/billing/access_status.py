@@ -26,7 +26,8 @@ def _base(parent, now):
             'parent_plan_routing_enabled': False,
             'checkout': {'state': 'unavailable', 'reason_code': 'not_configured',
                          'management_state': 'unavailable', 'management_reason_code': 'not_qualified',
-                         'handoff_available': False, 'management_handoff_available': False},
+                         'handoff_available': False, 'management_handoff_available': False,
+                         'controlled_parent_eligible': False},
             'purchase_recovery': None, 'management_recovery': None}
 
 
