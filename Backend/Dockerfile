@@ -27,4 +27,4 @@ USER kingdomkids
 
 EXPOSE 8000
 
-CMD ["gunicorn", "--chdir", "Core", "Core.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "30", "--graceful-timeout", "30", "--access-logfile", "-", "--error-logfile", "-"]
+CMD ["python", "scripts/render_start.py"]

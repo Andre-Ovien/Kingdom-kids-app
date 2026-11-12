@@ -1,0 +1,89 @@
+# Free staging only. Automatic deploys follow main; no payment/media activation.
+services:
+  - type: web
+    name: kingdom-kids-checkout-staging
+    runtime: docker
+    plan: free
+    region: virginia
+    branch: main
+    rootDir: Backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    autoDeployTrigger: commit
+    healthCheckPath: /health/ready/
+    envVars:
+      - key: DJANGO_DEBUG
+        value: "false"
+      - key: DJANGO_EMAIL_DELIVERY_ENABLED
+        value: "false"
+      - key: RENDER_DJANGO_SECRET_SEED
+        generateValue: true
+      - key: RENDER_JWT_SIGNING_SEED
+        generateValue: true
+      - key: EMAIL_VERIFICATION_PEPPER
+        generateValue: true
+      - key: PASSWORD_RESET_PEPPER
+        generateValue: true
+      - key: ACCOUNT_DELETION_PEPPER
+        generateValue: true
+      - key: DJANGO_TRUST_X_FORWARDED_PROTO
+        value: "true"
+      - key: DJANGO_API_NUM_PROXIES
+        value: "1"
+      - key: DJANGO_JWT_ISSUER
+        value: kingdom-kids-api
+      - key: DJANGO_JWT_AUDIENCE
+        value: kingdom-kids-mobile
+      - key: DJANGO_DATABASE_URL
+        fromDatabase:
+          name: kingdom-kids-db
+          property: connectionString
+      - key: DJANGO_DB_SSLMODE
+        value: require
+      - key: DJANGO_DB_CONN_MAX_AGE_SECONDS
+        value: "60"
+      - key: DJANGO_CACHE_URL
+        fromService:
+          type: keyvalue
+          name: kingdom-kids-cache
+          property: connectionString
+      # Render internal Key Value uses redis://; only private same-region URLs.
+      - key: DJANGO_CACHE_ALLOW_INSECURE
+        value: "true"
+      - key: SQUARE_SANDBOX_ENABLED
+        value: "false"
+      - key: SQUARE_SANDBOX_CHECKOUT_ENABLED
+        value: "false"
+      - key: SQUARE_SANDBOX_RECONCILIATION_ENABLED
+        value: "false"
+      - key: SQUARE_SANDBOX_CANCELLATION_ENABLED
+        value: "false"
+      - key: SQUARE_SANDBOX_TERM_BILLING_ENABLED
+        value: "false"
+      - key: SQUARE_SANDBOX_TERM_RECONCILIATION_ENABLED
+        value: "false"
+      - key: SQUARE_SANDBOX_HTTP_TRANSPORT_ENABLED
+        value: "false"
+      - key: PAID_CONTENT_ENFORCEMENT_ENABLED
+        value: "false"
+      - key: PARENT_CHECKOUT_SANDBOX_ENABLED
+        value: "false"
+      - key: PARENT_CONTENT_ACCESS_STATUS_ENABLED
+        value: "false"
+      - key: CLOUDINARY_PRIVATE_DELIVERY_ENABLED
+        value: "false"
+  - type: keyvalue
+    name: kingdom-kids-cache
+    plan: free
+    region: virginia
+    ipAllowList: []
+    maxmemoryPolicy: noeviction
+    persistenceMode: "off"
+
+databases:
+  - name: kingdom-kids-db
+    plan: free
+    region: virginia
+    databaseName: kingdom_kids
+    user: kingdom_kids
+    ipAllowList: []
