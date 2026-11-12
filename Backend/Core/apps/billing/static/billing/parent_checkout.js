@@ -12,14 +12,14 @@ const beforePaymentMessages = {
   security_code: 'Check the card security code in the secure Square form, then choose Pay again.',
   postal_code: 'Check the billing postal code and the secure Square form, then choose Pay again.',
   card_details: 'Check the highlighted card details in the secure Square form, then choose Pay again.',
-  billing_contact: 'Complete your billing name, email, address and postal code, then choose Pay again.',
+  billing_contact: 'Complete your billing name, address and country, then choose Pay again.',
   consent_required: 'Accept the billing agreement and confirm your password before choosing Pay again.',
   page_not_visible: 'Return to this checkout tab, review the agreement and choose Pay again.',
   review_before_payment: 'Keep this checkout tab visible and accept the agreement before choosing Pay again.',
   verification_canceled: 'Card verification was canceled. Review your details and choose Pay again.',
   verification_incomplete: 'Complete card verification in the secure Square form, then choose Pay again.',
-  verification_configuration: 'Card verification could not start. Choose Check payment to reload the secure card form.',
-  tokenization_unavailable: 'Card verification could not finish. Choose Check payment to reload the secure card form.',
+  verification_configuration: 'Card verification could not start. Reload the secure card form to try again.',
+  tokenization_unavailable: 'Card verification could not finish. Reload the secure card form to try again.',
 };
 class BeforePayment extends Error {
   constructor(code) {
@@ -161,7 +161,9 @@ export class PurchaseFlow {
 function attachPage() {
   const $ = (id) => document.getElementById(id);
   const runtime = JSON.parse($('checkout-runtime').textContent);
-  let access = '', signedInEmail = '', flow = null, card = null, busy = false, generation = 0, selectedPeriod = 'monthly';
+  const requestedPeriod = Object.hasOwn(plans, runtime.selected_plan) ? runtime.selected_plan : null;
+  let access = '', signedInEmail = '', flow = null, card = null, busy = false, generation = 0;
+  let selectedPeriod = requestedPeriod || 'monthly', planChosen = Boolean(requestedPeriod);
   let cardMount = null, mountSerial = 0;
   const active = (value) => { if (generation !== value || !access) throw new Refused(); };
   const message = (value, code = '') => {
@@ -169,8 +171,8 @@ function attachPage() {
   };
   function sync() {
     document.querySelectorAll('button').forEach((button) => { button.disabled = busy; });
-    $('monthly').disabled = busy || Boolean(flow?.intent) || Boolean(flow?.reserveAttempted);
-    $('yearly').disabled = $('monthly').disabled;
+    for (const period of ['monthly', 'yearly']) if ($(period))
+      $(period).disabled = busy || Boolean(flow?.intent) || Boolean(flow?.reserveAttempted) || planChosen;
     $('pay').disabled = busy || !card || !flow?.quote || flow.attempted || !$('consent').checked ||
       flow.access?.access_state === 'paid' || (flow.access?.access_state !== 'unpaid' && !flow.sourceAllowed);
     $('restart').disabled = busy || !flow?.intent || !$('consent').checked || !flow?.quote;
@@ -232,11 +234,11 @@ function attachPage() {
   }
   function contact() {
     const value = (id) => $(id).value.trim();
-    const data = { givenName: value('given-name'), familyName: value('family-name'), email: value('billing-email'),
+    const data = { givenName: value('given-name'), familyName: value('family-name'), email: signedInEmail,
       addressLines: [value('address')], city: value('city'), state: value('region'),
-      postalCode: value('postal'), countryCode: value('country').toUpperCase() };
-    if (!data.givenName || !data.familyName || !data.email || !$('billing-email').checkValidity() ||
-        !data.addressLines[0] || !data.city || !data.postalCode || !/^[A-Z]{2}$/.test(data.countryCode)) throw new BeforePayment('billing_contact');
+      countryCode: value('country').toUpperCase() };
+    if (!data.givenName || !data.familyName || !data.email ||
+        !data.addressLines[0] || !data.city || !/^[A-Z]{2}$/.test(data.countryCode)) throw new BeforePayment('billing_contact');
     return data;
   }
   async function loadSdk(scope) {
@@ -270,48 +272,60 @@ function attachPage() {
     const result = await api(base + '?billing_period=' + period); active(scope);
     flow.setQuote(result, period); $('consent').checked = false;
     $('terms').textContent = result.disclosure;
-    if (!card && (flow.access?.access_state === 'unpaid' || flow.sourceAllowed)) await loadSdk(scope);
+    if (!card && cardStepReady()) await loadSdk(scope);
+  }
+  function cardStepReady() {
+    return Boolean(access && planChosen && flow?.access?.checkout?.state === 'available' && !flow.attempted &&
+      flow.access.access_state !== 'paid' && (flow.access.access_state === 'unpaid' || flow.sourceAllowed));
   }
   function update() {
     const period = flow?.period || selectedPeriod, p = plans[period];
-    $('monthly').setAttribute('aria-pressed', String(period === 'monthly'));
-    $('yearly').setAttribute('aria-pressed', String(period === 'yearly'));
+    for (const option of ['monthly', 'yearly']) $(option)?.setAttribute('aria-pressed', String(period === option));
     $('plan-name').textContent = p.label; $('price').textContent = '$' + (p.amount / 100).toFixed(2);
-    $('unit').textContent = p.unit; $('plan-badge').textContent = period === 'yearly' ? '2 MONTHS FREE' : 'ALL ACCESS';
-    $('coverage').textContent = period === 'yearly' ? '12 full calendar months from your successful payment.' :
-      'A full 30 days of access from your successful payment.';
-    $('renewal-label').textContent = period === 'yearly' ? 'Renew on your yearly anniversary' : 'Renew every 30 days';
-    $('pay').textContent = 'Pay $' + (p.amount / 100).toFixed(2) + ' & start';
-    $('login-form').hidden = Boolean(access);
-    $('account-identity').hidden = !access;
-    $('account-identity').textContent = access ? 'Signed in as ' + signedInEmail + '. Use this same parent account in Kingdom Kids.' : '';
-    $('sign-out').hidden = !access; $('recovery').hidden = !flow?.intent && !flow?.reserveAttempted;
-    $('retry-access').hidden = !access || Boolean(flow?.intent) ||
-      (flow?.access?.access_state !== 'unknown' && flow?.access?.checkout?.state === 'available');
-    const paid = Boolean(access) && flow?.access?.access_state === 'paid'; $('complete').hidden = !paid;
+    $('unit').textContent = p.unit;
+    $('pay').textContent = 'Pay $' + (p.amount / 100).toFixed(2);
+    const paid = Boolean(access) && flow?.access?.access_state === 'paid';
     const recovery = flow?.access?.purchase_recovery;
-    $('payment-area').hidden = !access || (!flow?.intent &&
-      (paid || flow?.access?.checkout?.state !== 'available'));
-    $('payment-title').textContent = paid ? 'Manage your plan' : 'Payment details';
-    $('agreement').hidden = paid; $('consent').closest('label').hidden = paid;
-    $('restart').hidden = recovery?.restart_allowed !== true || flow?.access?.access_state !== 'unpaid';
-    $('recover').hidden = recovery?.restart_allowed === true || (flow?.sourceAllowed && !flow?.attempted);
-    $('recover').textContent = recovery?.setup_required ? 'Complete plan setup' : 'Recover existing payment';
+    const ready = cardStepReady();
+    const restart = Boolean(access && recovery?.restart_allowed === true && flow?.access?.access_state === 'unpaid');
+    const pending = Boolean(access && !paid && (flow?.attempted || (flow?.reserveAttempted && !flow?.intent) ||
+      (flow?.intent && !flow?.sourceAllowed)));
+    if ($('plan-step')) $('plan-step').hidden = planChosen || Boolean(access);
+    $('selected-plan').hidden = !planChosen || paid;
+    $('page-title').textContent = paid ? 'Payment confirmed' : !planChosen ? 'Choose your plan' :
+      !access ? 'Parent sign in' : pending ? 'Check your payment' : ready ? 'Complete payment' : 'Check access';
+    $('login-form').hidden = !planChosen || Boolean(access);
+    $('account-identity').hidden = !access;
+    $('account-identity').textContent = access ? 'Signed in as ' + signedInEmail : '';
+    $('sign-out').hidden = !access;
+    $('payment-area').hidden = !ready; $('contact').hidden = !ready; $('card-container').hidden = !ready;
+    $('authorization').hidden = !ready && !restart;
+    $('password-area').hidden = !ready && !(pending && flow?.intent);
+    $('pay').hidden = !ready;
+    $('recovery').hidden = !pending;
+    $('recovery-copy').textContent = restart ? 'This payment was unsuccessful. Review the agreement before starting again.' :
+      'Your payment is not confirmed yet. Check or recover this same payment.';
+    $('recover').hidden = !pending || !flow?.intent || restart;
+    $('restart').hidden = !restart;
+    $('retry-access').hidden = !access || paid || pending || (ready && (Boolean(card) || busy));
+    $('retry-access').textContent = ready ? 'Reload secure card form' : 'Check access';
+    $('complete').hidden = !paid;
+    $('access-date').textContent = paid ? 'Your subscription is active.' : '';
+    $('manage-plan').hidden = !access || (!recovery?.renewals_enabled && !recovery?.setup_required);
+    $('setup').hidden = !paid || recovery?.setup_required !== true;
     $('stop-renewals').hidden = recovery?.renewals_enabled !== true;
-    if (paid) { $('pay').hidden = true; $('card-container').hidden = true; $('contact').hidden = true;
-      $('access-date').textContent = 'Your already-paid access keeps its confirmed coverage period.'; }
-    else { $('pay').hidden = false; $('card-container').hidden = false; $('contact').hidden = false; }
+    $('secure-note').hidden = !ready;
     sync();
   }
   async function refresh() {
     const result = await flow.readAccess();
-    message(result.access_state === 'paid' ? (result.purchase_recovery?.setup_required ?
-      'Your paid access is verified. Complete plan setup before future renewals can begin.' : 'Your paid access has been verified.') :
+    message(result.access_state === 'paid' ? '' :
       result.checkout.state !== 'available' ? 'Checkout is unavailable at this address. Parent account settings in the app remain accessible.' :
-      result.access_state === 'unpaid' ? 'Review the billing agreement before continuing.' :
+      result.access_state === 'unpaid' || flow.sourceAllowed ? '' :
       'Access could not yet be confirmed. Your account is still signed in. Check or recover an existing purchase.');
   }
   $('login-form').addEventListener('submit', (event) => { event.preventDefault(); perform(async () => {
+    if (!planChosen) throw new Refused();
     let password = takePassword('login-password'); const scope = generation;
     try {
       const result = await api('/api/accounts/login/', 'POST', { email: $('email').value.trim(), password });
@@ -351,14 +365,18 @@ function attachPage() {
       flow.period = selectedPeriod;
       update();
       await refresh();
-      if (flow.access.checkout.state === 'available') await quote(flow.period);
+      if (flow.access.checkout.state === 'available' && flow.access.access_state !== 'paid' &&
+          (cardStepReady() || flow.access.purchase_recovery?.restart_allowed)) await quote(flow.period);
     } finally { password = ''; }
   }); });
-  for (const period of ['monthly', 'yearly']) $(period).onclick = () => perform(async () => {
-    if (flow?.intent || flow?.reserveAttempted) throw new Refused();
-    if (flow) await quote(period);
-    else { selectedPeriod = period; message('Sign in to confirm the selected plan with the server.'); }
-  });
+  for (const period of ['monthly', 'yearly']) if ($(period)) $(period).onclick = () => {
+    if (busy || planChosen || flow?.intent || flow?.reserveAttempted) return;
+    selectedPeriod = period; update();
+  };
+  if ($('proceed')) $('proceed').onclick = () => {
+    if (busy || planChosen) return;
+    planChosen = true; message(''); update();
+  };
   $('consent').onchange = sync;
   $('pay').onclick = () => perform(async () => {
     if (!$('consent').checked) throw new BeforePayment('consent_required');
@@ -370,27 +388,39 @@ function attachPage() {
     if (flow.access.checkout.state === 'available' && (flow.access.access_state === 'unpaid' || flow.sourceAllowed)) await quote(flow.period);
   });
   $('recover').onclick = () => perform(async () => { await flow.recover(takePassword('purchase-password')); await refresh(); });
+  $('setup').onclick = () => perform(async () => { await flow.recover(takePassword('manage-password')); await refresh(); });
   $('restart').onclick = () => perform(async () => {
     if (!$('consent').checked) throw new Refused();
     await flow.restart(takePassword('purchase-password'));
     await refresh();
+    if (cardStepReady() && (!card || !flow.quote)) await quote(flow.period);
     message('The previous purchase was safely closed. Review this agreement, then choose Pay to start again.');
   });
   $('stop-renewals').onclick = () => perform(async () => {
-    await flow.stopRenewals(takePassword('purchase-password'));
+    await flow.stopRenewals(takePassword('manage-password'));
     message('Future renewals are stopped. Already-paid access keeps its original end.');
   });
   function clear() {
     generation++; access = ''; signedInEmail = ''; flow = null; busy = false;
     $('card-container').replaceChildren(); cardMount = null;
-    for (const input of document.querySelectorAll('input')) { if (input.type === 'checkbox') input.checked = false;
+    for (const input of document.querySelectorAll('input, select')) { if (input.type === 'checkbox') input.checked = false;
       else input.value = input.id === 'country' ? 'US' : ''; }
     destroyCard(card);
-    card = null; $('terms').textContent = '';
+    card = null; $('terms').textContent = ''; $('manage-plan').open = false;
+    selectedPeriod = requestedPeriod || 'monthly'; planChosen = Boolean(requestedPeriod);
     message('Signed out of this page. Your app session is unchanged.'); update();
   }
   $('sign-out').onclick = clear;
   window.addEventListener('pagehide', clear);
+  const countryCodes = 'AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS YE YT ZA ZM ZW'.split(' ');
+  const countryNames = new Intl.DisplayNames(['en'], { type: 'region' });
+  const options = [...new Set(countryCodes)].map((code) => ({ code, name: countryNames.of(code) }));
+  $('country').replaceChildren();
+  for (const entry of options.sort((a, b) => a.name.localeCompare(b.name))) {
+    const option = document.createElement('option'); option.value = entry.code; option.textContent = entry.name;
+    $('country').append(option);
+  }
+  $('country').value = 'US';
   if (location.protocol !== 'https:' || !window.isSecureContext || location.origin !== runtime.origin ||
       runtime.environment !== 'sandbox' || !runtime.application_id.startsWith('sandbox-')) {
     message('Secure parent checkout is not configured for this address.');

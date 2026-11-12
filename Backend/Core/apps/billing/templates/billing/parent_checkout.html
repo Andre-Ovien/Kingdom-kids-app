@@ -1,36 +1,57 @@
 {% load static %}<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Family subscription · Kingdom Kids</title>
+<title>Payment · Kingdom Kids</title>
 <link rel="stylesheet" href="{% static 'billing/parent_checkout.css' %}">
 <script type="module" src="{% static 'billing/parent_checkout.js' %}"></script>
 </head><body>
-<header><a class="brand" href="#main">Kingdom Kids<span>For your family</span></a><span class="sandbox">Sandbox · Test cards only</span></header>
-<main id="main"><div class="intro"><p class="eyebrow">ONE PLAN, EVERY ADVENTURE</p><h1>A world of stories.<br>A plan for your family.</h1><p>Every Bible story, read-along, puzzle, quiz and matching game.</p></div>
-<div class="layout"><section class="plan" aria-label="Choose your plan">
-<div class="switch" role="group" aria-label="Billing period"><button id="monthly" type="button" aria-pressed="true">Monthly</button><button id="yearly" type="button" aria-pressed="false">Yearly</button></div>
-<div class="plan-title"><h2 id="plan-name">Monthly plan</h2><span id="plan-badge">ALL ACCESS</span></div>
-<p class="price"><strong id="price">$9.99</strong><span id="unit">USD every 30 days</span></p>
-<p id="coverage">A full 30 days of access from your successful payment.</p><hr>
-<ul class="benefits"><li>Every Bible story &amp; read-along</li><li>Puzzles, quizzes &amp; matching</li><li>Progress for every explorer</li></ul>
-<div class="steps"><p><b>1</b><span><strong>Start your family’s adventures</strong>Access begins after a verified successful payment.</span></p><p><b>2</b><span><strong id="renewal-label">Renew every 30 days</strong>Your exact renewal date is confirmed after payment.</span></p><p><b>3</b><span><strong>You’re in control</strong>Stop future renewals while keeping already-paid access.</span></p></div>
-</section>
-<section class="checkout" aria-label="Secure parent checkout"><p id="message" class="message" role="status" aria-live="polite">Sign in with your verified parent account to review your billing agreement.</p>
-<noscript><p>JavaScript is required for secure checkout. You can still use parent account settings in Kingdom Kids.</p></noscript>
-<form id="login-form" method="post" action="/parent/checkout/" autocomplete="off"><h2>Parent sign in</h2><label>Email address<input id="email" type="email" autocomplete="off" maxlength="254" required></label><label>Password<input id="login-password" type="password" autocomplete="off" maxlength="1024" required></label><button class="primary" id="login" type="submit">Continue securely</button><p class="hint">Use a Sandbox test account and test card. No real payment is taken in this environment.</p></form>
-<p id="account-identity" class="hint" hidden></p>
-<div id="payment-area" hidden><h2 id="payment-title">Payment details</h2><p class="hint">Card details are entered securely with Square.</p><div id="card-container"></div>
-<fieldset id="contact"><legend>Billing address</legend><div class="two"><label>First name<input id="given-name" autocomplete="off" maxlength="100"></label><label>Last name<input id="family-name" autocomplete="off" maxlength="100"></label></div><label>Billing email<input id="billing-email" type="email" autocomplete="off" maxlength="254"></label><label>Street address<input id="address" autocomplete="off" maxlength="200"></label><div class="two"><label>City<input id="city" autocomplete="off" maxlength="100"></label><label>State<input id="region" autocomplete="off" maxlength="100"></label></div><div class="two"><label>Postal code<input id="postal" autocomplete="off" maxlength="20"></label><label>Country code<input id="country" autocomplete="off" maxlength="2" value="US" aria-describedby="country-hint"></label></div><p id="country-hint" class="hint">Two-letter billing country, for example US, CA or GB.</p></fieldset>
-<details id="agreement"><summary>Billing agreement</summary><p id="terms">The current server-confirmed agreement will appear here.</p></details>
-<label class="consent"><input id="consent" type="checkbox"><span>I accept the billing agreement and authorize this payment, saving my card, and the disclosed recurring charges. I can stop future renewals.</span></label>
-<label>Confirm parent password<input id="purchase-password" type="password" autocomplete="off" maxlength="1024"></label>
-<button id="pay" type="button" class="primary" disabled>Pay $9.99 &amp; start</button>
-<div id="recovery" hidden><p>A purchase is already recorded for this account. Check or recover that purchase before trying another payment.</p><button id="check" type="button" class="secondary">Check payment</button><button id="recover" type="button" class="secondary">Recover existing payment</button><button id="restart" type="button" class="text-button">Start again after a confirmed unsuccessful payment</button><button id="stop-renewals" type="button" class="text-button">Stop future renewals</button></div>
+<header class="page-header"><a class="brand" href="#main">Kingdom Kids</a><span class="sandbox">Sandbox · Test cards only</span></header>
+<main id="main" class="checkout-shell"><section class="checkout" aria-label="Secure parent checkout">
+<h1 id="page-title">{% if selected_plan %}Parent sign in{% else %}Choose your plan{% endif %}</h1>
+{% if not selected_plan %}<section id="plan-step" aria-label="Choose your plan">
+<div class="plan-options" role="group" aria-label="Billing period">
+<button id="monthly" type="button" class="plan-option" aria-pressed="true"><span>Monthly</span><strong>$9.99 <small>/ 30 days</small></strong></button>
+<button id="yearly" type="button" class="plan-option" aria-pressed="false"><span>Yearly</span><strong>$99.90 <small>/ year</small></strong></button>
+</div><button id="proceed" type="button" class="primary">Proceed</button>
+</section>{% endif %}
+<div id="selected-plan" class="plan-summary" hidden><span id="plan-name">Monthly plan</span><span><strong id="price">$9.99</strong><small id="unit">USD every 30 days</small></span></div>
+<p id="message" class="message" role="status" aria-live="polite"></p>
+<noscript><p>JavaScript is required for secure checkout.</p></noscript>
+<form id="login-form" method="post" action="/parent/checkout/" autocomplete="off" hidden>
+<p class="hint">Sign in with your verified parent account.</p>
+<label>Email address<input id="email" type="email" autocomplete="username" maxlength="254" required></label>
+<label>Password<input id="login-password" type="password" autocomplete="current-password" maxlength="1024" required></label>
+<button id="login" type="submit" class="primary">Continue</button>
+</form>
+<p id="account-identity" class="account-identity" hidden></p>
+<div id="payment-area" hidden>
+<h2>Card details</h2><div id="card-container" aria-label="Secure Square card form"></div>
+<fieldset id="contact"><legend>Billing details</legend>
+<div class="two"><label>First name<input id="given-name" autocomplete="given-name" maxlength="100"></label><label>Last name<input id="family-name" autocomplete="family-name" maxlength="100"></label></div>
+<label>Street address<input id="address" autocomplete="address-line1" maxlength="200"></label>
+<div class="two"><label>City<input id="city" autocomplete="address-level2" maxlength="100"></label><label>State / region<input id="region" autocomplete="address-level1" maxlength="100"></label></div>
+<label>Billing country<select id="country" autocomplete="country"><option value="US" selected>United States</option></select></label>
+<p class="hint">Enter your postal code only in the secure card form above.</p>
+</fieldset>
 </div>
-<div id="complete" hidden><h2>Your access is confirmed</h2><p id="access-date"></p><p>You can return to Kingdom Kids. This page does not change your selected child or app session.</p></div>
-<button id="retry-access" type="button" class="secondary" hidden>Try again</button>
-<button id="sign-out" type="button" class="text-button" hidden>Sign out of this page</button>
-<p class="hint account-note">Parent account settings, privacy and account deletion remain available in Kingdom Kids, including when a plan has ended.</p>
-</section></div></main>
-<footer><span>Kingdom Kids · Parent checkout</span><span>Secure card entry by Square</span></footer>
+<section id="recovery" class="recovery" hidden><p id="recovery-copy">Check your existing payment before trying again.</p>
+<button id="check" type="button" class="secondary">Check payment</button></section>
+<div id="authorization" hidden>
+<details id="agreement"><summary>Billing agreement</summary><p id="terms"></p></details>
+<label class="consent"><input id="consent" type="checkbox"><span>I accept the billing agreement, saving my card and the disclosed recurring charges. I can stop future renewals.</span></label>
+</div>
+<div id="password-area" hidden><label>Confirm parent password<input id="purchase-password" type="password" autocomplete="current-password" maxlength="1024"></label></div>
+<button id="pay" type="button" class="primary" hidden disabled>Pay $9.99</button>
+<button id="recover" type="button" class="primary" hidden>Recover existing payment</button>
+<button id="restart" type="button" class="primary" hidden>Start again</button>
+<div id="complete" class="complete" hidden><div class="success-mark" aria-hidden="true">✓</div><p id="access-date"></p><p class="return-copy">Return to Kingdom Kids to continue.</p></div>
+<button id="retry-access" type="button" class="secondary" hidden>Check access</button>
+<details id="manage-plan" class="manage-plan" hidden><summary>Manage plan</summary><p class="hint">Manage future renewals without changing your already-paid coverage.</p>
+<label>Parent password<input id="manage-password" type="password" autocomplete="current-password" maxlength="1024"></label>
+<button id="setup" type="button" class="secondary" hidden>Complete card setup</button>
+<button id="stop-renewals" type="button" class="text-button" hidden>Stop future renewals</button>
+</details>
+<button id="sign-out" type="button" class="text-button sign-out" hidden>Sign out</button>
+<p id="secure-note" class="secure-note">Secure card entry by Square</p>
+</section></main>
 {{ runtime|json_script:'checkout-runtime' }}
 </body></html>

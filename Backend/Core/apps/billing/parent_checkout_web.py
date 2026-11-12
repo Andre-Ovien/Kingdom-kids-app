@@ -73,12 +73,19 @@ def checkout_capability(parent):
 def parent_checkout(request):
     try:
         public = public_checkout_configuration()
-        if (not request.is_secure() or request.GET
-                or f'https://{request.get_host()}' != public['origin']):
+        selected_plan = None
+        if request.GET:
+            if set(request.GET) != {'plan'} or len(request.GET.getlist('plan')) != 1:
+                raise ParentCheckoutUnavailable
+            selected_plan = request.GET['plan']
+            if selected_plan not in {'monthly', 'yearly'}:
+                raise ParentCheckoutUnavailable
+        if (not request.is_secure() or f'https://{request.get_host()}' != public['origin']):
             raise ParentCheckoutUnavailable
     except (ParentCheckoutUnavailable, SquareDisabled, SquareConfigurationError):
         raise Http404 from None
-    response = render(request, 'billing/parent_checkout.html', {'runtime': public})
+    response = render(request, 'billing/parent_checkout.html', {
+        'runtime': {**public, 'selected_plan': selected_plan}, 'selected_plan': selected_plan})
     response['Cache-Control'] = 'no-store, private'
     response['Referrer-Policy'] = 'no-referrer'
     response['X-Frame-Options'] = 'DENY'

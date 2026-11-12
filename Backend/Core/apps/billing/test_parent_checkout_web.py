@@ -31,10 +31,10 @@ class ParentCheckoutWebTests(SimpleTestCase):
             self.assertEqual(self.get().status_code, 404)
 
     def test_render_is_light_parent_checkout_with_only_public_runtime_config(self):
-        response = self.get()
+        response = self.get('/parent/checkout/?plan=monthly')
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Parent sign in')
-        self.assertContains(response, 'Payment details')
+        self.assertContains(response, 'Card details')
         self.assertContains(response, 'Sandbox · Test cards only')
         self.assertNotContains(response, CHECKOUT_CONFIG['SQUARE_SANDBOX_ACCESS_TOKEN'])
         self.assertNotContains(response, 'tokenize-only')
@@ -43,6 +43,23 @@ class ParentCheckoutWebTests(SimpleTestCase):
         self.assertIn("frame-ancestors 'none'", response['Content-Security-Policy'])
         self.assertIn('https://pci-connect.squareupsandbox.com', response['Content-Security-Policy'])
         self.assertNotIn('connect.squareup.com', response['Content-Security-Policy'])
+
+    def test_selected_plan_is_strict_nonsecret_and_omits_browser_plan_controls(self):
+        for period in ('monthly', 'yearly'):
+            response = self.get('/parent/checkout/?plan=' + period)
+            self.assertEqual(response.status_code, 200)
+            self.assertContains(response, '"selected_plan": "' + period + '"')
+            self.assertNotContains(response, 'id="monthly"')
+            self.assertNotContains(response, 'id="yearly"')
+            self.assertNotContains(response, 'id="plan-step"')
+            self.assertNotContains(response, 'Every Bible story')
+            self.assertNotContains(response, 'class="steps"')
+            self.assertNotContains(response, 'id="postal"')
+            self.assertNotContains(response, 'id="billing-email"')
+            self.assertContains(response, 'id="country"')
+        for query in ('plan=', 'plan=weekly', 'plan=MONTHLY', 'plan=monthly&plan=yearly',
+                      'plan=monthly&parent=41', 'plan=yearly&access=synthetic-token'):
+            self.assertEqual(self.get('/parent/checkout/?' + query).status_code, 404)
 
     def test_invalid_production_or_secret_like_application_config_fails_closed(self):
         for changes in ({'SQUARE_ENVIRONMENT': 'production'},
