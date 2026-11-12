@@ -97,6 +97,39 @@ void main() {
       expect(pending.deliveryDelayed, isTrue);
     });
 
+    test('maps a raw login rejection to approved family-facing copy', () async {
+      final api = HttpAuthApi(
+        baseUrl: 'https://kingdom-kids.test/api',
+        client: MockClient(
+          (_) async => http.Response(
+            jsonEncode({
+              'detail':
+                  'No active account found with the given credentials: HTTP 401',
+            }),
+            401,
+          ),
+        ),
+      );
+
+      await expectLater(
+        api.login(
+          const LoginRequest(
+            email: 'parent@example.com',
+            password: 'not-the-password',
+          ),
+        ),
+        throwsA(
+          isA<AppException>()
+              .having((error) => error.code, 'code', 'invalid_credentials')
+              .having(
+                (error) => error.userMessage,
+                'userMessage',
+                'That email or password did not match our records.',
+              ),
+        ),
+      );
+    });
+
     test('confirms and resends an email verification challenge', () async {
       final requests = <http.Request>[];
       final api = HttpAuthApi(
@@ -148,6 +181,233 @@ void main() {
     });
 
     test(
+      'requests password recovery at the exact destination with normalized email',
+      () async {
+        late http.Request sentRequest;
+        final api = HttpAuthApi(
+          baseUrl: 'https://kingdom-kids.test/api',
+          client: MockClient((request) async {
+            sentRequest = request;
+            return http.Response(
+              jsonEncode({
+                'detail':
+                    'If an eligible account exists for that email, a password reset code has been sent.',
+                'challenge_id': '11111111-1111-4111-8111-111111111111',
+                'expires_in': 600,
+              }),
+              202,
+            );
+          }),
+        );
+
+        final pending = await api.requestPasswordReset(
+          const PasswordResetRequest(email: '  PARENT@EXAMPLE.COM  '),
+        );
+
+        expect(sentRequest.method, 'POST');
+        expect(
+          sentRequest.url,
+          Uri.parse(
+            'https://kingdom-kids.test/api/accounts/password-reset/request/',
+          ),
+        );
+        expect(sentRequest.headers.containsKey('authorization'), isFalse);
+        expect(jsonDecode(sentRequest.body), {'email': 'parent@example.com'});
+        expect(pending.challengeId, '11111111-1111-4111-8111-111111111111');
+        expect(pending.expiresInSeconds, 600);
+      },
+    );
+
+    test(
+      'confirms password recovery with every backend field and accepts 204',
+      () async {
+        late http.Request sentRequest;
+        final api = HttpAuthApi(
+          baseUrl: 'https://kingdom-kids.test/api',
+          client: MockClient((request) async {
+            sentRequest = request;
+            return http.Response('', 204);
+          }),
+        );
+
+        await api.confirmPasswordReset(
+          const PasswordResetConfirmRequest(
+            challengeId: '11111111-1111-4111-8111-111111111111',
+            code: ' 123456 ',
+            newPassword: 'New-Correct-Horse-Battery-Staple-2026!',
+            newPasswordConfirmation: 'New-Correct-Horse-Battery-Staple-2026!',
+          ),
+        );
+
+        expect(sentRequest.method, 'POST');
+        expect(
+          sentRequest.url,
+          Uri.parse(
+            'https://kingdom-kids.test/api/accounts/password-reset/confirm/',
+          ),
+        );
+        expect(sentRequest.headers.containsKey('authorization'), isFalse);
+        expect(jsonDecode(sentRequest.body), {
+          'challenge_id': '11111111-1111-4111-8111-111111111111',
+          'code': '123456',
+          'new_password': 'New-Correct-Horse-Battery-Staple-2026!',
+          'new_password_confirmation': 'New-Correct-Horse-Battery-Staple-2026!',
+        });
+      },
+    );
+
+    test('preserves the safe invalid-or-expired reset response', () async {
+      final api = HttpAuthApi(
+        baseUrl: 'https://kingdom-kids.test/api',
+        client: MockClient(
+          (_) async => http.Response(
+            jsonEncode({
+              'code': 'invalid_or_expired_password_reset',
+              'detail': 'That password reset code is incorrect or has expired.',
+            }),
+            400,
+          ),
+        ),
+      );
+
+      await expectLater(
+        api.confirmPasswordReset(
+          const PasswordResetConfirmRequest(
+            challengeId: '11111111-1111-4111-8111-111111111111',
+            code: '000000',
+            newPassword: 'New-Correct-Horse-Battery-Staple-2026!',
+            newPasswordConfirmation: 'New-Correct-Horse-Battery-Staple-2026!',
+          ),
+        ),
+        throwsA(
+          isA<AppException>()
+              .having(
+                (error) => error.code,
+                'code',
+                'invalid_or_expired_password_reset',
+              )
+              .having((error) => error.statusCode, 'statusCode', 400)
+              .having(
+                (error) => error.userMessage,
+                'userMessage',
+                'That password reset code is incorrect or has expired.',
+              ),
+        ),
+      );
+    });
+
+    test(
+      'code verification sends no password and preserves local sign-in',
+      () async {
+        final store = MemoryAuthSessionStore();
+        await store.writeSession(_oldSession);
+        await store.writeSelectedKidId('kid-1');
+        late http.Request sent;
+        final repository = AuthRepository(
+          api: HttpAuthApi(
+            baseUrl: 'https://kingdom-kids.test/api',
+            client: MockClient((request) async {
+              sent = request;
+              return http.Response('', 204);
+            }),
+          ),
+          sessionStore: store,
+        );
+        await repository.verifyPasswordResetCode(
+          const PasswordResetVerifyRequest(
+            challengeId: '11111111-1111-4111-8111-111111111111',
+            code: ' 123456 ',
+          ),
+        );
+        expect(sent.method, 'POST');
+        expect(sent.url.path, '/api/accounts/password-reset/verify/');
+        expect(sent.headers['authorization'], isNull);
+        expect(jsonDecode(sent.body), {
+          'challenge_id': '11111111-1111-4111-8111-111111111111',
+          'code': '123456',
+        });
+        expect(
+          (await store.readSession())?.accessToken,
+          _oldSession.accessToken,
+        );
+        expect(await store.readSelectedKidId(), 'kid-1');
+      },
+    );
+
+    test(
+      'an incorrect verification code stays a retryable recovery error',
+      () async {
+        final store = MemoryAuthSessionStore();
+        await store.writeSession(_oldSession);
+        await store.writeSelectedKidId('kid-1');
+        final repository = AuthRepository(
+          api: HttpAuthApi(
+            baseUrl: 'https://kingdom-kids.test/api',
+            client: MockClient(
+              (_) async => http.Response(
+                jsonEncode({
+                  'code': 'invalid_or_expired_password_reset',
+                  'detail':
+                      'That password reset code is incorrect or has expired.',
+                }),
+                400,
+              ),
+            ),
+          ),
+          sessionStore: store,
+        );
+        await expectLater(
+          repository.verifyPasswordResetCode(
+            const PasswordResetVerifyRequest(
+              challengeId: '11111111-1111-4111-8111-111111111111',
+              code: '000000',
+            ),
+          ),
+          throwsA(
+            isA<AppException>().having(
+              (error) => error.code,
+              'code',
+              'invalid_or_expired_password_reset',
+            ),
+          ),
+        );
+        expect(
+          (await store.readSession())?.accessToken,
+          _oldSession.accessToken,
+        );
+        expect(await store.readSelectedKidId(), 'kid-1');
+      },
+    );
+
+    test(
+      'successful password recovery clears stale local auth state',
+      () async {
+        final store = MemoryAuthSessionStore();
+        await store.writeSession(_oldSession);
+        await store.writeSelectedKidId('kid-1');
+        final repository = AuthRepository(
+          api: HttpAuthApi(
+            baseUrl: 'https://kingdom-kids.test/api',
+            client: MockClient((_) async => http.Response('', 204)),
+          ),
+          sessionStore: store,
+        );
+
+        await repository.confirmPasswordReset(
+          const PasswordResetConfirmRequest(
+            challengeId: '11111111-1111-4111-8111-111111111111',
+            code: '123456',
+            newPassword: 'New-Correct-Horse-Battery-Staple-2026!',
+            newPasswordConfirmation: 'New-Correct-Horse-Battery-Staple-2026!',
+          ),
+        );
+
+        expect(await store.readSession(), isNull);
+        expect(await store.readSelectedKidId(), isNull);
+      },
+    );
+
+    test(
       'reads the bare profile list returned by the Django viewset',
       () async {
         late http.Request sentRequest;
@@ -168,7 +428,10 @@ void main() {
           }),
         );
 
-        final profiles = await api.fetchKidProfiles('access-token');
+        final profiles = await api.fetchKidProfiles(
+          'access-token',
+          expectedParentId: 'parent-1',
+        );
 
         expect(
           sentRequest.url,
@@ -177,8 +440,72 @@ void main() {
         expect(sentRequest.headers['authorization'], 'Bearer access-token');
         expect(profiles.single.displayName, 'Ada Grace');
         expect(profiles.single.avatarKey, 'rainbow');
+        expect(profiles.single.parentId, 'parent-1');
       },
     );
+
+    test(
+      'rejects malformed or unidentified entries in a profile list',
+      () async {
+        final responseBodies = [
+          jsonEncode([
+            {'id': 'kid-1', 'display_name': 'Ada', 'avatar_key': 'dove'},
+            'not-a-profile',
+          ]),
+          jsonEncode([
+            {'display_name': 'Ada', 'avatar_key': 'dove'},
+          ]),
+        ];
+
+        for (final responseBody in responseBodies) {
+          final api = HttpAuthApi(
+            baseUrl: 'https://kingdom-kids.test/api',
+            client: MockClient((_) async => http.Response(responseBody, 200)),
+          );
+
+          await expectLater(
+            api.fetchKidProfiles('access-token', expectedParentId: 'parent-1'),
+            throwsA(
+              isA<AppException>().having(
+                (error) => error.code,
+                'code',
+                'invalid_profile_list_response',
+              ),
+            ),
+          );
+        }
+      },
+    );
+
+    test('rejects a profile list entry owned by another parent', () async {
+      final api = HttpAuthApi(
+        baseUrl: 'https://kingdom-kids.test/api',
+        client: MockClient(
+          (_) async => http.Response(
+            jsonEncode([
+              {
+                'id': 'kid-1',
+                'parent_id': 'parent-2',
+                'display_name': 'Ada',
+                'avatar_key': 'dove',
+              },
+            ]),
+            200,
+          ),
+        ),
+      );
+
+      await expectLater(
+        api.fetchKidProfiles('access-token', expectedParentId: 'parent-1'),
+        throwsA(
+          isA<AppException>().having(
+            (error) => error.code,
+            'code',
+            'profile_owner_mismatch',
+          ),
+        ),
+      );
+    });
 
     test('sends the profile creation operation ID to Django', () async {
       late http.Request sentRequest;
@@ -214,6 +541,36 @@ void main() {
         'operation_id': '0b44df58-58fa-4a49-9a08-7dcb63a58f6b',
       });
       expect(profile.id, 'kid-1');
+    });
+
+    test('rejects a created profile response without an ID', () async {
+      final api = HttpAuthApi(
+        baseUrl: 'https://kingdom-kids.test/api',
+        client: MockClient(
+          (_) async => http.Response(
+            jsonEncode({'display_name': 'Ada', 'avatar_key': 'dove'}),
+            201,
+          ),
+        ),
+      );
+
+      await expectLater(
+        api.createKidProfile(
+          const CreateKidProfileRequest(
+            displayName: 'Ada',
+            avatarKey: 'dove',
+            operationId: '0b44df58-58fa-4a49-9a08-7dcb63a58f6b',
+          ),
+          'access-token',
+        ),
+        throwsA(
+          isA<AppException>().having(
+            (error) => error.code,
+            'code',
+            'invalid_profile_response',
+          ),
+        ),
+      );
     });
 
     test(
@@ -542,6 +899,176 @@ void main() {
     });
 
     test(
+      'deletes the current account with bearer auth and an exact password',
+      () async {
+        late http.Request sentRequest;
+        final api = HttpAuthApi(
+          baseUrl: 'https://kingdom-kids.test/api',
+          client: MockClient((request) async {
+            sentRequest = request;
+            return http.Response('', 204);
+          }),
+        );
+
+        await api.deleteAccount(
+          password: '  exact current password  ',
+          accessToken: 'access-token',
+        );
+
+        expect(sentRequest.method, 'DELETE');
+        expect(
+          sentRequest.url,
+          Uri.parse('https://kingdom-kids.test/api/accounts/me/'),
+        );
+        expect(sentRequest.headers['authorization'], 'Bearer access-token');
+        expect(sentRequest.headers['content-type'], 'application/json');
+        expect(jsonDecode(sentRequest.body), {
+          'password': '  exact current password  ',
+        });
+      },
+    );
+
+    test(
+      'failed account deletion preserves session and selected child',
+      () async {
+        final store = MemoryAuthSessionStore();
+        await store.writeSession(_oldSession);
+        await store.writeSelectedKidId('kid-1');
+        final repository = AuthRepository(
+          api: HttpAuthApi(
+            baseUrl: 'https://kingdom-kids.test/api',
+            client: MockClient(
+              (_) async => http.Response(
+                jsonEncode({
+                  'password': ['The password is incorrect.'],
+                }),
+                400,
+              ),
+            ),
+          ),
+          sessionStore: store,
+        );
+
+        await expectLater(
+          repository.deleteAccount(password: 'wrong-password'),
+          throwsA(
+            isA<AppException>()
+                .having(
+                  (error) => error.message,
+                  'message',
+                  'The password is incorrect.',
+                )
+                .having((error) => error.statusCode, 'statusCode', 400),
+          ),
+        );
+
+        expect(await store.readSession(), _oldSession);
+        expect(await store.readSelectedKidId(), 'kid-1');
+      },
+    );
+
+    test(
+      'account deletion refreshes, retries, then purges the session',
+      () async {
+        final requests = <http.Request>[];
+        final store = MemoryAuthSessionStore();
+        await store.writeSession(_oldSession);
+        await store.writeSelectedKidId('kid-1');
+        final repository = AuthRepository(
+          api: HttpAuthApi(
+            baseUrl: 'https://kingdom-kids.test/api',
+            client: MockClient((request) async {
+              requests.add(request);
+              if (request.url.path.endsWith('token/refresh/')) {
+                return http.Response(
+                  jsonEncode({
+                    'access': 'new-access',
+                    'refresh': 'new-refresh',
+                  }),
+                  200,
+                );
+              }
+              if (request.headers['authorization'] == 'Bearer old-access') {
+                return http.Response(
+                  jsonEncode({'detail': 'Token has expired.'}),
+                  401,
+                );
+              }
+              return http.Response('', 204);
+            }),
+          ),
+          sessionStore: store,
+        );
+
+        await repository.deleteAccount(password: 'current-password');
+
+        expect(
+          requests.map((request) => request.url.path),
+          containsAllInOrder([
+            '/api/accounts/me/',
+            '/api/accounts/token/refresh/',
+            '/api/accounts/me/',
+          ]),
+        );
+        final deletes = requests
+            .where((request) => request.method == 'DELETE')
+            .toList(growable: false);
+        expect(deletes, hasLength(2));
+        expect(deletes.last.headers['authorization'], 'Bearer new-access');
+        expect(
+          deletes.every((request) => request.body == deletes.first.body),
+          isTrue,
+        );
+        expect(await store.readSession(), isNull);
+        expect(await store.readSelectedKidId(), isNull);
+      },
+    );
+
+    test(
+      'account deletion reports session expiry and clears stale auth',
+      () async {
+        final store = MemoryAuthSessionStore();
+        await store.writeSession(_oldSession);
+        await store.writeSelectedKidId('kid-1');
+        final repository = AuthRepository(
+          api: HttpAuthApi(
+            baseUrl: 'https://kingdom-kids.test/api',
+            client: MockClient((request) async {
+              if (request.url.path.endsWith('token/refresh/')) {
+                return http.Response(
+                  jsonEncode({
+                    'code': 'token_not_valid',
+                    'detail': 'Token is invalid or expired.',
+                  }),
+                  401,
+                );
+              }
+              return http.Response(
+                jsonEncode({'detail': 'Token has expired.'}),
+                401,
+              );
+            }),
+          ),
+          sessionStore: store,
+        );
+
+        await expectLater(
+          repository.deleteAccount(password: 'current-password'),
+          throwsA(
+            isA<AppException>().having(
+              (error) => error.code,
+              'code',
+              'session_expired',
+            ),
+          ),
+        );
+
+        expect(await store.readSession(), isNull);
+        expect(await store.readSelectedKidId(), isNull);
+      },
+    );
+
+    test(
       'repository refreshes an expired access token and retries once',
       () async {
         final requests = <http.Request>[];
@@ -699,6 +1226,177 @@ void main() {
         );
 
         expect(await store.readSession(), isNull);
+      },
+    );
+
+    test(
+      'a token refresh keeps profile edits completed while it was pending',
+      () async {
+        final refreshStarted = Completer<void>();
+        final releaseRefresh = Completer<void>();
+        final store = MemoryAuthSessionStore();
+        await store.writeSession(_oldSession);
+        final api = HttpAuthApi(
+          baseUrl: 'https://kingdom-kids.test/api',
+          client: MockClient((request) async {
+            if (request.url.path.endsWith('token/refresh/')) {
+              refreshStarted.complete();
+              await releaseRefresh.future;
+              return http.Response(
+                jsonEncode({'access': 'new-access', 'refresh': 'new-refresh'}),
+                200,
+              );
+            }
+            return http.Response(
+              jsonEncode({
+                'id': 'kid-1',
+                'display_name': 'Ada Grace',
+                'avatar_key': 'dove',
+              }),
+              200,
+            );
+          }),
+        );
+        final refreshing = AuthRepository(api: api, sessionStore: store);
+        final editing = AuthRepository(api: api, sessionStore: store);
+        final refresh = refreshing.refreshSession();
+        await refreshStarted.future;
+        final edited = await editing.updateKidProfile(
+          profileId: 'kid-1',
+          displayName: 'Ada Grace',
+          avatarKey: 'dove',
+        );
+        await editing.selectKid(edited);
+        releaseRefresh.complete();
+        await refresh;
+        expect((await store.readSession())?.accessToken, 'new-access');
+        expect((await refreshing.currentKid())?.displayName, 'Ada Grace');
+        expect((await store.readSession())?.profiles.single.id, 'kid-1');
+      },
+    );
+
+    test('a delayed logout cannot clear a newly logged-in parent', () async {
+      final logoutStarted = Completer<void>();
+      final releaseLogout = Completer<void>();
+      final store = MemoryAuthSessionStore();
+      await store.writeSession(_oldSession);
+      final loggingOut = AuthRepository(
+        api: HttpAuthApi(
+          baseUrl: 'https://kingdom-kids.test/api',
+          client: MockClient((request) async {
+            logoutStarted.complete();
+            await releaseLogout.future;
+            return http.Response('', 204);
+          }),
+        ),
+        sessionStore: store,
+      );
+      final loggingIn = AuthRepository(
+        api: HttpAuthApi(
+          baseUrl: 'https://kingdom-kids.test/api',
+          client: MockClient(
+            (_) async => http.Response(jsonEncode(_newParentPayload), 200),
+          ),
+        ),
+        sessionStore: store,
+      );
+      final logout = loggingOut.logout();
+      await logoutStarted.future;
+      await loggingIn.login(_newParentLogin);
+      releaseLogout.complete();
+      await logout;
+      expect((await store.readSession())?.parent.id, '99');
+      expect((await store.readSession())?.accessToken, 'other-access');
+    });
+
+    test(
+      'a delayed logout preserves a fresh sign-in by the same parent',
+      () async {
+        final logoutStarted = Completer<void>();
+        final releaseLogout = Completer<void>();
+        final store = MemoryAuthSessionStore();
+        await store.writeSession(_oldSession);
+        final loggingOut = AuthRepository(
+          api: HttpAuthApi(
+            baseUrl: 'https://kingdom-kids.test/api',
+            client: MockClient((request) async {
+              logoutStarted.complete();
+              await releaseLogout.future;
+              return http.Response('', 204);
+            }),
+          ),
+          sessionStore: store,
+        );
+        final loggingIn = AuthRepository(
+          api: HttpAuthApi(
+            baseUrl: 'https://kingdom-kids.test/api',
+            client: MockClient(
+              (_) async => http.Response(
+                jsonEncode({
+                  'user': {
+                    'id': 42,
+                    'email': 'parent@example.com',
+                    'kid_profiles': <Object>[],
+                  },
+                  'access': 'fresh-login-access',
+                  'refresh': 'fresh-login-refresh',
+                }),
+                200,
+              ),
+            ),
+          ),
+          sessionStore: store,
+        );
+        final logout = loggingOut.logout();
+        await logoutStarted.future;
+        await loggingIn.login(
+          const LoginRequest(
+            email: 'parent@example.com',
+            password: 'Correct-Horse-Battery-Staple-2026!',
+          ),
+        );
+        releaseLogout.complete();
+        await logout;
+        expect((await store.readSession())?.parent.id, '42');
+        expect((await store.readSession())?.accessToken, 'fresh-login-access');
+      },
+    );
+
+    test(
+      'logout still clears its original session after a token rotation',
+      () async {
+        final requests = <http.Request>[];
+        final store = MemoryAuthSessionStore();
+        await store.writeSession(_oldSession);
+        final repository = AuthRepository(
+          api: HttpAuthApi(
+            baseUrl: 'https://kingdom-kids.test/api',
+            client: MockClient((request) async {
+              requests.add(request);
+              if (request.url.path.endsWith('token/refresh/')) {
+                return http.Response(
+                  jsonEncode({
+                    'access': 'rotated-access',
+                    'refresh': 'rotated-refresh',
+                  }),
+                  200,
+                );
+              }
+              if (request.headers['authorization'] == 'Bearer old-access') {
+                return http.Response(
+                  jsonEncode({'detail': 'Token expired.'}),
+                  401,
+                );
+              }
+              return http.Response('', 204);
+            }),
+          ),
+          sessionStore: store,
+        );
+        await repository.logout();
+        expect(await store.readSession(), isNull);
+        expect(requests.last.headers['authorization'], 'Bearer rotated-access');
+        expect(jsonDecode(requests.last.body), {'refresh': 'rotated-refresh'});
       },
     );
 

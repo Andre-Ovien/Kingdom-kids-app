@@ -81,7 +81,14 @@ class HttpProfileApi implements ProfileApi {
           code: 'invalid_profile_summary',
         );
       }
-      return ProfileProgressSummary.fromJson(summary);
+      final parsed = ProfileProgressSummary.fromJson(summary);
+      if (parsed.profile.id != normalizedProfileId) {
+        throw const AppException(
+          'The profile service returned the wrong child profile.',
+          code: 'profile_response_mismatch',
+        );
+      }
+      return parsed;
     } on TimeoutException {
       throw const AppException(
         'Kingdom Kids took too long to load this profile. Please try again.',

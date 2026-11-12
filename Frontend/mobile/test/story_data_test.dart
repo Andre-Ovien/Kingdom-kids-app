@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:mobile/core/config/app_config.dart';
 import 'package:mobile/core/errors/app_exception.dart';
 import 'package:mobile/features/auth/data/auth_api.dart';
 import 'package:mobile/features/auth/data/auth_repository.dart';
@@ -14,6 +15,7 @@ import 'package:mobile/features/auth/domain/auth_session.dart';
 import 'package:mobile/features/auth/domain/email_verification.dart';
 import 'package:mobile/features/auth/domain/kid_profile.dart';
 import 'package:mobile/features/auth/domain/parent_account.dart';
+import 'package:mobile/features/auth/domain/password_reset.dart';
 import 'package:mobile/features/stories/data/story_api.dart';
 import 'package:mobile/features/stories/data/story_repository.dart';
 import 'package:mobile/features/stories/domain/story_detail.dart';
@@ -77,7 +79,7 @@ void main() {
             'duration_seconds': 218,
           },
         ],
-      });
+      }, mediaPolicy: _trustedMediaPolicy);
 
       expect(story.id, 'ec224294-7b23-4afd-82a7-cf164d0808ac');
       expect(story.slug, 'david-and-goliath');
@@ -160,6 +162,35 @@ void main() {
       expect(story.narrations.single.audioUrl, isNull);
       expect(story.narrations.single.sampleUrl, isNull);
       expect(story.narrations.single.durationSeconds, isNull);
+    });
+
+    test('drops unowned or cleartext media while keeping bundled art', () {
+      final story = StoryDetail.fromJson({
+        'slug': 'david-and-goliath',
+        'title': 'David & Goliath',
+        'cover_asset_key': 'assets/images/david_and_goliath.png',
+        'cover_image_url': 'https://tracking.example/david.png',
+        'narrations': [
+          {
+            'avatar_key': 'lion',
+            'voice_key': 'kai',
+            'character_name': 'Kai',
+            'status': 'ready',
+            'audio_available': true,
+            'sample_url': 'http://media.test/kai-sample.mp3',
+            'audio_url': 'https://user:secret@media.test/david-kai.mp3',
+          },
+        ],
+      }, mediaPolicy: _trustedMediaPolicy);
+
+      expect(story.coverImageUrl, isNull);
+      expect(
+        story.coverAssetKey,
+        'assets/images/stories/david-and-goliath-v2.webp',
+      );
+      expect(story.narrations.single.sampleUrl, isNull);
+      expect(story.narrations.single.audioUrl, isNull);
+      expect(story.narrations.single.audioAvailable, isFalse);
     });
 
     test('requires the backend identity fields used for navigation', () {
@@ -367,6 +398,48 @@ void main() {
   });
 
   group('RemoteStoryRepository', () {
+    test(
+      'filters New Testament stories even from a cached catalogue',
+      () async {
+        final store = MemoryAuthSessionStore();
+        await store.writeSession(
+          const AuthSession(
+            parent: ParentAccount(id: 'parent-1', email: 'parent@example.com'),
+            accessToken: 'access-token',
+          ),
+        );
+        final api = _CatalogueStoryApi();
+        final repository = RemoteStoryRepository(
+          authRepository: AuthRepository(sessionStore: store),
+          api: api,
+          catalogueCache: StoryCatalogueCache(),
+        );
+        for (var read = 0; read < 2; read++) {
+          final stories = await repository.fetchStories();
+          expect(stories.map((story) => story.slug), ['ruth-and-naomi']);
+        }
+        expect(api.listCalls, 1);
+      },
+    );
+
+    test('retired story requests cannot fetch a body or recording', () async {
+      final api = _CatalogueStoryApi();
+      final repository = RemoteStoryRepository(api: api);
+      for (final slug in ['lost-sheep', 'good-samaritan']) {
+        await expectLater(
+          repository.fetchStory(slug),
+          throwsA(
+            isA<AppException>().having(
+              (error) => error.code,
+              'code',
+              'story_unavailable',
+            ),
+          ),
+        );
+      }
+      expect(api.detailCalls, 0);
+    });
+
     test('uses the refresh-aware AuthRepository token gateway', () async {
       final store = MemoryAuthSessionStore();
       await store.writeSession(
@@ -393,6 +466,57 @@ void main() {
     });
   });
 }
+
+final class _CatalogueStoryApi implements StoryApi {
+  int listCalls = 0;
+  int detailCalls = 0;
+
+  @override
+  Future<List<StoryDetail>> fetchStories(
+    String accessToken, {
+    String? search,
+    String? category,
+  }) async {
+    listCalls++;
+    return const [
+      StoryDetail(
+        slug: 'ruth-and-naomi',
+        title: 'Ruth and Naomi',
+        author: 'Kingdom Kids',
+        category: 'Kindness',
+      ),
+      StoryDetail(
+        slug: 'lost-sheep',
+        title: 'The Lost Sheep',
+        author: 'Kingdom Kids',
+        category: 'Kindness',
+      ),
+      StoryDetail(
+        slug: 'good-samaritan',
+        title: 'The Good Samaritan',
+        author: 'Kingdom Kids',
+        category: 'Kindness',
+      ),
+    ];
+  }
+
+  @override
+  Future<StoryDetail> fetchStory(String slug, String accessToken) async {
+    detailCalls++;
+    return StoryDetail(
+      slug: slug,
+      title: slug,
+      body: 'A saved story.',
+      author: 'Kingdom Kids',
+      category: 'Kindness',
+    );
+  }
+}
+
+const _trustedMediaPolicy = ContentMediaPolicy(
+  apiBaseUrl: 'https://api.test/api',
+  configuredHosts: 'media.test',
+);
 
 final class _RefreshAwareStoryApi implements StoryApi {
   final accessTokens = <String>[];
@@ -438,6 +562,23 @@ final class _RefreshingAuthApi implements AuthApi {
   }
 
   @override
+  Future<PendingPasswordReset> requestPasswordReset(
+    PasswordResetRequest request,
+  ) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> verifyPasswordResetCode(PasswordResetVerifyRequest request) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> confirmPasswordReset(PasswordResetConfirmRequest request) {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<KidProfile> createKidProfile(
     CreateKidProfileRequest request,
     String accessToken,
@@ -451,7 +592,18 @@ final class _RefreshingAuthApi implements AuthApi {
   }
 
   @override
-  Future<List<KidProfile>> fetchKidProfiles(String accessToken) {
+  Future<void> deleteAccount({
+    required String password,
+    required String accessToken,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<KidProfile>> fetchKidProfiles(
+    String accessToken, {
+    required String expectedParentId,
+  }) {
     throw UnimplementedError();
   }
 

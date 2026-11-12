@@ -1,0 +1,7 @@
+# Regenerate only the approved iPhone/iPad icon without touching Android assets:
+# dart run flutter_launcher_icons --file tool/flutter_launcher_icons_ios.yaml
+flutter_launcher_icons:
+  android: false
+  ios: true
+  image_path_ios: assets/images/branding/kingdom-kids-car-icon-v1.png
+  remove_alpha_ios: true

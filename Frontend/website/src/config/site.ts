@@ -15,5 +15,5 @@ export const privacyContact = Object.freeze({
 });
 
 export const policyDates = Object.freeze({
-  privacyLastUpdated: '12 August 2026',
+  privacyLastUpdated: '11 November 2026',
 });

@@ -32,15 +32,16 @@ class RemoteProgressRepository implements ProgressRepository {
     required String operationId,
   }) async {
     final activeProfileId = await _requireCurrentProfile(profileId);
-    return _authRepository.withAccessToken(
-      (accessToken) => _api.recordStoryActivity(
+    return _authRepository.withAccessToken((accessToken) async {
+      await _requireCurrentProfile(activeProfileId);
+      return _api.recordStoryActivity(
         accessToken: accessToken,
         profileId: activeProfileId,
         storyId: storyId,
         eventType: eventType,
         operationId: operationId,
-      ),
-    );
+      );
+    });
   }
 
   Future<String> _requireCurrentProfile(String requestedProfileId) async {

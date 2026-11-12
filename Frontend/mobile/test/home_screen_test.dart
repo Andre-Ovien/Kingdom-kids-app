@@ -1,14 +1,147 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile/app/app_route_observer.dart';
+import 'package:mobile/app/router.dart';
 import 'package:mobile/core/errors/app_exception.dart';
 import 'package:mobile/features/auth/data/auth_repository.dart';
 import 'package:mobile/features/auth/data/auth_session_store.dart';
 import 'package:mobile/features/auth/domain/kid_profile.dart';
+import 'package:mobile/features/auth/presentation/kid_profile_avatar.dart';
 import 'package:mobile/features/home/presentation/home_screen.dart';
+import 'package:mobile/features/milestones/data/level_milestone_store.dart';
+import 'package:mobile/features/milestones/domain/level_milestone.dart';
+import 'package:mobile/features/profile/domain/progress_summary.dart';
+import 'package:mobile/features/streak/data/streak_reminder_service.dart';
+import 'package:mobile/features/streak/data/streak_repository.dart';
+import 'package:mobile/features/streak/domain/streak_presentation.dart';
+import 'package:mobile/features/streak/domain/streak_claim_receipt.dart';
+import 'package:mobile/features/streak/presentation/streak_screen.dart';
 import 'package:mobile/features/stories/data/story_repository.dart';
 import 'package:mobile/features/stories/domain/story_detail.dart';
 
 void main() {
+  group('daily visit XP and overall milestones', () {
+    testWidgets(
+      'shows the streak first, then its confirmed level milestone once',
+      (tester) async {
+        final store = MemoryLevelMilestoneStore();
+        final repository = _FakeStreakRepository([
+          StreakClaimReceipt(
+            presentation: _dailyPresentation(),
+            xpAwarded: 20,
+            levelMilestone: _visitLevelEight,
+          ),
+          const StreakClaimReceipt(),
+        ]);
+        await tester.pumpWidget(_rewardHomeApp(repository, store));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('streak-screen')), findsOneWidget);
+        expect(find.text('+20 XP for today’s visit'), findsOneWidget);
+        expect(find.byKey(const Key('level-milestone-screen')), findsNothing);
+        await tester.tap(find.byKey(const Key('streak-continue-button')));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('level-milestone-screen')), findsOneWidget);
+        expect(repository.calls, 1);
+        expect(await store.highestPresentedLevel('kid-1'), 8);
+        await tester.tap(find.byKey(const Key('level-milestone-continue')));
+        await tester.pumpAndSettle();
+        expect(find.text('Hey, Ada!'), findsOneWidget);
+        expect(find.byKey(const Key('level-milestone-screen')), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'a lost streak response can recover its level milestone without another streak page',
+      (tester) async {
+        final store = MemoryLevelMilestoneStore();
+        await tester.pumpWidget(
+          _rewardHomeApp(
+            _FakeStreakRepository([
+              const StreakClaimReceipt(
+                xpAwarded: 20,
+                levelMilestone: _visitLevelEight,
+              ),
+            ]),
+            store,
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('streak-screen')), findsNothing);
+        expect(find.byKey(const Key('level-milestone-screen')), findsOneWidget);
+        await tester.tap(find.byKey(const Key('level-milestone-continue')));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('level-milestone-screen')), findsNothing);
+        expect(await store.highestPresentedLevel('kid-1'), 8);
+      },
+    );
+
+    testWidgets(
+      'a delayed visit receipt waits for foreground before celebrating',
+      (tester) async {
+        final barrier = Completer<void>();
+        final store = MemoryLevelMilestoneStore();
+        final repository = _FakeStreakRepository([
+          const StreakClaimReceipt(
+            xpAwarded: 20,
+            levelMilestone: _visitLevelEight,
+          ),
+        ], barrier: barrier.future);
+        addTearDown(
+          () => tester.binding.handleAppLifecycleStateChanged(
+            AppLifecycleState.resumed,
+          ),
+        );
+        await tester.pumpWidget(_rewardHomeApp(repository, store));
+        await tester.pumpAndSettle();
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+        barrier.complete();
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('level-milestone-screen')), findsNothing);
+        expect(await store.highestPresentedLevel('kid-1'), 0);
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('level-milestone-screen')), findsOneWidget);
+        expect(await store.highestPresentedLevel('kid-1'), 8);
+      },
+    );
+
+    testWidgets('a switched child cannot receive a delayed visit milestone', (
+      tester,
+    ) async {
+      final barrier = Completer<void>();
+      final store = MemoryLevelMilestoneStore();
+      final auth = _FakeHomeAuthRepository(_visitProfile);
+      await tester.pumpWidget(
+        _rewardHomeApp(
+          _FakeStreakRepository([
+            const StreakClaimReceipt(
+              xpAwarded: 20,
+              levelMilestone: _visitLevelEight,
+            ),
+          ], barrier: barrier.future),
+          store,
+          auth: auth,
+        ),
+      );
+      await tester.pumpAndSettle();
+      auth.profile = const KidProfile(
+        id: 'kid-2',
+        parentId: 'parent-1',
+        displayName: 'Nia',
+        avatarKey: 'dove',
+      );
+      barrier.complete();
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('level-milestone-screen')), findsNothing);
+      expect(await store.highestPresentedLevel('kid-1'), 0);
+      expect(await store.highestPresentedLevel('kid-2'), 0);
+    });
+  });
+
   testWidgets('home renders backend sections and filters backend categories', (
     tester,
   ) async {
@@ -17,8 +150,8 @@ void main() {
     await tester.pumpWidget(_homeApp(repository));
     await tester.pumpAndSettle();
 
-    expect(find.text('Featured Mercy'), findsOneWidget);
-    expect(find.text('A backend-provided featured summary.'), findsOneWidget);
+    expect(find.text('Ready, set, read!'), findsNothing);
+    expect(find.text('More stories'), findsNothing);
 
     await tester.scrollUntilVisible(
       find.text('Story picks'),
@@ -31,14 +164,7 @@ void main() {
     expect(find.text('Faith One'), findsOneWidget);
     expect(find.text('Courage One'), findsOneWidget);
 
-    await tester.scrollUntilVisible(
-      find.text('More stories'),
-      220,
-      scrollable: _homeScrollable,
-    );
-    await tester.pump();
-
-    expect(find.text('More stories'), findsOneWidget);
+    expect(find.text('More stories'), findsNothing);
     expect(find.text('Continue reading'), findsNothing);
     expect(find.byType(LinearProgressIndicator), findsNothing);
 
@@ -82,10 +208,15 @@ void main() {
     expect(find.byKey(const Key('home-stories-error')), findsOneWidget);
     expect(find.text('Stories couldn\'t load'), findsOneWidget);
 
+    await tester.drag(
+      find.byKey(const Key('home-scroll')),
+      const Offset(0, -220),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('home-stories-retry')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Featured Mercy'), findsOneWidget);
+    expect(find.text('Explore stories'), findsOneWidget);
     expect(find.byKey(const Key('home-stories-error')), findsNothing);
     expect(repository.listCalls, 2);
   });
@@ -100,13 +231,45 @@ void main() {
     expect(find.text('New stories are coming soon'), findsOneWidget);
   });
 
-  testWidgets('home adventure doors move directly to each app world', (
+  testWidgets('returning Home sends an expired account to parent sign-in', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: _stillHome,
+        home: HomeScreen(
+          storyRepository: _FakeHomeStoryRepository(
+            stories: _stories,
+            failuresRemaining: 1,
+            failure: const AppException(
+              'Sign in again.',
+              code: 'session_expired',
+              statusCode: 401,
+            ),
+          ),
+          authRepository: AuthRepository(
+            sessionStore: MemoryAuthSessionStore(),
+          ),
+        ),
+        onGenerateRoute: (settings) => MaterialPageRoute<void>(
+          settings: settings,
+          builder: (_) => const Scaffold(body: Text('Parent sign-in')),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Parent sign-in'), findsOneWidget);
+    expect(find.byType(HomeScreen), findsNothing);
+  });
+
+  testWidgets('home adventure carousel opens the selected app world', (
     tester,
   ) async {
     final repository = _FakeHomeStoryRepository(stories: _stories);
 
     await tester.pumpWidget(
       MaterialApp(
+        builder: _stillHome,
         home: HomeScreen(
           storyRepository: repository,
           authRepository: AuthRepository(
@@ -121,6 +284,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.drag(
+      find.byKey(const Key('home-adventure-pages')),
+      const Offset(-500, 0),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('home-adventure-play')));
     await tester.pumpAndSettle();
 
@@ -139,6 +307,8 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        builder: _stillHome,
+        theme: ThemeData.dark(),
         home: HomeScreen(
           storyRepository: _FakeHomeStoryRepository(stories: _stories),
           authRepository: _FakeHomeAuthRepository(profile),
@@ -148,63 +318,286 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Hey, Ada!'), findsOneWidget);
+    expect(
+      Theme.of(
+        tester.element(find.byKey(const Key('home-child-name'))),
+      ).brightness,
+      Brightness.light,
+    );
+    final homeTheme = Theme.of(
+      tester.element(find.byKey(const Key('home-child-name'))),
+    );
+    expect(homeTheme.textTheme.bodySmall?.color, const Color(0xFF171421));
+    expect(homeTheme.colorScheme.onSurface, const Color(0xFF171421));
     expect(find.byKey(const Key('home-character-wave')), findsNothing);
     expect(find.byKey(const Key('home-profile-avatar')), findsOneWidget);
+    expect(find.text('Pick your adventure'), findsNothing);
+    expect(find.byKey(const Key('home-adventure-carousel')), findsOneWidget);
+    expect(
+      tester.widget<Scaffold>(find.byType(Scaffold).first).backgroundColor,
+      Colors.white,
+    );
+    final avatar = tester.getCenter(
+      find.byKey(const Key('home-profile-avatar')),
+    );
+    final name = tester.getCenter(find.byKey(const Key('home-child-name')));
+    final search = tester.getCenter(
+      find.byKey(const Key('home-notifications')),
+    );
+    expect(name.dx, closeTo((avatar.dx + search.dx) / 2, 0.01));
   });
 
-  testWidgets('home stays usable on a compact phone with large text', (
+  testWidgets('returning Home refreshes the same child name and avatar', (
     tester,
   ) async {
-    tester.view.physicalSize = const Size(320, 568);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-
+    final auth = _FakeHomeAuthRepository(_visitProfile);
     await tester.pumpWidget(
       MaterialApp(
-        builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(
-            context,
-          ).copyWith(textScaler: const TextScaler.linear(2)),
-          child: child!,
-        ),
+        builder: _stillHome,
+        navigatorObservers: [appRouteObserver],
         home: HomeScreen(
           storyRepository: _FakeHomeStoryRepository(stories: _stories),
-          authRepository: AuthRepository(
-            sessionStore: MemoryAuthSessionStore(),
-          ),
+          authRepository: auth,
+          streakRepository: _FakeStreakRepository([null]),
+          streakReminderService: _FakeHomeStreakReminderService(),
         ),
       ),
     );
     await tester.pumpAndSettle();
-
-    await tester.scrollUntilVisible(
-      find.byKey(const Key('home-adventure-read')),
-      180,
-      scrollable: _homeScrollable,
-    );
-    await tester.pump();
-
-    expect(find.byKey(const Key('home-adventure-read')), findsOneWidget);
-
-    await tester.scrollUntilVisible(
-      find.byKey(const Key('home-featured-carousel')),
-      260,
-      scrollable: _homeScrollable,
-    );
-    await tester.pump();
-
-    expect(find.byKey(const Key('home-featured-carousel')), findsOneWidget);
-    expect(tester.takeException(), isNull);
-
-    await tester.fling(
-      find.byKey(const Key('home-scroll')),
-      const Offset(0, -700),
-      1200,
+    expect(find.text('Hey, Ada!'), findsOneWidget);
+    final navigator = Navigator.of(tester.element(find.byType(HomeScreen)));
+    unawaited(
+      navigator.push(
+        MaterialPageRoute<void>(
+          builder: (_) => const Scaffold(body: Text('Profile editor')),
+        ),
+      ),
     );
     await tester.pumpAndSettle();
+    auth.profile = const KidProfile(
+      id: 'kid-1',
+      parentId: 'parent-1',
+      displayName: 'Grace',
+      avatarKey: 'dove',
+    );
+    navigator.pop();
+    await tester.pumpAndSettle();
+    expect(find.text('Hey, Grace!'), findsOneWidget);
+    expect(find.text('Hey, Ada!'), findsNothing);
+    final avatar = tester.widget<KidAvatarBadge>(
+      find.descendant(
+        of: find.byKey(const Key('home-profile-avatar')),
+        matching: find.byType(KidAvatarBadge),
+      ),
+    );
+    expect(avatar.avatarKey, 'dove');
+  });
+
+  testWidgets('opening Home claims today and presents the celebration once', (
+    tester,
+  ) async {
+    const profile = KidProfile(
+      id: 'kid-1',
+      parentId: 'parent-1',
+      displayName: 'Ada',
+      avatarKey: 'dove',
+    );
+    final streakRepository = _FakeStreakRepository([
+      StreakPresentation(
+        profile: profile,
+        state: StreakPresentationState.firstStreak,
+        currentDays: 1,
+        longestDays: 1,
+        localDate: DateTime(2026, 7, 25),
+        recentDays: [StreakDay(date: DateTime(2026, 7, 25), active: true)],
+      ),
+      null,
+    ]);
+    final reminderService = _FakeHomeStreakReminderService();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(disableAnimations: true),
+          child: child!,
+        ),
+        home: HomeScreen(
+          storyRepository: _FakeHomeStoryRepository(stories: _stories),
+          authRepository: _FakeHomeAuthRepository(profile),
+          streakRepository: streakRepository,
+          streakReminderService: reminderService,
+          streakPresentationDelay: const Duration(milliseconds: 700),
+        ),
+        navigatorObservers: [appRouteObserver],
+        onGenerateRoute: (settings) {
+          if (settings.name == AppRoutes.streak &&
+              settings.arguments is StreakPresentation) {
+            return MaterialPageRoute<void>(
+              settings: settings,
+              builder: (_) => StreakScreen(
+                presentation: settings.arguments! as StreakPresentation,
+              ),
+            );
+          }
+          return MaterialPageRoute<void>(
+            settings: settings,
+            builder: (_) => const SizedBox.shrink(),
+          );
+        },
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 1));
+    await tester.pump(const Duration(milliseconds: 1));
+    await tester.pump(const Duration(milliseconds: 1));
+
+    expect(streakRepository.calls, 1);
+    expect(reminderService.refreshCalls, 1);
+    expect(find.byKey(const Key('streak-screen')), findsNothing);
+
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.pump();
+
+    expect(find.byKey(const Key('streak-screen')), findsOneWidget);
+    expect(find.text('1 day streak!'), findsOneWidget);
+
+    tester
+        .widget<IconButton>(find.byKey(const Key('streak-close-button')))
+        .onPressed!
+        .call();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(milliseconds: 1));
+
+    expect(find.byKey(const Key('streak-screen')), findsNothing);
+    expect(find.text('Hey, Ada!'), findsOneWidget);
+  });
+
+  testWidgets('a streak service failure never blocks Home', (tester) async {
+    const profile = KidProfile(
+      id: 'kid-1',
+      parentId: 'parent-1',
+      displayName: 'Ada',
+      avatarKey: 'dove',
+    );
+    final streakRepository = _FakeStreakRepository([
+      const AppException('Streak service is resting.'),
+    ]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: _stillHome,
+        home: HomeScreen(
+          storyRepository: _FakeHomeStoryRepository(stories: _stories),
+          authRepository: _FakeHomeAuthRepository(profile),
+          streakRepository: streakRepository,
+          streakReminderService: _FakeHomeStreakReminderService(),
+          streakPresentationDelay: Duration.zero,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 1));
+    await tester.pump(const Duration(milliseconds: 1));
+    await tester.pump(const Duration(milliseconds: 1));
+
+    expect(streakRepository.calls, 1);
+    expect(find.text('Hey, Ada!'), findsOneWidget);
+    expect(find.byKey(const Key('streak-screen')), findsNothing);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('an expired daily visit session returns Home to parent sign-in', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: _stillHome,
+        home: HomeScreen(
+          storyRepository: _FakeHomeStoryRepository(stories: _stories),
+          authRepository: _FakeHomeAuthRepository(_visitProfile),
+          streakRepository: _FakeStreakRepository([
+            const AppException(
+              'Sign in again.',
+              code: 'session_expired',
+              statusCode: 401,
+            ),
+          ]),
+          streakReminderService: _FakeHomeStreakReminderService(),
+        ),
+        onGenerateRoute: (settings) => MaterialPageRoute<void>(
+          settings: settings,
+          builder: (_) => const Scaffold(body: Text('Parent sign-in')),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Parent sign-in'), findsOneWidget);
+    expect(find.byType(HomeScreen), findsNothing);
+  });
+
+  for (final viewport in const [
+    Size(320, 568),
+    Size(834, 1194),
+    Size(1194, 834),
+    Size(1032, 1376),
+    Size(1376, 1032),
+  ]) {
+    testWidgets('home stays usable at $viewport with large text', (
+      tester,
+    ) async {
+      tester.view.physicalSize = viewport;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaler: const TextScaler.linear(2),
+              disableAnimations: true,
+            ),
+            child: child!,
+          ),
+          home: HomeScreen(
+            storyRepository: _FakeHomeStoryRepository(stories: _stories),
+            authRepository: AuthRepository(
+              sessionStore: MemoryAuthSessionStore(),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('home-adventure-read')),
+        180,
+        scrollable: _homeScrollable,
+      );
+      await tester.pump();
+
+      expect(find.byKey(const Key('home-adventure-read')), findsOneWidget);
+
+      await tester.scrollUntilVisible(
+        find.text('Explore stories'),
+        260,
+        scrollable: _homeScrollable,
+      );
+      await tester.pump();
+
+      expect(find.text('Explore stories'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      await tester.fling(
+        find.byKey(const Key('home-scroll')),
+        const Offset(0, -700),
+        1200,
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets('home doors and profile entry have descriptive semantics', (
     tester,
@@ -217,8 +610,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.bySemanticsLabel('READ adventures'), findsOneWidget);
-    expect(find.bySemanticsLabel('WATCH adventures'), findsOneWidget);
+    expect(find.bySemanticsLabel('WATCH adventures'), findsNothing);
+    await tester.drag(
+      find.byKey(const Key('home-adventure-pages')),
+      const Offset(-500, 0),
+    );
+    await tester.pumpAndSettle();
     expect(find.bySemanticsLabel('PLAY adventures'), findsOneWidget);
+    expect(find.byKey(const Key('home-adventure-watch')), findsNothing);
     expect(find.bySemanticsLabel('Open my profile'), findsOneWidget);
     semantics.dispose();
   });
@@ -233,6 +632,7 @@ Finder get _homeScrollable => find
 
 Widget _homeApp(StoryRepository repository) {
   return MaterialApp(
+    builder: _stillHome,
     home: HomeScreen(
       storyRepository: repository,
       authRepository: AuthRepository(sessionStore: MemoryAuthSessionStore()),
@@ -246,6 +646,7 @@ Widget _homeApp(StoryRepository repository) {
 
 const _stories = [
   StoryDetail(
+    id: 'featured-mercy',
     slug: 'featured-mercy',
     title: 'Featured Mercy',
     author: 'Kingdom Kids',
@@ -255,6 +656,7 @@ const _stories = [
     isFeatured: true,
   ),
   StoryDetail(
+    id: 'faith-one',
     slug: 'faith-one',
     title: 'Faith One',
     author: 'Kingdom Kids',
@@ -263,6 +665,7 @@ const _stories = [
     estimatedReadSeconds: 125,
   ),
   StoryDetail(
+    id: 'courage-one',
     slug: 'courage-one',
     title: 'Courage One',
     author: 'Kingdom Kids',
@@ -271,6 +674,7 @@ const _stories = [
     estimatedReadSeconds: 240,
   ),
   StoryDetail(
+    id: 'faith-two',
     slug: 'faith-two',
     title: 'Faith Two',
     author: 'Kingdom Kids',
@@ -279,6 +683,7 @@ const _stories = [
     estimatedReadSeconds: 300,
   ),
   StoryDetail(
+    id: 'adventure-one',
     slug: 'adventure-one',
     title: 'Adventure One',
     author: 'Kingdom Kids',
@@ -289,11 +694,16 @@ const _stories = [
 ];
 
 final class _FakeHomeStoryRepository implements StoryRepository {
-  _FakeHomeStoryRepository({required this.stories, this.failuresRemaining = 0});
+  _FakeHomeStoryRepository({
+    required this.stories,
+    this.failuresRemaining = 0,
+    this.failure,
+  });
 
   final List<StoryDetail> stories;
   int failuresRemaining;
   int listCalls = 0;
+  final AppException? failure;
 
   @override
   Future<List<StoryDetail>> fetchStories({
@@ -303,7 +713,7 @@ final class _FakeHomeStoryRepository implements StoryRepository {
     listCalls += 1;
     if (failuresRemaining > 0) {
       failuresRemaining -= 1;
-      throw const AppException('The story service is unavailable.');
+      throw failure ?? const AppException('The story service is unavailable.');
     }
     return stories;
   }
@@ -317,8 +727,98 @@ final class _FakeHomeStoryRepository implements StoryRepository {
 final class _FakeHomeAuthRepository extends AuthRepository {
   _FakeHomeAuthRepository(this.profile);
 
-  final KidProfile? profile;
+  KidProfile? profile;
 
   @override
   Future<KidProfile?> currentKid() async => profile;
 }
+
+final class _FakeStreakRepository implements StreakRepository {
+  _FakeStreakRepository(this.results, {this.barrier});
+
+  final Future<void>? barrier;
+
+  final List<Object?> results;
+  int calls = 0;
+
+  @override
+  Future<StreakClaimReceipt> claimPresentation({
+    required String profileId,
+  }) async {
+    final index = calls < results.length ? calls : results.length - 1;
+    final result = results[index];
+    calls += 1;
+    if (barrier != null) await barrier;
+    if (result is AppException) throw result;
+    return result is StreakClaimReceipt
+        ? result
+        : StreakClaimReceipt(presentation: result as StreakPresentation?);
+  }
+}
+
+final class _FakeHomeStreakReminderService implements StreakReminderService {
+  int refreshCalls = 0;
+
+  @override
+  Future<bool> isEnabled() async => false;
+
+  @override
+  Future<bool> enable({required KidProfile profile}) async => true;
+
+  @override
+  Future<void> disable() async {}
+
+  @override
+  Future<void> refreshAfterAppOpen({required KidProfile profile}) async {
+    refreshCalls += 1;
+  }
+}
+
+const _visitProfile = KidProfile(
+  id: 'kid-1',
+  parentId: 'parent-1',
+  displayName: 'Ada',
+  avatarKey: 'lion',
+);
+const _visitLevelEight = LevelMilestone(
+  previousLevel: 7,
+  level: ProfileLevel(
+    number: 8,
+    title: 'Faithful Adventurer',
+    xp: 2100,
+    nextLevelXp: 2400,
+  ),
+);
+StreakPresentation _dailyPresentation() => StreakPresentation(
+  profile: _visitProfile,
+  state: StreakPresentationState.continued,
+  currentDays: 7,
+  longestDays: 7,
+  localDate: DateTime(2026, 10, 3),
+  recentDays: const [],
+);
+Widget _rewardHomeApp(
+  StreakRepository repository,
+  LevelMilestoneStore store, {
+  AuthRepository? auth,
+}) => MaterialApp(
+  builder: (context, child) => MediaQuery(
+    data: MediaQuery.of(context).copyWith(disableAnimations: true),
+    child: child!,
+  ),
+  navigatorObservers: [appRouteObserver],
+  home: HomeScreen(
+    storyRepository: _FakeHomeStoryRepository(stories: _stories),
+    authRepository: auth ?? _FakeHomeAuthRepository(_visitProfile),
+    streakRepository: repository,
+    streakReminderService: _FakeHomeStreakReminderService(),
+    milestoneStore: store,
+    streakPresentationDelay: Duration.zero,
+  ),
+);
+
+// Backend/layout checks remain still; the countdown has deterministic motion tests.
+Widget _stillHome(BuildContext context, Widget? child) => MediaQuery(
+  data: MediaQuery.of(context).copyWith(disableAnimations: true),
+  child: child!,
+);

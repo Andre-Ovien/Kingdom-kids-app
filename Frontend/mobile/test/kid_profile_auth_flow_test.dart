@@ -11,8 +11,7 @@ import 'package:mobile/features/auth/data/auth_repository.dart';
 import 'package:mobile/features/auth/data/auth_session_store.dart';
 import 'package:mobile/features/auth/domain/auth_session.dart';
 import 'package:mobile/features/auth/domain/parent_account.dart';
-import 'package:mobile/features/auth/presentation/kid_character_pose.dart';
-import 'package:mobile/features/auth/presentation/kid_profile_avatar.dart';
+import 'package:mobile/features/auth/presentation/spotlight_character.dart';
 import 'package:mobile/features/auth/presentation/kid_profile_setup_screen.dart';
 import 'package:mobile/features/auth/presentation/profile_picker_screen.dart';
 
@@ -23,6 +22,17 @@ const _session = AuthSession(
 );
 
 void main() {
+  setUp(() {
+    TestWidgetsFlutterBinding.ensureInitialized()
+        .platformDispatcher
+        .accessibilityFeaturesTestValue = const FakeAccessibilityFeatures(
+      disableAnimations: true,
+    );
+  });
+  tearDown(() {
+    TestWidgetsFlutterBinding.ensureInitialized().platformDispatcher
+        .clearAccessibilityFeaturesTestValue();
+  });
   testWidgets(
     'profile setup stays usable on a compact screen with large text',
     (tester) async {
@@ -47,6 +57,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
+      await _chooseBuddy(tester);
       final createButton = find.byKey(const Key('create-kid-profile-button'));
       await tester.ensureVisible(createButton);
       await tester.pumpAndSettle();
@@ -91,34 +102,28 @@ void main() {
       ),
     );
 
-    expect(find.byKey(const Key('kid-avatar-choice-lion')), findsOneWidget);
-    expect(find.byKey(const Key('kid-avatar-choice-dove')), findsOneWidget);
-    expect(find.byKey(const Key('kid-avatar-choice-rainbow')), findsOneWidget);
-    expect(find.byKey(const Key('kid-avatar-choice-star')), findsNothing);
-    expect(find.byType(KidAvatarBadge), findsNWidgets(3));
+    expect(find.byKey(const Key('story-buddy-previous')), findsNothing);
+    expect(find.byKey(const Key('story-buddy-next')), findsNothing);
+    expect(find.byKey(const Key('story-buddy-page-indicator')), findsOneWidget);
+    for (var page = 0; page < 3; page++) {
+      expect(find.byKey(ValueKey('story-buddy-page-$page')), findsOneWidget);
+    }
+    expect(find.byKey(const Key('kid-avatar-choice-lion')), findsNothing);
+    expect(find.byKey(const Key('kid-avatar-choice-dove')), findsNothing);
+    expect(find.byKey(const Key('kid-avatar-choice-rainbow')), findsNothing);
+    expect(find.byType(SpotlightCharacter), findsWidgets);
+    expect(find.byKey(const Key('kid-profile-name-field')), findsNothing);
+    expect(find.text('LAST STEP  •  MAKE IT THEIRS'), findsNothing);
 
-    var stagePose = tester.widget<KidCharacterPoseImage>(
-      find.byKey(const Key('kid-profile-stage-pose')),
-    );
-    expect(stagePose.avatarKey, 'lion');
-    expect(stagePose.pose, KidCharacterPose.wave);
-
-    final niaChoice = find.byKey(const Key('kid-avatar-choice-dove'));
+    final niaChoice = find.byKey(const ValueKey('story-buddy-page-1'));
     await tester.ensureVisible(niaChoice);
     await tester.pump();
     await tester.tap(niaChoice);
     await tester.pumpAndSettle();
     expect(find.text('Meet Nia'), findsOneWidget);
-    stagePose = tester.widget<KidCharacterPoseImage>(
-      find.byKey(const Key('kid-profile-stage-pose')),
-    );
-    expect(stagePose.avatarKey, 'dove');
-    expect(stagePose.pose, KidCharacterPose.wave);
-    expect(
-      find.bySemanticsLabel('Nia waving, selected story buddy'),
-      findsOneWidget,
-    );
+    expect(find.bySemanticsLabel('Nia, story buddy'), findsOneWidget);
 
+    await _chooseBuddy(tester);
     await tester.enterText(
       find.byKey(const Key('kid-profile-name-field')),
       'Ada',
@@ -154,6 +159,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(home: KidProfileSetupScreen(repository: repository)),
     );
+    await _chooseBuddy(tester);
     await tester.enterText(
       find.byKey(const Key('kid-profile-name-field')),
       'Sam',
@@ -194,11 +200,11 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(home: KidProfileSetupScreen(repository: repository)),
     );
+    await _chooseBuddy(tester);
     await tester.enterText(
       find.byKey(const Key('kid-profile-name-field')),
       'Sam',
     );
-    await tester.drag(find.byType(CustomScrollView), const Offset(0, -520));
     await tester.pump();
     final createButton = find.byKey(const Key('create-kid-profile-button'));
     await tester.ensureVisible(createButton);
@@ -222,7 +228,13 @@ void main() {
         ),
       ),
     );
-    expect(find.text('Please retry.'), findsOneWidget);
+    expect(
+      find.text(
+        'Kingdom Kids is having trouble right now. Please try again soon.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Please retry.'), findsNothing);
   });
 
   testWidgets('returns to sign-in after the refresh token is rejected', (
@@ -253,11 +265,11 @@ void main() {
         },
       ),
     );
+    await _chooseBuddy(tester);
     await tester.enterText(
       find.byKey(const Key('kid-profile-name-field')),
       'Sam',
     );
-    await tester.drag(find.byType(CustomScrollView), const Offset(0, -520));
     await tester.pump();
     final createButton = find.byKey(const Key('create-kid-profile-button'));
     await tester.ensureVisible(createButton);
@@ -268,6 +280,85 @@ void main() {
     expect(find.text('Parent sign-in reached'), findsOneWidget);
     expect(await store.readSession(), isNull);
   });
+
+  testWidgets('a missing local session goes straight to parent sign-in', (
+    tester,
+  ) async {
+    final repository = AuthRepository(sessionStore: MemoryAuthSessionStore());
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ProfilePickerScreen(repository: repository),
+        routes: {
+          AppRoutes.login: (_) => const Scaffold(
+            body: Center(child: Text('Parent sign-in reached')),
+          ),
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Parent sign-in reached'), findsOneWidget);
+    expect(find.byKey(const Key('profile-picker-load-error')), findsNothing);
+  });
+
+  testWidgets(
+    'profile load failure stays distinct from a family with no profiles',
+    (tester) async {
+      final store = MemoryAuthSessionStore();
+      await store.writeSession(_session);
+      var requests = 0;
+      final repository = AuthRepository(
+        api: HttpAuthApi(
+          baseUrl: 'https://kingdom-kids.test/api',
+          client: MockClient((_) async {
+            requests += 1;
+            if (requests == 1) {
+              return http.Response(
+                jsonEncode({'detail': 'upstream service unavailable'}),
+                503,
+              );
+            }
+            return http.Response(
+              jsonEncode([
+                {
+                  'id': 'kid-1',
+                  'parent_id': '42',
+                  'display_name': 'Ada',
+                  'avatar_key': 'dove',
+                },
+              ]),
+              200,
+            );
+          }),
+        ),
+        sessionStore: store,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(home: ProfilePickerScreen(repository: repository)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('profile-picker-load-error')),
+        findsOneWidget,
+      );
+      expect(find.text('Profiles couldn\'t load'), findsOneWidget);
+      expect(find.text('No child profiles yet'), findsNothing);
+      expect(find.text('Let\'s make a profile'), findsNothing);
+      expect(find.textContaining('upstream'), findsNothing);
+
+      final retry = find.byKey(const Key('profile-picker-retry-button'));
+      await tester.ensureVisible(retry);
+      await tester.tap(retry);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Ada'), findsOneWidget);
+      expect(find.byKey(const Key('profile-picker-load-error')), findsNothing);
+      expect(requests, 2);
+    },
+  );
 
   testWidgets('profile loading also returns to sign-in after session expiry', (
     tester,
@@ -302,4 +393,9 @@ void main() {
     expect(find.text('Parent sign-in reached'), findsOneWidget);
     expect(await store.readSession(), isNull);
   });
+}
+
+Future<void> _chooseBuddy(WidgetTester tester) async {
+  await tester.tap(find.byKey(const Key('select-story-buddy')));
+  await tester.pumpAndSettle();
 }

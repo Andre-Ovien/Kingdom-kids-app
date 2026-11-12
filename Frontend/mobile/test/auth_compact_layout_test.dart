@@ -1,0 +1,184 @@
+import 'dart:convert';
+import 'dart:io';
+import 'dart:ui' as ui;
+
+import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile/app/theme.dart';
+import 'package:mobile/features/auth/presentation/auth_screen.dart';
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  setUpAll(() async {
+    final fonts =
+        jsonDecode(await rootBundle.loadString('FontManifest.json'))
+            as List<dynamic>;
+    for (final font in fonts.cast<Map<String, dynamic>>()) {
+      final loader = FontLoader(font['family'] as String);
+      for (final asset in font['fonts'] as List<dynamic>) {
+        loader.addFont(rootBundle.load((asset as Map)['asset'] as String));
+      }
+      await loader.load();
+    }
+    // Optional native-font capture inputs are temporary system-font extracts;
+    // no macOS fonts are copied into the application or repository.
+    final fontDir = Platform.environment['KINGDOM_AUTH_FONT_DIR'];
+    final manifest = fontDir == null ? null : File('$fontDir/manifest.json');
+    if (manifest != null && manifest.existsSync()) {
+      final entries = (jsonDecode(await manifest.readAsString()) as List)
+          .cast<Map<String, dynamic>>();
+      for (final family in ['Avenir Next', 'Helvetica Neue']) {
+        final sourceFamily = family;
+        final loader = FontLoader(family);
+        for (final font in entries.where(
+          (entry) => entry['family'] == sourceFamily,
+        )) {
+          loader.addFont(
+            Future.value(
+              ByteData.sublistView(
+                await File(font['path'] as String).readAsBytes(),
+              ),
+            ),
+          );
+        }
+        await loader.load();
+      }
+    } else {
+      final avenir = File('/System/Library/Fonts/Avenir Next.ttc');
+      if (avenir.existsSync()) {
+        await (FontLoader('Avenir Next')..addFont(
+              Future.value(ByteData.sublistView(await avenir.readAsBytes())),
+            ))
+            .load();
+      }
+    }
+  });
+
+  for (final scenario in [
+    (
+      name: 'iphone16',
+      size: const Size(393, 852),
+      top: 59.0,
+      bottom: 34.0,
+      keyboard: 0.0,
+      scale: 1.0,
+    ),
+    (
+      name: 'small-phone',
+      size: const Size(375, 667),
+      top: 20.0,
+      bottom: 0.0,
+      keyboard: 0.0,
+      scale: 1.0,
+    ),
+    (
+      name: 'iphone16-larger-text',
+      size: const Size(393, 852),
+      top: 59.0,
+      bottom: 34.0,
+      keyboard: 0.0,
+      scale: 1.4,
+    ),
+  ]) {
+    testWidgets('Create Account fits without scrolling: ${scenario.name}', (
+      tester,
+    ) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = scenario.size;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final boundary = GlobalKey();
+      await tester.pumpWidget(
+        RepaintBoundary(
+          key: boundary,
+          child: MaterialApp(
+            theme: buildKingdomKidsTheme(),
+            debugShowCheckedModeBanner: false,
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                padding: EdgeInsets.only(
+                  top: scenario.top,
+                  bottom: scenario.keyboard > 0 ? 0 : scenario.bottom,
+                ),
+                viewPadding: EdgeInsets.only(
+                  top: scenario.top,
+                  bottom: scenario.bottom,
+                ),
+                viewInsets: EdgeInsets.only(bottom: scenario.keyboard),
+                textScaler: TextScaler.linear(scenario.scale),
+                disableAnimations: true,
+              ),
+              child: child!,
+            ),
+            home: const AuthScreen(),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(
+        tester
+            .widget<SingleChildScrollView>(
+              find.byKey(const Key('auth-form-scroll')),
+            )
+            .controller!
+            .position
+            .maxScrollExtent,
+        0,
+      );
+      final availableBottom =
+          scenario.size.height -
+          (scenario.keyboard > 0 ? scenario.keyboard : scenario.bottom);
+      for (final key in [
+        'auth-email-field',
+        'auth-password-field',
+        'auth-confirm-password-field',
+        'auth-submit-button',
+        'auth-privacy-policy',
+        'auth-mode-link',
+        'auth-parent-safety-note',
+      ]) {
+        final item = find.byKey(Key(key));
+        expect(
+          item.hitTestable(),
+          findsOneWidget,
+          reason: '$key must be usable without scrolling',
+        );
+        expect(tester.getTopLeft(item).dy, greaterThanOrEqualTo(scenario.top));
+        expect(
+          tester.getBottomRight(item).dy,
+          lessThanOrEqualTo(availableBottom),
+        );
+      }
+      expect(tester.takeException(), isNull);
+      final captureDir = Platform.environment['KINGDOM_AUTH_CAPTURE_DIR'];
+      if (captureDir != null && scenario.name.startsWith('iphone16')) {
+        await tester.runAsync(() async {
+          final render =
+              boundary.currentContext!.findRenderObject()!
+                  as RenderRepaintBoundary;
+          final image = await render.toImage(pixelRatio: 3);
+          final data = await image.toByteData(format: ui.ImageByteFormat.png);
+          await Directory(captureDir).create(recursive: true);
+          await File(
+            '$captureDir/create-account-${scenario.name}.png',
+          ).writeAsBytes(data!.buffer.asUint8List());
+          image.dispose();
+        });
+      }
+      if (scenario.keyboard == 0) {
+        await tester.tap(find.byKey(const Key('auth-submit-button')));
+        await tester.pump();
+        expect(find.text('Please enter your email address.'), findsOneWidget);
+        expect(find.text('Please enter your password.'), findsOneWidget);
+        expect(
+          find.byKey(const Key('auth-parent-safety-note')).hitTestable(),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+      }
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+  }
+}

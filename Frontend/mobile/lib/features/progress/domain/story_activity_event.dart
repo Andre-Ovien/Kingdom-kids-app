@@ -1,3 +1,5 @@
+import '../../milestones/domain/level_milestone.dart';
+
 enum StoryActivityType {
   storyStarted('story_started'),
   storyCompleted('story_completed');
@@ -28,6 +30,8 @@ class StoryActivityEvent {
     required this.storyId,
     required this.recordedAt,
     required this.isIdempotentReplay,
+    this.xpAwarded = 0,
+    this.levelMilestone,
   });
 
   final String eventId;
@@ -37,6 +41,8 @@ class StoryActivityEvent {
   final String storyId;
   final DateTime recordedAt;
   final bool isIdempotentReplay;
+  final int xpAwarded;
+  final LevelMilestone? levelMilestone;
 
   factory StoryActivityEvent.fromJson(Map<String, dynamic> json) {
     final eventId = _requiredString(json['event_id'], 'event_id');
@@ -56,8 +62,18 @@ class StoryActivityEvent {
       storyId: storyId,
       recordedAt: recordedAt,
       isIdempotentReplay: _boolean(json['idempotent_replay']),
+      xpAwarded: _xpAwarded(json['xp_awarded']),
+      levelMilestone: LevelMilestone.tryParse(json['level_milestone']),
     );
   }
+}
+
+int _xpAwarded(Object? value) {
+  if (value == null) return 0;
+  if (value is! int || value < 0) {
+    throw const FormatException('Invalid XP reward.');
+  }
+  return value;
 }
 
 String _requiredString(Object? value, String field) {

@@ -1,0 +1,10 @@
+# Run tool/generate_android_car_icons.py to generate standard/adaptive icons,
+# round variants, and a mask preview without changing the installed iOS build.
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path_android: assets/images/branding/kingdom-kids-car-icon-v1.png
+  adaptive_icon_background: "#72C8EE"
+  adaptive_icon_foreground: assets/images/branding/kingdom-kids-car-icon-v1.png
+  adaptive_icon_foreground_inset: 16
+  min_sdk_android: 24

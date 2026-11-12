@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/app/router.dart';
+import 'package:mobile/app/app_route_observer.dart';
 import 'package:mobile/core/errors/app_exception.dart';
 import 'package:mobile/features/auth/data/auth_repository.dart';
 import 'package:mobile/features/auth/data/auth_session_store.dart';
@@ -10,11 +12,216 @@ import 'package:mobile/features/auth/domain/parent_account.dart';
 import 'package:mobile/features/parental_controls/data/parental_controls_repository.dart';
 import 'package:mobile/features/parental_controls/domain/parent_settings.dart';
 import 'package:mobile/features/stories/data/story_repository.dart';
+import 'package:mobile/features/stories/data/story_reading_bookmark_store.dart';
 import 'package:mobile/features/stories/domain/story_detail.dart';
+import 'package:mobile/features/stories/domain/story_reading_bookmark.dart';
 import 'package:mobile/features/stories/presentation/stories_screen.dart';
 import 'package:mobile/features/stories/presentation/story_detail_screen.dart';
 
 void main() {
+  testWidgets(
+    'plain reading restores its visible text after closing the page',
+    (tester) async {
+      tester.view.physicalSize = const Size(393, 852);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final authStore = await _selectedKidStore();
+      final bookmarks = MemoryStoryReadingBookmarkStore();
+      final story = _longReadingStory();
+      await bookmarks.save(
+        parentId: 'parent-1',
+        profileId: 'kid-1',
+        bookmark: StoryReadingBookmark.forStory(
+          story: story,
+          textOffset: 2,
+          updatedAt: DateTime.utc(2026, 1),
+          heardRanges: const [StoryHeardRange(0, 10)],
+        ),
+      );
+      await tester.pumpWidget(_plainReaderApp(authStore, bookmarks, story));
+      await tester.pumpAndSettle();
+      await tester.drag(
+        find.byKey(const Key('story-detail-scroll')),
+        const Offset(0, -800),
+      );
+      await tester.pumpAndSettle();
+      final saved = (await bookmarks.readAll(
+        parentId: 'parent-1',
+        profileId: 'kid-1',
+      )).single;
+      expect(saved.readingMode, StoryReadingMode.read);
+      expect(saved.textOffset, greaterThan(0));
+      expect(saved.heardRanges.map((range) => [range.start, range.end]), [
+        [0, 10],
+      ]);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        _plainReaderApp(authStore, bookmarks, story, resumeReading: true),
+      );
+      await tester.pumpAndSettle();
+      final paragraph = tester.renderObject<RenderParagraph>(
+        find.byKey(const Key('story-reading-text')),
+      );
+      final caret = paragraph.getOffsetForCaret(
+        TextPosition(offset: saved.textOffset),
+        Rect.zero,
+      );
+      expect(paragraph.localToGlobal(caret).dy, closeTo(72, 2));
+      expect(find.byKey(const Key('read-along-controls')), findsNothing);
+      expect(
+        (await bookmarks.readAll(
+          parentId: 'parent-1',
+          profileId: 'kid-1',
+        )).single.readingMode,
+        StoryReadingMode.read,
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
+  testWidgets('opening a cover or summary does not create a reading bookmark', (
+    tester,
+  ) async {
+    final authStore = await _selectedKidStore();
+    final bookmarks = MemoryStoryReadingBookmarkStore();
+    await tester.pumpWidget(
+      _plainReaderApp(authStore, bookmarks, _longReadingStory()),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      await bookmarks.readAll(parentId: 'parent-1', profileId: 'kid-1'),
+      isEmpty,
+    );
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpWidget(
+      _plainReaderApp(authStore, bookmarks, _previewDavid),
+    );
+    await tester.pumpAndSettle();
+    await tester.drag(
+      find.byKey(const Key('story-detail-scroll')),
+      const Offset(0, -500),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      await bookmarks.readAll(parentId: 'parent-1', profileId: 'kid-1'),
+      isEmpty,
+    );
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('finishing the visible text removes only that unfinished story', (
+    tester,
+  ) async {
+    final authStore = await _selectedKidStore();
+    final bookmarks = MemoryStoryReadingBookmarkStore();
+    final story = _longReadingStory();
+    for (final savedStory in [story, _detailedDavid]) {
+      await bookmarks.save(
+        parentId: 'parent-1',
+        profileId: 'kid-1',
+        bookmark: StoryReadingBookmark.forStory(
+          story: savedStory,
+          textOffset: 1,
+          updatedAt: DateTime.now(),
+        ),
+      );
+    }
+    await tester.pumpWidget(_plainReaderApp(authStore, bookmarks, story));
+    await tester.pumpAndSettle();
+    await tester.drag(
+      find.byKey(const Key('story-detail-scroll')),
+      const Offset(0, -10000),
+    );
+    await tester.pumpAndSettle();
+    final saved = await bookmarks.readAll(
+      parentId: 'parent-1',
+      profileId: 'kid-1',
+    );
+    expect(saved.map((bookmark) => bookmark.storyId), [_detailedDavid.id]);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('a covered text page cannot overwrite newer narrated progress', (
+    tester,
+  ) async {
+    final authStore = await _selectedKidStore();
+    final bookmarks = MemoryStoryReadingBookmarkStore();
+    final story = _longReadingStory();
+    await tester.pumpWidget(_plainReaderApp(authStore, bookmarks, story));
+    await tester.pumpAndSettle();
+    await tester.drag(
+      find.byKey(const Key('story-detail-scroll')),
+      const Offset(0, -650),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('story-read-along-button')));
+    await tester.pumpAndSettle();
+    await bookmarks.save(
+      parentId: 'parent-1',
+      profileId: 'kid-1',
+      bookmark: StoryReadingBookmark.forStory(
+        story: story,
+        textOffset: 900,
+        updatedAt: DateTime.now().add(const Duration(seconds: 1)),
+        heardRanges: const [StoryHeardRange(0, 900)],
+      ),
+    );
+    await tester.tap(find.byKey(const Key('close-narration-test-page')));
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+    final saved = (await bookmarks.readAll(
+      parentId: 'parent-1',
+      profileId: 'kid-1',
+    )).single;
+    expect(saved.readingMode, StoryReadingMode.readAlong);
+    expect(saved.textOffset, 900);
+    expect(saved.heardRanges.single.end, 900);
+  });
+
+  testWidgets('text-page saves cannot leak across a switched child profile', (
+    tester,
+  ) async {
+    final authStore = await _selectedKidStore();
+    final bookmarks = MemoryStoryReadingBookmarkStore();
+    await tester.pumpWidget(
+      _plainReaderApp(authStore, bookmarks, _longReadingStory()),
+    );
+    await tester.pumpAndSettle();
+    final session = (await authStore.readSession())!;
+    await authStore.writeSession(
+      session.copyWith(
+        profiles: [
+          ...session.profiles,
+          const KidProfile(
+            id: 'kid-2',
+            parentId: 'parent-1',
+            displayName: 'Noah',
+            avatarKey: 'lion',
+          ),
+        ],
+      ),
+    );
+    await authStore.writeSelectedKidId('kid-2');
+    await tester.drag(
+      find.byKey(const Key('story-detail-scroll')),
+      const Offset(0, -750),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      await bookmarks.readAll(parentId: 'parent-1', profileId: 'kid-1'),
+      isEmpty,
+    );
+    expect(
+      await bookmarks.readAll(parentId: 'parent-1', profileId: 'kid-2'),
+      isEmpty,
+    );
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets('library loads backend stories, searches, and routes by slug', (
     tester,
   ) async {
@@ -95,7 +302,7 @@ void main() {
     expect(repository.listCalls, 2);
   });
 
-  testWidgets('library story-world chips filter the backend catalogue', (
+  testWidgets('library story-world filter menu filters the backend catalogue', (
     tester,
   ) async {
     final repository = _FakeStoryRepository(
@@ -115,15 +322,91 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('story-category-rail')), findsOneWidget);
-    expect(find.byKey(const Key('story-category-Mercy')), findsOneWidget);
+    expect(find.byKey(const Key('story-category-rail')), findsNothing);
 
-    await tester.tap(find.byKey(const Key('story-category-Mercy')));
+    await tester.tap(find.byKey(const Key('story-filter-button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ListTile, 'Mercy'));
     await tester.pumpAndSettle();
 
     expect(find.text('David & Goliath'), findsNothing);
     expect(find.text('Jonah and the Big Fish'), findsOneWidget);
+    expect(
+      find.bySemanticsLabel(RegExp(r'Filter story worlds\. Mercy selected')),
+      findsWidgets,
+    );
+    await tester.tap(find.byKey(const Key('story-filter-button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ListTile, 'All'));
+    await tester.pumpAndSettle();
+    expect(find.text('David & Goliath'), findsOneWidget);
+    expect(find.text('Jonah and the Big Fish'), findsOneWidget);
     expect(repository.listCalls, 1);
+  });
+
+  testWidgets('an empty catalogue says new stories are being prepared', (
+    tester,
+  ) async {
+    final repository = _FakeStoryRepository(
+      stories: const [],
+      detail: _detailedDavid,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StoriesScreen(
+          repository: repository,
+          authRepository: AuthRepository(
+            sessionStore: MemoryAuthSessionStore(),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('NEW STORIES ARE ON THE WAY!'), findsOneWidget);
+    expect(
+      find.text(
+        'Fresh story adventures are being prepared. Check back soon or refresh now.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('NO TALE HIDING HERE!'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('story-library-refresh-button')));
+    await tester.pumpAndSettle();
+    expect(repository.listCalls, 2);
+  });
+
+  testWidgets('a search with no matches can return to the full story shelf', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StoriesScreen(
+          repository: _FakeStoryRepository(
+            stories: [_previewDavid],
+            detail: _detailedDavid,
+          ),
+          authRepository: AuthRepository(
+            sessionStore: MemoryAuthSessionStore(),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('story-search-field')),
+      'No story has this title',
+    );
+    await tester.pump();
+
+    expect(find.text('NO TALE HIDING HERE!'), findsOneWidget);
+    expect(find.text('NEW STORIES ARE ON THE WAY!'), findsNothing);
+    await tester.tap(find.byKey(const Key('story-library-reset-button')));
+    await tester.pump();
+    expect(find.text('David & Goliath'), findsOneWidget);
   });
 
   testWidgets('library keeps saved stories visible after a refresh error', (
@@ -156,27 +439,80 @@ void main() {
     expect(repository.listCalls, 2);
   });
 
-  testWidgets('library remains usable on a compact screen with large text', (
+  for (final viewport in const [
+    Size(360, 780),
+    Size(834, 1194),
+    Size(1194, 834),
+    Size(1032, 1376),
+    Size(1376, 1032),
+  ]) {
+    testWidgets('library remains usable at $viewport with large text', (
+      tester,
+    ) async {
+      tester.view.physicalSize = viewport;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData.dark(),
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: const TextScaler.linear(1.6)),
+            child: child!,
+          ),
+          home: StoriesScreen(
+            repository: _FakeStoryRepository(
+              stories: [_previewDavid, _previewJonah],
+              detail: _detailedDavid,
+            ),
+            authRepository: AuthRepository(
+              sessionStore: MemoryAuthSessionStore(),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('story-search-field')), findsOneWidget);
+      expect(
+        tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor,
+        Colors.white,
+      );
+      expect(
+        Theme.of(
+          tester.element(find.byKey(const Key('story-search-field'))),
+        ).brightness,
+        Brightness.light,
+      );
+      expect(
+        find.bySemanticsLabel(
+          'Featured story: David & Goliath. Courage. 4 min. Open story.',
+        ),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('a retired saved story cannot reopen its body or Read Along', (
     tester,
   ) async {
-    tester.view.physicalSize = const Size(360, 780);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-
+    const saved = StoryDetail(
+      slug: 'lost-sheep',
+      title: 'The Lost Sheep',
+      author: 'Kingdom Kids',
+      category: 'Kindness',
+      body: 'A saved New Testament story body.',
+    );
+    final repository = _FakeStoryRepository(stories: [saved], detail: saved);
     await tester.pumpWidget(
       MaterialApp(
-        builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(
-            context,
-          ).copyWith(textScaler: const TextScaler.linear(1.6)),
-          child: child!,
-        ),
-        home: StoriesScreen(
-          repository: _FakeStoryRepository(
-            stories: [_previewDavid, _previewJonah],
-            detail: _detailedDavid,
-          ),
+        home: StoryDetailScreen(
+          story: saved,
+          repository: repository,
           authRepository: AuthRepository(
             sessionStore: MemoryAuthSessionStore(),
           ),
@@ -184,15 +520,14 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('story-search-field')), findsOneWidget);
-    expect(
-      find.bySemanticsLabel(
-        'Featured story: David & Goliath. Courage. 4 min. Open story.',
-      ),
-      findsOneWidget,
+    expect(find.text(saved.body), findsNothing);
+    expect(find.text(saved.title), findsNothing);
+    expect(repository.detailSlugs, isEmpty);
+    final button = tester.widget<IconButton>(
+      find.byKey(const Key('story-read-along-button')),
     );
-    expect(tester.takeException(), isNull);
+    expect(button.onPressed, isNull);
+    expect(find.textContaining('no longer in the library'), findsOneWidget);
   });
 
   testWidgets('detail loads full text and opens the separate read-along flow', (
@@ -432,6 +767,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(
+      find.text(
+        'This story adventure is still being prepared. Please check back soon.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('server'), findsNothing);
     await _scrollStoryDetailTo(
       tester,
       find.byKey(const Key('story-summary-text')),
@@ -445,6 +787,49 @@ void main() {
     expect(readAlongButton.onPressed, isNull);
   });
 }
+
+StoryDetail _longReadingStory() => StoryDetail(
+  id: 'plain-reading-story',
+  slug: 'ruth-and-naomi',
+  title: 'Ruth and Naomi',
+  author: 'Kingdom Kids',
+  category: 'Kindness',
+  body: List.generate(
+    20,
+    (index) =>
+        'Passage ${index + 1}. Ruth gathered grain and brought it home to Naomi. '
+        'She cared for her family through patient, useful work and faithful kindness.',
+  ).join('\n\n'),
+);
+
+Widget _plainReaderApp(
+  MemoryAuthSessionStore authStore,
+  StoryReadingBookmarkStore bookmarks,
+  StoryDetail story, {
+  bool resumeReading = false,
+}) => MaterialApp(
+  navigatorObservers: [appRouteObserver],
+  home: StoryDetailScreen(
+    story: story,
+    repository: _FakeStoryRepository(stories: [story], detail: story),
+    authRepository: AuthRepository(sessionStore: authStore),
+    settingsRepository: _FakeParentalControlsRepository(_readerSettings()),
+    bookmarkStore: bookmarks,
+    resumeReading: resumeReading,
+  ),
+  onGenerateRoute: (settings) => MaterialPageRoute<void>(
+    settings: settings,
+    builder: (context) => Scaffold(
+      body: Center(
+        child: TextButton(
+          key: const Key('close-narration-test-page'),
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Back'),
+        ),
+      ),
+    ),
+  ),
+);
 
 Future<void> _scrollStoryDetailTo(
   WidgetTester tester,

@@ -10,6 +10,7 @@ import '../domain/auth_session.dart';
 import '../domain/email_verification.dart';
 import '../domain/kid_profile.dart';
 import '../domain/parent_account.dart';
+import '../domain/password_reset.dart';
 
 /// HTTP contract for the parent account and child-profile API.
 ///
@@ -22,6 +23,9 @@ class AuthEndpoints {
   static const login = 'accounts/login/';
   static const verifyEmail = 'accounts/email-verification/confirm/';
   static const resendVerification = 'accounts/email-verification/resend/';
+  static const passwordResetRequest = 'accounts/password-reset/request/';
+  static const passwordResetVerify = 'accounts/password-reset/verify/';
+  static const passwordResetConfirm = 'accounts/password-reset/confirm/';
   static const refresh = 'accounts/token/refresh/';
   static const currentParent = 'accounts/me/';
   static const kidProfiles = 'accounts/kid-profiles/';
@@ -40,11 +44,27 @@ abstract interface class AuthApi {
 
   Future<PendingEmailVerification> resendEmailVerification(String challengeId);
 
+  Future<PendingPasswordReset> requestPasswordReset(
+    PasswordResetRequest request,
+  );
+
+  Future<void> verifyPasswordResetCode(PasswordResetVerifyRequest request);
+
+  Future<void> confirmPasswordReset(PasswordResetConfirmRequest request);
+
   Future<AuthSession> refresh(AuthSession session);
 
   Future<ParentAccount> currentParent(String accessToken);
 
-  Future<List<KidProfile>> fetchKidProfiles(String accessToken);
+  Future<void> deleteAccount({
+    required String password,
+    required String accessToken,
+  });
+
+  Future<List<KidProfile>> fetchKidProfiles(
+    String accessToken, {
+    required String expectedParentId,
+  });
 
   Future<KidProfile> createKidProfile(
     CreateKidProfileRequest request,
@@ -84,13 +104,26 @@ class HttpAuthApi implements AuthApi {
       AuthEndpoints.register,
       body: request.toJson(),
     );
-    return _pendingVerificationFrom(response);
+    return _pendingVerificationFrom(
+      response,
+      fallbackEmail: request.email.trim().toLowerCase(),
+    );
   }
 
   @override
   Future<AuthSession> login(LoginRequest request) async {
-    final response = await _post(AuthEndpoints.login, body: request.toJson());
-    return _sessionFrom(response);
+    try {
+      final response = await _post(AuthEndpoints.login, body: request.toJson());
+      return _sessionFrom(response);
+    } on AppException catch (error) {
+      if (error.statusCode != 401) rethrow;
+      throw AppException(
+        'That email or password did not match our records.',
+        code: 'invalid_credentials',
+        statusCode: error.statusCode,
+        details: error.details,
+      );
+    }
   }
 
   @override
@@ -111,6 +144,44 @@ class HttpAuthApi implements AuthApi {
       body: {'challenge_id': challengeId},
     );
     return _pendingVerificationFrom(response);
+  }
+
+  @override
+  Future<PendingPasswordReset> requestPasswordReset(
+    PasswordResetRequest request,
+  ) async {
+    final response = await _post(
+      AuthEndpoints.passwordResetRequest,
+      body: request.toJson(),
+    );
+    try {
+      return PendingPasswordReset.fromJson(response);
+    } on FormatException {
+      throw const AppException(
+        'We could not start password recovery. Please try again.',
+        code: 'invalid_password_reset_response',
+      );
+    }
+  }
+
+  @override
+  Future<void> verifyPasswordResetCode(
+    PasswordResetVerifyRequest request,
+  ) async {
+    await _post(
+      AuthEndpoints.passwordResetVerify,
+      body: request.toJson(),
+      allowEmptyResponse: true,
+    );
+  }
+
+  @override
+  Future<void> confirmPasswordReset(PasswordResetConfirmRequest request) async {
+    await _post(
+      AuthEndpoints.passwordResetConfirm,
+      body: request.toJson(),
+      allowEmptyResponse: true,
+    );
   }
 
   @override
@@ -144,22 +215,50 @@ class HttpAuthApi implements AuthApi {
   }
 
   @override
-  Future<List<KidProfile>> fetchKidProfiles(String accessToken) async {
+  Future<void> deleteAccount({
+    required String password,
+    required String accessToken,
+  }) {
+    return _delete(
+      AuthEndpoints.currentParent,
+      body: {'password': password},
+      accessToken: accessToken,
+    );
+  }
+
+  @override
+  Future<List<KidProfile>> fetchKidProfiles(
+    String accessToken, {
+    required String expectedParentId,
+  }) async {
+    final normalizedParentId = expectedParentId.trim();
+    if (normalizedParentId.isEmpty) {
+      throw const AppException(
+        'We could not verify who owns these child profiles.',
+        code: 'invalid_parent_account',
+      );
+    }
     final response = await _get(AuthEndpoints.kidProfiles, accessToken);
+    final envelope = response is Map ? _mapFrom(response) : null;
     final rawProfiles = response is List
         ? response
-        : _mapFrom(response)['profiles'] ??
-              _mapFrom(response)['kid_profiles'] ??
-              _mapFrom(response)['results'] ??
-              const [];
+        : envelope?['profiles'] ??
+              envelope?['kid_profiles'] ??
+              envelope?['results'];
     if (rawProfiles is! List) {
-      throw const AppException('We could not read the child profiles yet.');
+      throw _invalidProfileListResponse;
     }
 
-    return rawProfiles
-        .whereType<Map>()
-        .map((profile) => KidProfile.fromJson(_mapFrom(profile)))
-        .toList(growable: false);
+    final profiles = <KidProfile>[];
+    for (final value in rawProfiles) {
+      if (value is! Map) {
+        throw _invalidProfileListResponse;
+      }
+      profiles.add(
+        _ownedKidProfileFrom(value, expectedParentId: normalizedParentId),
+      );
+    }
+    return List.unmodifiable(profiles);
   }
 
   @override
@@ -172,7 +271,16 @@ class HttpAuthApi implements AuthApi {
       body: request.toJson(),
       accessToken: accessToken,
     );
-    return KidProfile.fromJson(_mapFrom(response['profile'] ?? response));
+    final profile = KidProfile.fromJson(
+      _mapFrom(response['profile'] ?? response),
+    );
+    if (profile.id.trim().isEmpty) {
+      throw const AppException(
+        'Your child profile was created, but the service did not identify it.',
+        code: 'invalid_profile_response',
+      );
+    }
+    return profile.copyWith(id: profile.id.trim());
   }
 
   @override
@@ -297,6 +405,33 @@ class HttpAuthApi implements AuthApi {
     }
   }
 
+  Future<void> _delete(
+    String path, {
+    required Map<String, dynamic> body,
+    required String accessToken,
+  }) async {
+    try {
+      final response = await _client
+          .delete(
+            _uri(path),
+            headers: _headers(accessToken: accessToken),
+            body: jsonEncode(body),
+          )
+          .timeout(_requestTimeout);
+      _decodeResponse(response);
+    } on TimeoutException {
+      throw const AppException(
+        'Kingdom Kids took too long to respond. Please try again.',
+        code: 'request_timeout',
+      );
+    } on http.ClientException {
+      throw const AppException(
+        'We could not reach Kingdom Kids. Check your connection and try again.',
+        code: 'network_error',
+      );
+    }
+  }
+
   Uri _uri(String path) {
     return AppConfig.resolveApiUri(path, baseUrl: baseUrl);
   }
@@ -386,10 +521,15 @@ class HttpAuthApi implements AuthApi {
   }
 
   PendingEmailVerification _pendingVerificationFrom(
-    Map<String, dynamic> response,
-  ) {
-    final pending = PendingEmailVerification.fromJson(response);
-    if (pending.challengeId.isEmpty || pending.email.isEmpty) {
+    Map<String, dynamic> response, {
+    String fallbackEmail = '',
+  }) {
+    final pending = PendingEmailVerification.fromJson(
+      response,
+      fallbackEmail: fallbackEmail,
+    );
+    if (pending.challengeId.isEmpty ||
+        (pending.destinationHint.isEmpty && pending.email.isEmpty)) {
       throw const AppException(
         'Your account was created, but the verification details were missing.',
       );
@@ -409,6 +549,30 @@ class HttpAuthApi implements AuthApi {
     }
     return profile;
   }
+
+  KidProfile _ownedKidProfileFrom(
+    Object? value, {
+    required String expectedParentId,
+  }) {
+    final profile = KidProfile.fromJson(_mapFrom(value));
+    final profileId = profile.id.trim();
+    final parentId = profile.parentId.trim();
+    if (profileId.isEmpty) {
+      throw _invalidProfileListResponse;
+    }
+    if (parentId.isNotEmpty && parentId != expectedParentId) {
+      throw const AppException(
+        'The service returned a child profile from a different account.',
+        code: 'profile_owner_mismatch',
+      );
+    }
+    return profile.copyWith(id: profileId, parentId: expectedParentId);
+  }
+
+  static const _invalidProfileListResponse = AppException(
+    'We could not safely read the child profiles yet.',
+    code: 'invalid_profile_list_response',
+  );
 }
 
 Map<String, dynamic> _mapFrom(Object? value) {

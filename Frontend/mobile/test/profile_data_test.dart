@@ -25,6 +25,8 @@ void main() {
       expect(summary.level.title, 'Little Explorer');
       expect(summary.level.xp, 500);
       expect(summary.level.nextLevelXp, 600);
+      expect(summary.level.maxLevel, 15);
+      expect(summary.level.isMaxLevel, isFalse);
       expect(summary.level.progress, closeTo(2 / 3, 0.0001));
       expect(summary.stats.completedGameLevels, 3);
       expect(summary.stats.totalGameLevels, 24);
@@ -73,8 +75,149 @@ void main() {
       expect(summary.stats.totalStories, 0);
       expect(summary.stats.storiesStarted, 0);
       expect(summary.stats.storiesCompleted, 0);
+      expect(summary.xpBreakdown, isNull);
       expect(summary.weeklyActivity.single.storyCompletions, 0);
       expect(summary.weeklyActivity.single.activities, 4);
+      expect(summary.streakWeek, isNull);
+    });
+
+    test(
+      'parses real weekday history without inventing consecutive visits',
+      () {
+        final summary = ProfileProgressSummary.fromJson({
+          ..._summaryJson(),
+          'streak_week': {
+            'local_date': '2026-07-15',
+            'days': [
+              for (var day = 13; day <= 19; day++)
+                {'date': '2026-07-$day', 'active': day == 13 || day == 15},
+            ],
+          },
+        });
+        final week = summary.streakWeek!;
+        expect(week.localDate, DateTime(2026, 7, 15));
+        expect(week.days.map((day) => day.active), [
+          true,
+          false,
+          true,
+          false,
+          false,
+          false,
+          false,
+        ]);
+        expect(week.days.first.date.weekday, DateTime.monday);
+        expect(week.days.last.date.weekday, DateTime.sunday);
+        expect(() => week.days.clear(), throwsUnsupportedError);
+        expect(summary.activityStreak.currentDays, 2);
+      },
+    );
+
+    test('malformed optional weekday history never breaks the summary', () {
+      final valid = {
+        'local_date': '2026-07-15',
+        'days': [
+          for (var day = 13; day <= 19; day++)
+            {'date': '2026-07-$day', 'active': day == 13 || day == 15},
+        ],
+      };
+      for (final malformed in <Object?>[
+        null,
+        'not a week',
+        {},
+        {...valid, 'local_date': '2026-02-31'},
+        {...valid, 'days': []},
+        {
+          ...valid,
+          'days': [
+            for (var i = 0; i < 7; i++) {'date': '2026-07-13', 'active': true},
+          ],
+        },
+        {
+          ...valid,
+          'days': [
+            for (var day = 13; day <= 19; day++)
+              {'date': '2026-07-$day', 'active': true},
+          ],
+        },
+      ]) {
+        final summary = ProfileProgressSummary.fromJson({
+          ..._summaryJson(),
+          'streak_week': malformed,
+        });
+        expect(summary.streakWeek, isNull);
+        expect(summary.profile.id, 'kid-1');
+        expect(summary.activityStreak.currentDays, 2);
+      }
+    });
+
+    test(
+      'keeps combined quest, completed-story and streak XP authoritative',
+      () {
+        final summary = ProfileProgressSummary.fromJson({
+          ..._summaryJson(),
+          'xp_breakdown': {'quests': 260, 'stories': 200, 'streaks': 40},
+        });
+
+        final sources = summary.xpBreakdown!;
+        expect(sources.quests, 260);
+        expect(sources.stories, 200);
+        expect(sources.streaks, 40);
+        expect(sources.total, 500);
+        expect(sources.total, summary.level.xp);
+        expect(summary.level.number, 2);
+        expect(summary.level.nextLevelXp, 600);
+        expect(summary.level.progress, closeTo(2 / 3, 0.0001));
+      },
+    );
+
+    test('keeps level 14 progress on the existing 300 XP interval', () {
+      final level = ProfileLevel.fromJson({
+        'number': 14,
+        'title': 'Kingdom Guardian',
+        'xp': 4199,
+        'next_level_xp': 4200,
+        'max_level': 15,
+        'is_max_level': false,
+      });
+
+      expect(level.isMaxLevel, isFalse);
+      expect(level.progress, closeTo(299 / 300, 0.0001));
+    });
+
+    test('final rank is complete while lifetime XP keeps growing', () {
+      for (final xp in [4200, 9000]) {
+        final level = ProfileLevel.fromJson({
+          'number': 15,
+          'title': 'Kingdom Champion',
+          'xp': xp,
+          'next_level_xp': 4200,
+          'max_level': 15,
+          'is_max_level': true,
+        });
+
+        expect(level.number, 15);
+        expect(level.maxLevel, 15);
+        expect(level.isMaxLevel, isTrue);
+        expect(level.progress, 1);
+        expect(level.xp, xp);
+      }
+    });
+
+    test('older level responses cannot create progress beyond level 15', () {
+      for (final number in [15, 31]) {
+        final level = ProfileLevel.fromJson({
+          'number': number,
+          'title': 'Kingdom Champion',
+          'xp': 9000,
+          'next_level_xp': 9300,
+        });
+
+        expect(level.number, 15);
+        expect(level.maxLevel, 15);
+        expect(level.isMaxLevel, isTrue);
+        expect(level.progress, 1);
+        expect(level.xp, 9000);
+      }
     });
   });
 

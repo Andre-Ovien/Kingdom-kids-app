@@ -34,18 +34,19 @@ class RemoteGameRepository implements GameRepository {
   @override
   Future<List<MiniGame>> fetchGames({required String profileId}) async {
     final activeProfileId = await _requireCurrentProfile(profileId);
-    return _authRepository.withAccessToken(
-      (accessToken) => _api.fetchGames(accessToken, profileId: activeProfileId),
-    );
+    return _authRepository.withAccessToken((accessToken) async {
+      await _requireCurrentProfile(activeProfileId);
+      return _api.fetchGames(accessToken, profileId: activeProfileId);
+    });
   }
 
   @override
   Future<MiniGame> fetchGame(String slug, {required String profileId}) async {
     final activeProfileId = await _requireCurrentProfile(profileId);
-    return _authRepository.withAccessToken(
-      (accessToken) =>
-          _api.fetchGame(slug, accessToken, profileId: activeProfileId),
-    );
+    return _authRepository.withAccessToken((accessToken) async {
+      await _requireCurrentProfile(activeProfileId);
+      return _api.fetchGame(slug, accessToken, profileId: activeProfileId);
+    });
   }
 
   @override
@@ -57,16 +58,19 @@ class RemoteGameRepository implements GameRepository {
     required Map<String, dynamic> result,
   }) async {
     final activeProfileId = await _requireCurrentProfile(profileId);
-    return _authRepository.withAccessToken(
-      (accessToken) => _api.submitResult(
+    return _authRepository.withAccessToken((accessToken) async {
+      // Token refresh can outlive a profile switch. Keep this attempt bound
+      // to its original child and operation, or stop before another POST.
+      await _requireCurrentProfile(activeProfileId);
+      return _api.submitResult(
         slug: slug,
         profileId: activeProfileId,
         levelNumber: levelNumber,
         operationId: operationId,
         result: result,
         accessToken: accessToken,
-      ),
-    );
+      );
+    });
   }
 
   Future<String> _requireCurrentProfile(String requestedProfileId) async {

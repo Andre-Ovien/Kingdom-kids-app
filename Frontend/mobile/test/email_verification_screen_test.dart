@@ -10,6 +10,7 @@ import 'package:mobile/features/auth/data/auth_repository.dart';
 import 'package:mobile/features/auth/data/auth_session_store.dart';
 import 'package:mobile/features/auth/domain/email_verification.dart';
 import 'package:mobile/features/auth/presentation/email_verification_screen.dart';
+import 'package:mobile/features/auth/presentation/verification_code_input.dart';
 
 const _pending = PendingEmailVerification(
   challengeId: 'challenge-1',
@@ -20,34 +21,59 @@ const _pending = PendingEmailVerification(
 );
 
 void main() {
-  testWidgets('shows six code slots and enables completion after a paste', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      const MaterialApp(home: EmailVerificationScreen(pending: _pending)),
-    );
+  testWidgets(
+    'shows six code slots and automatically checks a pasted code once',
+    (tester) async {
+      var checks = 0;
+      final repository = AuthRepository(
+        api: HttpAuthApi(
+          baseUrl: 'https://kingdom-kids.test/api',
+          client: MockClient((request) async {
+            checks++;
+            return http.Response(
+              jsonEncode({'detail': 'That code was not accepted.'}),
+              400,
+            );
+          }),
+        ),
+        sessionStore: MemoryAuthSessionStore(),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: EmailVerificationScreen(
+            pending: _pending,
+            repository: repository,
+          ),
+        ),
+      );
 
-    expect(find.text('Enter your magic code.'), findsOneWidget);
-    expect(find.text('Kingdom Kids'), findsNothing);
-    expect(find.textContaining('pa••••@example.com'), findsOneWidget);
-    expect(find.text('Complete'), findsOneWidget);
+      expect(find.text('Enter your magic code.'), findsOneWidget);
+      expect(find.byType(VerificationCodeInput), findsOneWidget);
+      expect(find.text('Kingdom Kids'), findsNothing);
+      expect(find.textContaining('pa••••@example.com'), findsOneWidget);
+      expect(find.text('Complete'), findsOneWidget);
 
-    var completeButton = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, 'Complete'),
-    );
-    expect(completeButton.onPressed, isNull);
+      var completeButton = tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, 'Complete'),
+      );
+      expect(completeButton.onPressed, isNull);
 
-    await tester.enterText(find.byType(TextField), '123456');
-    await tester.pump();
+      await tester.enterText(find.byType(TextField), '123456');
+      await tester.pumpAndSettle();
 
-    for (final digit in ['1', '2', '3', '4', '5', '6']) {
-      expect(find.text(digit), findsOneWidget);
-    }
-    completeButton = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, 'Complete'),
-    );
-    expect(completeButton.onPressed, isNotNull);
-  });
+      for (final digit in ['1', '2', '3', '4', '5', '6']) {
+        expect(find.text(digit), findsOneWidget);
+      }
+      completeButton = tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, 'Complete'),
+      );
+      expect(completeButton.onPressed, isNotNull);
+      expect(checks, 1);
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pumpAndSettle();
+      expect(checks, 1);
+    },
+  );
 
   testWidgets('remains scroll-safe on a small screen with large text', (
     tester,
@@ -120,12 +146,7 @@ void main() {
     );
 
     await tester.enterText(find.byType(TextField), '123456');
-    final completeButton = find.byKey(const Key('verification-submit-button'));
-    await tester.ensureVisible(completeButton);
-    await tester.pump();
-    await tester.tap(completeButton);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
 
     expect(find.text('Profile setup reached'), findsOneWidget);
     expect((await store.readSession())?.accessToken, 'access-token');

@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "native_source": "Motion/wise-builders-blender-v1/wise-builders-source.blend",
+  "provenance": "Original Blender architecture, carved rock and loose sand, 12 keyed safe-collapse frames and 8 keyed wind/rain frames. No occupants.",
+  "cell": 256,
+  "collapse_frames": 12,
+  "weather_frames": 8,
+  "decoded_budget_bytes": 37748736,
+  "assets": [
+    "storm-rain.png",
+    "collapse.png",
+    "storm-rain_and_wind.png",
+    "right-wall.png",
+    "left-wall.png",
+    "standing.png",
+    "rock.png",
+    "background.png",
+    "roof.png",
+    "front-wall.png",
+    "storm-wind.png",
+    "cover.png",
+    "brace.png",
+    "sand.png",
+    "back-wall.png"
+  ]
+}

@@ -57,12 +57,12 @@ class HttpGameApi implements GameApi {
     String accessToken, {
     required String profileId,
   }) async {
-    _requireProfileId(profileId);
+    final normalizedProfileId = _requireProfileId(profileId);
     final payload = await _request(
       'GET',
       GameEndpoints.catalogue,
       accessToken,
-      queryParameters: {'profile_id': profileId.trim()},
+      queryParameters: {'profile_id': normalizedProfileId},
     );
     final rawGames = payload is List ? payload : _asMap(payload)['results'];
     if (rawGames is! List) {
@@ -73,10 +73,16 @@ class HttpGameApi implements GameApi {
     }
 
     try {
-      return rawGames
-          .whereType<Map>()
-          .map((game) => MiniGame.fromJson(_asMap(game)))
-          .toList(growable: false);
+      final games = <MiniGame>[];
+      for (final value in rawGames) {
+        if (value is! Map) {
+          throw const FormatException('Invalid game catalogue entry.');
+        }
+        final game = MiniGame.fromJson(_asMap(value));
+        _requireGameProgressProfile(game, normalizedProfileId);
+        games.add(game);
+      }
+      return List.unmodifiable(games);
     } on FormatException {
       throw const AppException(
         'The game library sent content this app cannot play yet.',
@@ -92,12 +98,12 @@ class HttpGameApi implements GameApi {
     required String profileId,
   }) async {
     final normalizedSlug = _requireSlug(slug);
-    _requireProfileId(profileId);
+    final normalizedProfileId = _requireProfileId(profileId);
     final payload = await _request(
       'GET',
       GameEndpoints.detail(normalizedSlug),
       accessToken,
-      queryParameters: {'profile_id': profileId.trim()},
+      queryParameters: {'profile_id': normalizedProfileId},
     );
     final rawGame = _asMap(payload);
     if (rawGame.isEmpty) {
@@ -108,7 +114,15 @@ class HttpGameApi implements GameApi {
     }
 
     try {
-      return MiniGame.fromJson(rawGame);
+      final game = MiniGame.fromJson(rawGame);
+      if (game.slug != normalizedSlug) {
+        throw const AppException(
+          'The game service returned the wrong game.',
+          code: 'game_response_mismatch',
+        );
+      }
+      _requireGameProgressProfile(game, normalizedProfileId);
+      return game;
     } on FormatException {
       throw const AppException(
         'This game contains a level this app cannot play yet.',
@@ -127,7 +141,7 @@ class HttpGameApi implements GameApi {
     required String accessToken,
   }) async {
     final normalizedSlug = _requireSlug(slug);
-    _requireProfileId(profileId);
+    final normalizedProfileId = _requireProfileId(profileId);
     if (levelNumber < 1) {
       throw const AppException(
         'We could not identify that game level.',
@@ -146,7 +160,7 @@ class HttpGameApi implements GameApi {
       GameEndpoints.submit(normalizedSlug),
       accessToken,
       body: {
-        'profile_id': profileId.trim(),
+        'profile_id': normalizedProfileId,
         'level_number': levelNumber,
         'operation_id': operationId.trim(),
         'result': result,
@@ -159,7 +173,19 @@ class HttpGameApi implements GameApi {
         code: 'invalid_game_submission',
       );
     }
-    return GameSubmission.fromJson(rawSubmission);
+    final submission = GameSubmission.fromJson(rawSubmission);
+    final normalizedOperationId = operationId.trim();
+    if (submission.gameSlug != normalizedSlug ||
+        submission.profileId != normalizedProfileId ||
+        submission.levelNumber != levelNumber ||
+        submission.operationId != normalizedOperationId ||
+        submission.progress.profileId != normalizedProfileId) {
+      throw const AppException(
+        'Your result was saved, but the service returned a mismatched receipt.',
+        code: 'game_submission_mismatch',
+      );
+    }
+    return submission;
   }
 
   Future<Object?> _request(
@@ -319,11 +345,22 @@ String _requireSlug(String slug) {
   return normalized;
 }
 
-void _requireProfileId(String profileId) {
-  if (profileId.trim().isEmpty) {
+String _requireProfileId(String profileId) {
+  final normalized = profileId.trim();
+  if (normalized.isEmpty) {
     throw const AppException(
       'Choose a kid profile before playing.',
       code: 'active_kid_required',
+    );
+  }
+  return normalized;
+}
+
+void _requireGameProgressProfile(MiniGame game, String expectedProfileId) {
+  if (game.playerProgress.profileId != expectedProfileId) {
+    throw const AppException(
+      'The game service returned progress for the wrong child profile.',
+      code: 'game_response_mismatch',
     );
   }
 }

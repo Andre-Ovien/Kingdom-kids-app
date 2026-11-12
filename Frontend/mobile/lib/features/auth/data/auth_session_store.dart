@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import '../../../core/storage/secure_storage.dart';
 import '../domain/auth_session.dart';
 
 abstract interface class AuthSessionStore {
@@ -22,7 +23,7 @@ abstract interface class AuthSessionStore {
 /// the account shell. Tokens are never stored in regular preferences.
 class SecureAuthSessionStore implements AuthSessionStore {
   SecureAuthSessionStore({FlutterSecureStorage? storage})
-    : _storage = storage ?? const FlutterSecureStorage();
+    : _storage = storage ?? kingdomKidsSecureStorage;
 
   static const _sessionKey = 'kingdom_kids.auth_session';
   static const _selectedKidKey = 'kingdom_kids.selected_kid_id';

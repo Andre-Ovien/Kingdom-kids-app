@@ -27,17 +27,24 @@ class AuthSession {
         parentJson['kid_profiles'] ??
         const [];
     final parentId = parentJson['id']?.toString() ?? '';
-    final profiles = profilesJson is List
-        ? profilesJson
-              .whereType<Map>()
-              .map((profile) {
-                final kidProfile = KidProfile.fromJson(_mapFrom(profile));
-                return kidProfile.parentId.isEmpty && parentId.isNotEmpty
-                    ? kidProfile.copyWith(parentId: parentId)
-                    : kidProfile;
-              })
-              .toList(growable: false)
-        : const <KidProfile>[];
+    final profiles = <KidProfile>[];
+    if (profilesJson is List) {
+      for (final profile in profilesJson.whereType<Map>()) {
+        final kidProfile = KidProfile.fromJson(_mapFrom(profile));
+        if (kidProfile.parentId.isNotEmpty &&
+            parentId.isNotEmpty &&
+            kidProfile.parentId != parentId) {
+          throw const FormatException(
+            'A child profile belongs to a different parent account.',
+          );
+        }
+        profiles.add(
+          kidProfile.parentId.isEmpty && parentId.isNotEmpty
+              ? kidProfile.copyWith(parentId: parentId)
+              : kidProfile,
+        );
+      }
+    }
 
     return AuthSession(
       parent: ParentAccount.fromJson(parentJson),
@@ -45,7 +52,7 @@ class AuthSession {
           (json['access_token'] ?? json['access'] ?? json['token'] ?? '')
               .toString(),
       refreshToken: _nullableString(json['refresh_token'] ?? json['refresh']),
-      profiles: profiles,
+      profiles: List<KidProfile>.unmodifiable(profiles),
     );
   }
 

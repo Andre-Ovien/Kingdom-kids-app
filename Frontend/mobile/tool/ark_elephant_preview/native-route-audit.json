@@ -1,0 +1,1473 @@
+{
+  "scope": "isolated saved-model preview; not production activation or visual approval",
+  "date": "2026-10-13",
+  "routeProof": "adaptive continuous rigid-envelope and curvature bounds",
+  "meshEnvelopeLimit": "49 phase samples x 7 gait/blend weights; 6 cm guard; no continuous skinning guarantee",
+  "animals": [
+    {
+      "animal": "elephant",
+      "clips": {
+        "walk": {
+          "name": "Elephant_RigAction",
+          "duration": 2,
+          "loopError": 0
+        },
+        "left": {
+          "name": "ElephantTurnLeft",
+          "duration": 2,
+          "loopError": 0
+        },
+        "right": {
+          "name": "ElephantTurnRight",
+          "duration": 2,
+          "loopError": 0
+        }
+      },
+      "missingTurns": [],
+      "normalizedDimensions": [
+        1.2053533396569327,
+        3.3,
+        3.789126461042909
+      ],
+      "normalizationFactor": 0.3159499404404154,
+      "gaitEnvelope": {
+        "width": 1.3345108746845664,
+        "length": 3.935298185940117,
+        "poses": 343,
+        "phaseSamples": 49,
+        "blendSamples": 7,
+        "straight": {
+          "width": 1.3337004762048141,
+          "length": 3.92225447895848,
+          "minZ": -1.954709644409204,
+          "maxZ": 1.96112723947924
+        },
+        "guard": 0.06,
+        "basis": "sampled native gait and blends with guard; visual review required"
+      },
+      "approaches": {
+        "left": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 25,
+            "maxCurvatureBound": 0.439125646929211,
+            "maxCurvature": 0.44960293046830346
+          }
+        },
+        "right": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 25,
+            "maxCurvatureBound": 0.439125646929211,
+            "maxCurvature": 0.44960293046830346
+          }
+        },
+        "far-left": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 31,
+            "maxCurvatureBound": 0.44015712486070324,
+            "maxCurvature": 0.44960293046830346
+          }
+        },
+        "far-right": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 31,
+            "maxCurvatureBound": 0.44015712486070324,
+            "maxCurvature": 0.44960293046830346
+          }
+        },
+        "center": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 7,
+            "maxCurvatureBound": 6.56877216456942e-16,
+            "maxCurvature": 0.44960293046830346
+          }
+        },
+        "away": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 51,
+            "maxCurvatureBound": 0.44884218190743613,
+            "maxCurvature": 0.44960293046830346
+          }
+        },
+        "away-left": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 29,
+            "maxCurvatureBound": 0.4339903842037058,
+            "maxCurvature": 0.44960293046830346
+          }
+        },
+        "away-right": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 29,
+            "maxCurvatureBound": 0.4339903842037058,
+            "maxCurvature": 0.44960293046830346
+          }
+        }
+      },
+      "gaitInterior": {
+        "endpointZ": 0.29529035559079597,
+        "fitsCabinDepth": true
+      },
+      "walkSpeed": 0.18956996426424924,
+      "legacyInteriorEndpointZ": -1.5391264610429092,
+      "centeredBodyClearEndpointZ": 0.3554367694785454,
+      "footSpans": {
+        "walk": {},
+        "left": {},
+        "right": {}
+      },
+      "sourceSha256": "f19d828962b25222b4862b3a824c91317d39e90278f9e9263facaa5b6c4e5331"
+    },
+    {
+      "animal": "sheep",
+      "clips": {
+        "walk": {
+          "name": "WalkSlow",
+          "duration": 2,
+          "loopError": 0
+        },
+        "left": {
+          "name": "SheepTurnLeft",
+          "duration": 2,
+          "loopError": 0
+        },
+        "right": {
+          "name": "SheepTurnRight",
+          "duration": 2,
+          "loopError": 0
+        }
+      },
+      "missingTurns": [],
+      "normalizedDimensions": [
+        0.7184519977895873,
+        1.4,
+        2.0008337018684985
+      ],
+      "normalizationFactor": 0.34086068705045036,
+      "gaitEnvelope": {
+        "width": 0.8522451457019962,
+        "length": 2.8042899619395274,
+        "poses": 343,
+        "phaseSamples": 49,
+        "blendSamples": 7,
+        "straight": {
+          "width": 0.8520850767952037,
+          "length": 2.500221035109199,
+          "minZ": -1.2501105175545995,
+          "maxZ": 1.0605039127880402
+        },
+        "guard": 0.06,
+        "basis": "sampled native gait and blends with guard; visual review required"
+      },
+      "approaches": {
+        "left": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 9,
+            "maxCurvatureBound": 0.6370075632314617,
+            "maxCurvature": 0.704022783850272
+          }
+        },
+        "right": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 9,
+            "maxCurvatureBound": 0.6370075632314617,
+            "maxCurvature": 0.704022783850272
+          }
+        },
+        "far-left": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 13,
+            "maxCurvatureBound": 0.5504053821974929,
+            "maxCurvature": 0.704022783850272
+          }
+        },
+        "far-right": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 13,
+            "maxCurvatureBound": 0.5504053821974929,
+            "maxCurvature": 0.704022783850272
+          }
+        },
+        "center": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 5,
+            "maxCurvatureBound": 6.56877216456942e-16,
+            "maxCurvature": 0.704022783850272
+          }
+        },
+        "away": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 23,
+            "maxCurvatureBound": 0.7023463846042675,
+            "maxCurvature": 0.704022783850272
+          }
+        },
+        "away-left": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 39,
+            "maxCurvatureBound": 0.7017279698690047,
+            "maxCurvature": 0.704022783850272
+          }
+        },
+        "away-right": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 39,
+            "maxCurvatureBound": 0.7017279698690047,
+            "maxCurvature": 0.704022783850272
+          }
+        }
+      },
+      "gaitInterior": {
+        "endpointZ": 0.9998894824454005,
+        "fitsCabinDepth": true
+      },
+      "walkSpeed": 0.8348973496476322,
+      "legacyInteriorEndpointZ": -1,
+      "centeredBodyClearEndpointZ": 1.2495831490657507,
+      "footSpans": {
+        "walk": {
+          "FrontFootR": {
+            "x": -0.9117706855949113,
+            "forwardSpan": 2.6524944120773264
+          },
+          "BackFootR": {
+            "x": -0.8358623421922037,
+            "forwardSpan": 2.9035195003075396
+          },
+          "FrontFootL": {
+            "x": 0.8608940620811681,
+            "forwardSpan": 2.6257095302027267
+          },
+          "BackFootL": {
+            "x": 0.7849858208578431,
+            "forwardSpan": 2.861957526806735
+          }
+        },
+        "left": {
+          "FrontFootR": {
+            "x": -0.9117706855949113,
+            "forwardSpan": 3.4482425211235768
+          },
+          "BackFootR": {
+            "x": -0.8358623421922037,
+            "forwardSpan": 3.774575457688146
+          },
+          "FrontFootL": {
+            "x": 0.8608940620811681,
+            "forwardSpan": 1.8379967784302669
+          },
+          "BackFootL": {
+            "x": 0.7849858208578431,
+            "forwardSpan": 2.0033702687647144
+          }
+        },
+        "right": {
+          "FrontFootR": {
+            "x": -0.9117706855949113,
+            "forwardSpan": 1.856746005007631
+          },
+          "BackFootR": {
+            "x": -0.8358623421922037,
+            "forwardSpan": 2.0324637217409256
+          },
+          "FrontFootL": {
+            "x": 0.8608940620811681,
+            "forwardSpan": 3.413422222370571
+          },
+          "BackFootL": {
+            "x": 0.7849858208578431,
+            "forwardSpan": 3.7205446656394665
+          }
+        }
+      },
+      "sourceSha256": "b0b263a46ecc3d457be1c7ff752d0c6274abbc9d4c5111ca35f0738577cf4e92"
+    },
+    {
+      "animal": "zebra",
+      "clips": {
+        "walk": {
+          "name": "WalkSlow",
+          "duration": 2,
+          "loopError": 0
+        },
+        "left": {
+          "name": "ZebraTurnLeft",
+          "duration": 2,
+          "loopError": 5.960464477539063e-08
+        },
+        "right": {
+          "name": "ZebraTurnRight",
+          "duration": 2,
+          "loopError": 0
+        }
+      },
+      "missingTurns": [],
+      "normalizedDimensions": [
+        1.0899986106239583,
+        3,
+        3.99749964253425
+      ],
+      "normalizationFactor": 0.44460355418626935,
+      "gaitEnvelope": {
+        "width": 1.2102529635241486,
+        "length": 4.713985369098897,
+        "poses": 343,
+        "phaseSamples": 49,
+        "blendSamples": 7,
+        "straight": {
+          "width": 1.2100541551375494,
+          "length": 4.317156536573773,
+          "minZ": -2.1585782682868864,
+          "maxZ": 2.060413188462522
+        },
+        "guard": 0.06,
+        "basis": "sampled native gait and blends with guard; visual review required"
+      },
+      "approaches": {
+        "left": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 73,
+            "maxCurvatureBound": 0.4957154694873768,
+            "maxCurvature": 0.49576412376868184
+          }
+        },
+        "right": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 73,
+            "maxCurvatureBound": 0.4957154694873768,
+            "maxCurvature": 0.49576412376868184
+          }
+        },
+        "far-left": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 33,
+            "maxCurvatureBound": 0.48177000911753537,
+            "maxCurvature": 0.49576412376868184
+          }
+        },
+        "far-right": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 33,
+            "maxCurvatureBound": 0.48177000911753537,
+            "maxCurvature": 0.49576412376868184
+          }
+        },
+        "center": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 9,
+            "maxCurvatureBound": 5.388445916248354e-16,
+            "maxCurvature": 0.49576412376868184
+          }
+        },
+        "away": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 43,
+            "maxCurvatureBound": 0.48969652958585963,
+            "maxCurvature": 0.49576412376868184
+          }
+        },
+        "away-left": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 31,
+            "maxCurvatureBound": 0.4703802429564438,
+            "maxCurvature": 0.49576412376868184
+          }
+        },
+        "away-right": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 29,
+            "maxCurvatureBound": 0.4703802429564438,
+            "maxCurvature": 0.49576412376868184
+          }
+        }
+      },
+      "gaitInterior": {
+        "endpointZ": 0.09142173171311363,
+        "fitsCabinDepth": true
+      },
+      "walkSpeed": 1.0890030535527644,
+      "legacyInteriorEndpointZ": -1.7474996425342502,
+      "centeredBodyClearEndpointZ": 0.2512501787328749,
+      "footSpans": {
+        "walk": {
+          "FrontFootR": {
+            "x": -0.9117707403338707,
+            "forwardSpan": 2.652494412077326
+          },
+          "BackFootR": {
+            "x": -0.8358623811176841,
+            "forwardSpan": 2.903519619516829
+          },
+          "FrontFootL": {
+            "x": 0.8608940024765233,
+            "forwardSpan": 2.625709530202727
+          },
+          "BackFootL": {
+            "x": 0.7849857855816248,
+            "forwardSpan": 2.861957646016025
+          }
+        },
+        "left": {
+          "FrontFootR": {
+            "x": -0.9117707403338707,
+            "forwardSpan": 3.4482425211235763
+          },
+          "BackFootR": {
+            "x": -0.8358623811176841,
+            "forwardSpan": 3.7745753384788845
+          },
+          "FrontFootL": {
+            "x": 0.8608940024765233,
+            "forwardSpan": 1.8379967188256217
+          },
+          "BackFootL": {
+            "x": 0.7849857855816248,
+            "forwardSpan": 2.003370387973777
+          }
+        },
+        "right": {
+          "FrontFootR": {
+            "x": -0.9117707403338707,
+            "forwardSpan": 1.8567460646122687
+          },
+          "BackFootR": {
+            "x": -0.8358623811176841,
+            "forwardSpan": 2.0324639005547747
+          },
+          "FrontFootL": {
+            "x": 0.8608940024765233,
+            "forwardSpan": 3.413422222370571
+          },
+          "BackFootL": {
+            "x": 0.7849857855816248,
+            "forwardSpan": 3.7205447848483013
+          }
+        }
+      },
+      "sourceSha256": "45db69cc5e1953481dc8e3e4dac5f3c25967740ef1da908ab6568d48fb579447"
+    },
+    {
+      "animal": "donkey",
+      "meshes": [
+        {
+          "name": "Mesh",
+          "joints": 50,
+          "vertices": 10690,
+          "triangles": 20640,
+          "maxWeightError": 5.21540641784668e-08,
+          "materials": [
+            {
+              "name": "Main",
+              "color": [
+                0.18812136352062225,
+                0.19598476588726044,
+                0.19006958603858948
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Mesh_1",
+          "joints": 50,
+          "vertices": 3333,
+          "triangles": 6128,
+          "maxWeightError": 4.470348358154297e-08,
+          "materials": [
+            {
+              "name": "Main_Light",
+              "color": [
+                0.4868924617767334,
+                0.4868924617767334,
+                0.4868924617767334
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Mesh_2",
+          "joints": 50,
+          "vertices": 690,
+          "triangles": 1280,
+          "maxWeightError": 4.470348358154297e-08,
+          "materials": [
+            {
+              "name": "Main_Dark",
+              "color": [
+                0.039678264409303665,
+                0.039678264409303665,
+                0.039678264409303665
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Mesh_3",
+          "joints": 50,
+          "vertices": 788,
+          "triangles": 1440,
+          "maxWeightError": 2.9802322387695312e-08,
+          "materials": [
+            {
+              "name": "Hooves",
+              "color": [
+                0.06071748584508896,
+                0.05466758832335472,
+                0.045779984444379807
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Mesh_4",
+          "joints": 50,
+          "vertices": 1038,
+          "triangles": 1968,
+          "maxWeightError": 4.470348358154297e-08,
+          "materials": [
+            {
+              "name": "Hair",
+              "color": [
+                0.039678264409303665,
+                0.039678264409303665,
+                0.039678264409303665
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Mesh_5",
+          "joints": 50,
+          "vertices": 73,
+          "triangles": 112,
+          "maxWeightError": 0,
+          "materials": [
+            {
+              "name": "Muzzle",
+              "color": [
+                0.046960070729255676,
+                0.03439539670944214,
+                0.01925700344145298
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Mesh_6",
+          "joints": 50,
+          "vertices": 392,
+          "triangles": 672,
+          "maxWeightError": 3.3527612686157227e-08,
+          "materials": [
+            {
+              "name": "Eye_Dark",
+              "color": [
+                0.00901754666119814,
+                0.00901754666119814,
+                0.00901754666119814
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Mesh_7",
+          "joints": 50,
+          "vertices": 78,
+          "triangles": 112,
+          "maxWeightError": 3.259629011154175e-08,
+          "materials": [
+            {
+              "name": "Eye_White",
+              "color": [
+                0.7483956217765808,
+                0.7483956217765808,
+                0.7483956217765808
+              ]
+            }
+          ]
+        }
+      ],
+      "clips": {
+        "walk": {
+          "name": "Walk",
+          "duration": 1.1666666269302368,
+          "loopError": 0
+        },
+        "left": {
+          "name": "DonkeyTurnLeft",
+          "duration": 1.1666666269302368,
+          "loopError": 0
+        },
+        "right": {
+          "name": "DonkeyTurnRight",
+          "duration": 1.1666666269302368,
+          "loopError": 0
+        }
+      },
+      "missingTurns": [],
+      "normalizedDimensions": [
+        0.549964086304242,
+        1.9,
+        2.3162709542141298
+      ],
+      "normalizationFactor": 0.49614959721389873,
+      "gaitEnvelope": {
+        "width": 0.8172927292585683,
+        "length": 3.1178774706379735,
+        "poses": 343,
+        "phaseSamples": 49,
+        "blendSamples": 7,
+        "straight": {
+          "width": 0.8166272830219071,
+          "length": 2.932839639417856,
+          "minZ": -1.466419819708928,
+          "maxZ": 1.2357356657456566
+        },
+        "guard": 0.06,
+        "basis": "sampled native gait and blends with guard; visual review required"
+      },
+      "approaches": {
+        "left": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 11,
+            "maxCurvatureBound": 0.6370075632314617,
+            "maxCurvature": 0.7341310873330636
+          }
+        },
+        "right": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 11,
+            "maxCurvatureBound": 0.6370075632314617,
+            "maxCurvature": 0.7341310873330636
+          }
+        },
+        "far-left": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 15,
+            "maxCurvatureBound": 0.5504053821974929,
+            "maxCurvature": 0.7341310873330636
+          }
+        },
+        "far-right": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 15,
+            "maxCurvatureBound": 0.5504053821974929,
+            "maxCurvature": 0.7341310873330636
+          }
+        },
+        "center": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 5,
+            "maxCurvatureBound": 6.56877216456942e-16,
+            "maxCurvature": 0.7341310873330636
+          }
+        },
+        "away": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 21,
+            "maxCurvatureBound": 0.7307357877292523,
+            "maxCurvature": 0.7341310873330636
+          }
+        },
+        "away-left": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 27,
+            "maxCurvatureBound": 0.7278882614827491,
+            "maxCurvature": 0.7341310873330636
+          }
+        },
+        "away-right": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 27,
+            "maxCurvatureBound": 0.7278882614827491,
+            "maxCurvature": 0.7341310873330636
+          }
+        }
+      },
+      "gaitInterior": {
+        "endpointZ": 0.783580180291072,
+        "fitsCabinDepth": true
+      },
+      "walkSpeed": 1.4043877530644564,
+      "legacyInteriorEndpointZ": -1,
+      "centeredBodyClearEndpointZ": 1.0918645228929351,
+      "footSpans": {
+        "walk": {
+          "IKBackLegL": {
+            "x": 0.33518871256993166,
+            "forwardSpan": 2.130022037059938
+          },
+          "IKFrontLegL": {
+            "x": 0.33558196718899774,
+            "forwardSpan": 1.1690442744522351
+          },
+          "IKBackLegR": {
+            "x": -0.33518870998503425,
+            "forwardSpan": 2.1397243524332494
+          },
+          "IKFrontLegR": {
+            "x": -0.3355819664920888,
+            "forwardSpan": 1.1689784108887755
+          }
+        },
+        "left": {
+          "IKBackLegL": {
+            "x": 0.33518863789940356,
+            "forwardSpan": 1.4910154615183804
+          },
+          "IKFrontLegL": {
+            "x": 0.3355819433420699,
+            "forwardSpan": 0.8183308227398886
+          },
+          "IKBackLegR": {
+            "x": -0.3351887807782226,
+            "forwardSpan": 2.781641862278124
+          },
+          "IKFrontLegR": {
+            "x": -0.33558200385902925,
+            "forwardSpan": 1.5196718328275123
+          }
+        },
+        "right": {
+          "IKBackLegL": {
+            "x": 0.3351887937787213,
+            "forwardSpan": 2.769028825563758
+          },
+          "IKFrontLegL": {
+            "x": 0.33558199521737436,
+            "forwardSpan": 1.519757510097611
+          },
+          "IKBackLegR": {
+            "x": -0.33518863919184483,
+            "forwardSpan": 1.4978071139138263
+          },
+          "IKFrontLegR": {
+            "x": -0.33558193402884673,
+            "forwardSpan": 0.8182846449816081
+          }
+        }
+      },
+      "sourceSha256": "84fd04635fc211dfd122b55f934b902192decd2fbc9cce7b83f0754bbf280c13"
+    },
+    {
+      "animal": "deer",
+      "meshes": [
+        {
+          "name": "Mesh",
+          "joints": 46,
+          "vertices": 11089,
+          "triangles": 21232,
+          "maxWeightError": 5.029141902923584e-08,
+          "materials": [
+            {
+              "name": "Main",
+              "color": [
+                0.29613831639289856,
+                0.1247718334197998,
+                0.057805441319942474
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Mesh_1",
+          "joints": 46,
+          "vertices": 1617,
+          "triangles": 2928,
+          "maxWeightError": 2.9802322387695312e-08,
+          "materials": [
+            {
+              "name": "Hooves",
+              "color": [
+                0.07323051989078522,
+                0.052918363362550735,
+                0.04983120784163475
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Mesh_2",
+          "joints": 46,
+          "vertices": 3619,
+          "triangles": 6640,
+          "maxWeightError": 4.6566128730773926e-08,
+          "materials": [
+            {
+              "name": "Main_Light",
+              "color": [
+                0.4769851267337799,
+                0.3990589380264282,
+                0.29124030470848083
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Mesh_3",
+          "joints": 46,
+          "vertices": 749,
+          "triangles": 1248,
+          "maxWeightError": 4.0978193283081055e-08,
+          "materials": [
+            {
+              "name": "Main_Dark",
+              "color": [
+                0.17335247993469238,
+                0.07484988123178482,
+                0.03573969379067421
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Mesh_4",
+          "joints": 46,
+          "vertices": 720,
+          "triangles": 1280,
+          "maxWeightError": 4.377216100692749e-08,
+          "materials": [
+            {
+              "name": "Eye_Lighter",
+              "color": [
+                0.42922112345695496,
+                0.17829889059066772,
+                0.0811440721154213
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Mesh_5",
+          "joints": 46,
+          "vertices": 456,
+          "triangles": 800,
+          "maxWeightError": 3.9086444303393364e-08,
+          "materials": [
+            {
+              "name": "Eye_Black",
+              "color": [
+                0.00901754666119814,
+                0.00901754666119814,
+                0.00901754666119814
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Mesh_6",
+          "joints": 46,
+          "vertices": 66,
+          "triangles": 96,
+          "maxWeightError": 3.702007234096527e-08,
+          "materials": [
+            {
+              "name": "Eye_White",
+              "color": [
+                0.7230369448661804,
+                0.7230369448661804,
+                0.7230369448661804
+              ]
+            }
+          ]
+        }
+      ],
+      "clips": {
+        "walk": {
+          "name": "Walk",
+          "duration": 1.1666666269302368,
+          "loopError": 0
+        },
+        "left": {
+          "name": "DeerTurnLeft",
+          "duration": 1.1666666269302368,
+          "loopError": 0
+        },
+        "right": {
+          "name": "DeerTurnRight",
+          "duration": 1.1666666269302368,
+          "loopError": 0
+        }
+      },
+      "missingTurns": [],
+      "normalizedDimensions": [
+        0.7112059332397456,
+        2.1,
+        2.1925882384591224
+      ],
+      "normalizationFactor": 0.4997316728424601,
+      "gaitEnvelope": {
+        "width": 0.8866171153078258,
+        "length": 3.0598002079843187,
+        "poses": 343,
+        "phaseSamples": 49,
+        "blendSamples": 7,
+        "straight": {
+          "width": 0.8795274821918224,
+          "length": 2.874775657392351,
+          "minZ": -1.4373878286961754,
+          "maxZ": 1.2060599898378248
+        },
+        "guard": 0.06,
+        "basis": "sampled native gait and blends with guard; visual review required"
+      },
+      "approaches": {
+        "left": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 11,
+            "maxCurvatureBound": 0.6370075632314617,
+            "maxCurvature": 0.6767295483481448
+          }
+        },
+        "right": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 11,
+            "maxCurvatureBound": 0.6370075632314617,
+            "maxCurvature": 0.6767295483481448
+          }
+        },
+        "far-left": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 15,
+            "maxCurvatureBound": 0.5504053821974929,
+            "maxCurvature": 0.6767295483481448
+          }
+        },
+        "far-right": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 15,
+            "maxCurvatureBound": 0.5504053821974929,
+            "maxCurvature": 0.6767295483481448
+          }
+        },
+        "center": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 5,
+            "maxCurvatureBound": 6.56877216456942e-16,
+            "maxCurvature": 0.6767295483481448
+          }
+        },
+        "away": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 25,
+            "maxCurvatureBound": 0.6710649101104532,
+            "maxCurvature": 0.6767295483481448
+          }
+        },
+        "away-left": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 19,
+            "maxCurvatureBound": 0.54171585511584,
+            "maxCurvature": 0.6767295483481448
+          }
+        },
+        "away-right": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 19,
+            "maxCurvatureBound": 0.54171585511584,
+            "maxCurvature": 0.6767295483481448
+          }
+        }
+      },
+      "gaitInterior": {
+        "endpointZ": 0.8126121713038246,
+        "fitsCabinDepth": true
+      },
+      "walkSpeed": 1.4145270803390353,
+      "legacyInteriorEndpointZ": -1,
+      "centeredBodyClearEndpointZ": 1.1537058807704388,
+      "footSpans": {
+        "walk": {
+          "IKBackLegL": {
+            "x": 0.3618118133852093,
+            "forwardSpan": 2.130022225807873
+          },
+          "IKFrontLegL": {
+            "x": 0.33558196718899774,
+            "forwardSpan": 1.169044247133506
+          },
+          "IKBackLegR": {
+            "x": -0.3618118100273774,
+            "forwardSpan": 2.13972458091805
+          },
+          "IKFrontLegR": {
+            "x": -0.3355819664920888,
+            "forwardSpan": 1.1689783512841307
+          }
+        },
+        "left": {
+          "IKBackLegL": {
+            "x": 0.3618117379417467,
+            "forwardSpan": 1.4910154739359773
+          },
+          "IKFrontLegL": {
+            "x": 0.3355819433420699,
+            "forwardSpan": 0.8183309593341193
+          },
+          "IKBackLegR": {
+            "x": -0.3618118823664337,
+            "forwardSpan": 2.7816417331350562
+          },
+          "IKFrontLegR": {
+            "x": -0.33558200385902925,
+            "forwardSpan": 1.519671892432157
+          }
+        },
+        "right": {
+          "IKBackLegL": {
+            "x": 0.36181189382106443,
+            "forwardSpan": 2.7690287063544683
+          },
+          "IKFrontLegL": {
+            "x": 0.33558199521737436,
+            "forwardSpan": 1.5197575299659993
+          },
+          "IKBackLegR": {
+            "x": -0.3618117408307411,
+            "forwardSpan": 1.4978071859360254
+          },
+          "IKFrontLegR": {
+            "x": -0.33558193402884673,
+            "forwardSpan": 0.8182848101361047
+          }
+        }
+      },
+      "sourceSha256": "9b6273e7c852f5b30fdbb52a3b654c48a524394fdc34e3336f710551709d145a",
+      "eyeSkinReview": "All three eye material primitives remain skinned to the same 46-bone body, with source Head/Ear/Neck influences; no detached eye objects. Actual visual review still required."
+    },
+    {
+      "animal": "rabbit",
+      "meshes": [
+        {
+          "name": "Rabbit",
+          "joints": 37,
+          "vertices": 17988,
+          "triangles": 27776,
+          "maxWeightError": 4.842877388000488e-08,
+          "materials": [
+            {
+              "name": "Fur.001",
+              "color": [
+                1,
+                1,
+                1
+              ],
+              "hasDiffuseMap": true,
+              "hasNormalMap": true,
+              "roughness": 0.800000011920929
+            }
+          ]
+        }
+      ],
+      "clips": {
+        "walk": {
+          "name": "Running",
+          "duration": 0.6666666865348816,
+          "loopError": 0
+        },
+        "left": {
+          "name": "RabbitTurnLeft",
+          "duration": 0.6666666865348816,
+          "loopError": 0
+        },
+        "right": {
+          "name": "RabbitTurnRight",
+          "duration": 0.6666666865348816,
+          "loopError": 0
+        }
+      },
+      "missingTurns": [],
+      "normalizedDimensions": [
+        0.6288785638074096,
+        0.9,
+        1.9140245644681306
+      ],
+      "normalizationFactor": 0.09346018806780669,
+      "gaitEnvelope": {
+        "width": 0.8483650975408961,
+        "length": 2.679659861419874,
+        "poses": 343,
+        "phaseSamples": 49,
+        "blendSamples": 7,
+        "straight": {
+          "width": 0.8483650975408961,
+          "length": 2.679659861419874,
+          "minZ": -1.339829930709937,
+          "maxZ": 1.133389437922794
+        },
+        "guard": 0.06,
+        "basis": "sampled native gait and blends with guard; visual review required"
+      },
+      "approaches": {
+        "left": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 21,
+            "maxCurvatureBound": 0.439125646929211,
+            "maxCurvature": 0.45
+          }
+        },
+        "right": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 21,
+            "maxCurvatureBound": 0.439125646929211,
+            "maxCurvature": 0.45
+          }
+        },
+        "far-left": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 25,
+            "maxCurvatureBound": 0.44015712486070324,
+            "maxCurvature": 0.45
+          }
+        },
+        "far-right": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 25,
+            "maxCurvatureBound": 0.44015712486070324,
+            "maxCurvature": 0.45
+          }
+        },
+        "center": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 5,
+            "maxCurvatureBound": 6.56877216456942e-16,
+            "maxCurvature": 0.45
+          }
+        },
+        "away": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 47,
+            "maxCurvatureBound": 0.44884218190743613,
+            "maxCurvature": 0.45
+          }
+        },
+        "away-left": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 25,
+            "maxCurvatureBound": 0.4339903842037058,
+            "maxCurvature": 0.45
+          }
+        },
+        "away-right": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 25,
+            "maxCurvatureBound": 0.4339903842037058,
+            "maxCurvature": 0.45
+          }
+        }
+      },
+      "gaitInterior": {
+        "endpointZ": 0.9101700692900629,
+        "fitsCabinDepth": true
+      },
+      "walkSpeed": 1.841843852060412,
+      "legacyInteriorEndpointZ": -1,
+      "centeredBodyClearEndpointZ": 1.2929877177659348,
+      "footSpans": {
+        "walk": {
+          "FrontPaw_L": {
+            "x": 2.0924684794951927,
+            "forwardSpan": 11.746890871954745
+          },
+          "FrontPaw_R": {
+            "x": -1.6184876044780498,
+            "forwardSpan": 11.746896238657481
+          },
+          "BackPaw_L": {
+            "x": 2.371963640466299,
+            "forwardSpan": 14.52944843402757
+          },
+          "BackPaw_R": {
+            "x": -2.3719616354221706,
+            "forwardSpan": 14.529447402745895
+          }
+        },
+        "left": {
+          "FrontPaw_L": {
+            "x": 2.0952955924091845,
+            "forwardSpan": 11.74689058330869
+          },
+          "FrontPaw_R": {
+            "x": -1.615686312624307,
+            "forwardSpan": 11.746900286688977
+          },
+          "BackPaw_L": {
+            "x": 2.371963640466299,
+            "forwardSpan": 14.52944843402757
+          },
+          "BackPaw_R": {
+            "x": -2.3719616354221706,
+            "forwardSpan": 14.529447402745895
+          }
+        },
+        "right": {
+          "FrontPaw_L": {
+            "x": 2.0899015139795147,
+            "forwardSpan": 11.746890856317624
+          },
+          "FrontPaw_R": {
+            "x": -1.6215999943281567,
+            "forwardSpan": 11.746896714433088
+          },
+          "BackPaw_L": {
+            "x": 2.371963640466299,
+            "forwardSpan": 14.52944843402757
+          },
+          "BackPaw_R": {
+            "x": -2.3719616354221706,
+            "forwardSpan": 14.529447402745895
+          }
+        }
+      },
+      "sourceSha256": "ed99fb548d4a9bbde7e31e0de2820d362ff8744e4cda2b1f21405f0a4b27d70b",
+      "images": [
+        {
+          "name": "rabbit-NORM",
+          "width": 1024,
+          "height": 1024,
+          "bitDepth": 8,
+          "colorType": 2,
+          "bytes": 520664,
+          "pngCrcsValid": true,
+          "zlibValid": true,
+          "sha256": "000bbb47c2bfc17d8f0839d0bd3c57485389309a971c914ec7177bb0347b428c"
+        },
+        {
+          "name": "rabbit-skinn",
+          "width": 1024,
+          "height": 1024,
+          "bitDepth": 8,
+          "colorType": 6,
+          "bytes": 1659183,
+          "pngCrcsValid": true,
+          "zlibValid": true,
+          "sha256": "96f367bce29f79d1e0ae037440d85c3fd87b7bd003e711964581fe65a04229b0"
+        }
+      ],
+      "textureLoaderLimit": "Actual geometry/skin/animation parsed by Three.js; Node assigns Texture placeholders. Embedded PNG payloads have valid CRCs and compressed pixel lengths. Actual rendered texture appearance requires browser review.",
+      "paceCalibration": "Mean native paired paw longitudinal span per 16/24-second cycle; 1.841843852 world units/sec at height 0.9. Unequal front/rear contact speeds mean feet are not claimed fully planted.",
+      "turnCalibration": "Native head/spine lean variants with broad presentation curvature limit 0.45; no altered inside/outside paw stride or physical contact guarantee."
+    },
+    {
+      "animal": "dove",
+      "meshes": [
+        {
+          "name": "Dove",
+          "joints": 13,
+          "vertices": 19878,
+          "triangles": 24240,
+          "maxWeightError": 5.21540641784668e-08,
+          "materials": [
+            {
+              "name": "Material.001",
+              "color": [
+                1,
+                1,
+                1
+              ],
+              "hasDiffuseMap": false,
+              "hasNormalMap": false,
+              "roughness": 0.800000011920929
+            }
+          ]
+        }
+      ],
+      "clips": {
+        "walk": {
+          "name": "flap-wings-animation",
+          "duration": 1,
+          "loopError": 1.1920928955078125e-07
+        },
+        "left": {
+          "name": "DoveTurnLeft",
+          "duration": 1,
+          "loopError": 1.1920928955078125e-07
+        },
+        "right": {
+          "name": "DoveTurnRight",
+          "duration": 1,
+          "loopError": 1.1920928955078125e-07
+        }
+      },
+      "missingTurns": [],
+      "normalizedDimensions": [
+        1.3998669045538923,
+        0.55,
+        0.9244138909922055
+      ],
+      "normalizationFactor": 2.314202763424157,
+      "gaitEnvelope": {
+        "width": 1.6596398860016341,
+        "length": 1.076919002270623,
+        "minY": -0.1574226095704321,
+        "maxY": 0.8922048402162865,
+        "poses": 343,
+        "phaseSamples": 49,
+        "blendSamples": 7,
+        "straight": {
+          "width": 1.519866931137734,
+          "length": 1.0769189907158894,
+          "minZ": -0.5377566220702656,
+          "maxZ": 0.5384594953579447,
+          "minY": -0.07981168117513046,
+          "maxY": 0.8267692055278559
+        },
+        "guard": 0.06,
+        "basis": "sampled native gait and blends with guard; visual review required"
+      },
+      "flightClearance": {
+        "altitude": 1,
+        "stairRiseAhead": 0.7381832707493057,
+        "lowestAboveSteps": 0.10439411968026224,
+        "highestAboveDeck": 1.8922048402162865,
+        "basis": "sampled whole-wing envelope and conservative tread/door bounds; visual review required"
+      },
+      "approaches": {
+        "left": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 15,
+            "maxCurvatureBound": 0.5449601220614073,
+            "maxCurvature": 0.6
+          }
+        },
+        "right": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 15,
+            "maxCurvatureBound": 0.5449601220614073,
+            "maxCurvature": 0.6
+          }
+        },
+        "far-left": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 15,
+            "maxCurvatureBound": 0.5504053821974929,
+            "maxCurvature": 0.6
+          }
+        },
+        "far-right": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 13,
+            "maxCurvatureBound": 0.5504053821974929,
+            "maxCurvature": 0.6
+          }
+        },
+        "center": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 7,
+            "maxCurvatureBound": 6.56877216456942e-16,
+            "maxCurvature": 0.6
+          }
+        },
+        "away": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 25,
+            "maxCurvatureBound": 0.5106873623799822,
+            "maxCurvature": 0.6
+          }
+        },
+        "away-left": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 19,
+            "maxCurvatureBound": 0.54171585511584,
+            "maxCurvature": 0.6
+          }
+        },
+        "away-right": {
+          "curves": 1,
+          "clearance": {
+            "intervals": 19,
+            "maxCurvatureBound": 0.54171585511584,
+            "maxCurvature": 0.6
+          }
+        }
+      },
+      "gaitInterior": {
+        "endpointZ": 1.7122433779297344,
+        "fitsCabinDepth": true
+      },
+      "walkSpeed": 1.2,
+      "legacyInteriorEndpointZ": -1,
+      "centeredBodyClearEndpointZ": 1.7877930545038971,
+      "footSpans": {
+        "walk": {},
+        "left": {},
+        "right": {}
+      },
+      "sourceSha256": "5ae85d015a65ddda2a97d14433fe9925afa11328599dfb0fca1582e1dbe0aea9",
+      "coatColors": {
+        "vertices": 19878,
+        "lightWhiteVerticesAbove06Linear": 15765,
+        "darkEyeVerticesBelow008": 253,
+        "vertexColorsExported": true
+      },
+      "bankReview": {
+        "leftDegrees": 8,
+        "leftUpVector": [
+          0.1391731287,
+          0.9902680648,
+          0
+        ],
+        "rightUpVector": [
+          -0.1391731287,
+          0.9902680648,
+          0
+        ],
+        "basis": "actual native rig quaternion relative to default flap; signed banks tilt into their route turn"
+      },
+      "forwardReview": "Default exported yaw places face ahead of thorax along +Z; no additional runtime yaw flip."
+    }
+  ]
+}

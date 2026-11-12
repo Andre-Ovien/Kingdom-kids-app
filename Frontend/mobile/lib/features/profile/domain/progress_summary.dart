@@ -1,6 +1,7 @@
 import 'dart:collection';
 
 import '../../auth/domain/kid_profile.dart';
+import '../../streak/domain/streak_presentation.dart';
 
 class ProfileProgressSummary {
   ProfileProgressSummary({
@@ -11,6 +12,8 @@ class ProfileProgressSummary {
     required this.activityStreak,
     required List<WeeklyProfileActivity> weeklyActivity,
     this.lastActivityAt,
+    this.xpBreakdown,
+    this.streakWeek,
   }) : badges = UnmodifiableListView(badges),
        weeklyActivity = UnmodifiableListView(weeklyActivity);
 
@@ -21,10 +24,13 @@ class ProfileProgressSummary {
   final ProfileActivityStreak activityStreak;
   final List<WeeklyProfileActivity> weeklyActivity;
   final DateTime? lastActivityAt;
+  final ProfileXpBreakdown? xpBreakdown;
+  final ProfileStreakWeek? streakWeek;
 
   factory ProfileProgressSummary.fromJson(Map<String, dynamic> json) {
     final rawBadges = json['badges'];
     final rawWeeks = json['weekly_activity'];
+    final xpSources = _map(json['xp_breakdown']);
     return ProfileProgressSummary(
       profile: KidProfile.fromJson(_map(json['profile'])),
       level: ProfileLevel.fromJson(_map(json['level'])),
@@ -45,8 +51,84 @@ class ProfileProgressSummary {
                 .toList(growable: false)
           : const [],
       lastActivityAt: _date(json['last_activity_at']),
+      xpBreakdown: xpSources.isEmpty
+          ? null
+          : ProfileXpBreakdown.fromJson(xpSources),
+      streakWeek: ProfileStreakWeek.tryParse(json['streak_week']),
     );
   }
+}
+
+/// Optional real weekday history; missing or malformed data stays unavailable.
+class ProfileStreakWeek {
+  ProfileStreakWeek({required this.localDate, required List<StreakDay> days})
+    : days = UnmodifiableListView(days);
+
+  final DateTime localDate;
+  final List<StreakDay> days;
+
+  static ProfileStreakWeek? tryParse(Object? value) {
+    if (value is! Map) return null;
+    final date = _calendarDate(value['local_date']);
+    final rawDays = value['days'];
+    if (date == null || rawDays is! List || rawDays.length != 7) return null;
+    final monday = DateTime.utc(
+      date.year,
+      date.month,
+      date.day,
+    ).subtract(Duration(days: date.weekday - 1));
+    final days = <StreakDay>[];
+    for (var index = 0; index < rawDays.length; index++) {
+      final raw = rawDays[index];
+      if (raw is! Map || raw['active'] is! bool) return null;
+      final day = _calendarDate(raw['date']);
+      final expected = monday.add(Duration(days: index));
+      if (day == null ||
+          day.year != expected.year ||
+          day.month != expected.month ||
+          day.day != expected.day ||
+          (day.isAfter(date) && raw['active'] == true)) {
+        return null;
+      }
+      days.add(StreakDay(date: day, active: raw['active'] as bool));
+    }
+    return ProfileStreakWeek(localDate: date, days: days);
+  }
+
+  static DateTime? _calendarDate(Object? value) {
+    if (value is! String || !RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(value)) {
+      return null;
+    }
+    final date = DateTime.tryParse(value);
+    if (date == null ||
+        '${date.year.toString().padLeft(4, '0')}-'
+                '${date.month.toString().padLeft(2, '0')}-'
+                '${date.day.toString().padLeft(2, '0')}' !=
+            value) {
+      return null;
+    }
+    return date;
+  }
+}
+
+class ProfileXpBreakdown {
+  const ProfileXpBreakdown({
+    required this.quests,
+    required this.stories,
+    required this.streaks,
+  });
+
+  final int quests;
+  final int stories;
+  final int streaks;
+  int get total => quests + stories + streaks;
+
+  factory ProfileXpBreakdown.fromJson(Map<String, dynamic> json) =>
+      ProfileXpBreakdown(
+        quests: _nonNegative(json['quests']),
+        stories: _nonNegative(json['stories']),
+        streaks: _nonNegative(json['streaks']),
+      );
 }
 
 class ProfileLevel {
@@ -55,29 +137,42 @@ class ProfileLevel {
     required this.title,
     required this.xp,
     required this.nextLevelXp,
-  });
+    this.maxLevel = maximumLevel,
+    bool isMaxLevel = false,
+  }) : _isMaxLevel = isMaxLevel;
 
+  static const maximumLevel = 15;
   final int number;
   final String title;
   final int xp;
   final int nextLevelXp;
+  final int maxLevel;
+  final bool _isMaxLevel;
+
+  bool get isMaxLevel => _isMaxLevel || number >= maxLevel;
 
   double get progress {
-    if (nextLevelXp <= 0) return 1;
+    if (isMaxLevel || nextLevelXp <= 0) return 1;
     final levelFloor = (number - 1) * 300;
     final span = (nextLevelXp - levelFloor).clamp(1, 1 << 31).toInt();
     return ((xp - levelFloor) / span).clamp(0.0, 1.0).toDouble();
   }
 
   factory ProfileLevel.fromJson(Map<String, dynamic> json) {
+    final maxLevel = _integer(
+      json['max_level'],
+      fallback: maximumLevel,
+    ).clamp(1, maximumLevel).toInt();
     return ProfileLevel(
-      number: _integer(json['number'], fallback: 1).clamp(1, 999).toInt(),
+      number: _integer(json['number'], fallback: 1).clamp(1, maxLevel).toInt(),
       title: _string(json['title'], fallback: 'New Explorer'),
       xp: _integer(json['xp']).clamp(0, 1 << 31).toInt(),
       nextLevelXp: _integer(
         json['next_level_xp'],
         fallback: 300,
       ).clamp(0, 1 << 31).toInt(),
+      maxLevel: maxLevel,
+      isMaxLevel: _boolean(json['is_max_level']),
     );
   }
 }

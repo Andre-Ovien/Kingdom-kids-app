@@ -7,6 +7,7 @@ import '../domain/auth_session.dart';
 import '../domain/email_verification.dart';
 import '../domain/kid_profile.dart';
 import '../domain/parent_account.dart';
+import '../domain/password_reset.dart';
 import 'auth_api.dart';
 import 'auth_session_store.dart';
 
@@ -24,6 +25,9 @@ class AuthRepository {
   static final Map<String, Future<AuthSession>> _refreshesByToken = {};
   static final Queue<Future<void> Function()> _sessionMutationQueue = Queue();
   static bool _sessionMutationActive = false;
+  // Repositories share the device's session storage. An explicit sign-in is a
+  // new session even for the same parent; routine token rotation is not.
+  static int _signInGeneration = 0;
 
   Future<PendingEmailVerification> register(RegisterParentRequest request) {
     return _api.register(request);
@@ -39,10 +43,103 @@ class AuthRepository {
     return _api.resendEmailVerification(challengeId);
   }
 
+  Future<PendingPasswordReset> requestPasswordReset(
+    PasswordResetRequest request,
+  ) {
+    return _api.requestPasswordReset(request);
+  }
+
+  /// Proves the recovery code without changing credentials or local sign-in.
+  Future<void> verifyPasswordResetCode(PasswordResetVerifyRequest request) =>
+      _api.verifyPasswordResetCode(request);
+
+  Future<void> confirmPasswordReset(PasswordResetConfirmRequest request) async {
+    final origin = await _withSessionMutationLock(() async {
+      final session = await _sessionStore.readSession();
+      return (session: session, signInGeneration: _signInGeneration);
+    });
+    await _api.confirmPasswordReset(request);
+    await _withSessionMutationLock(() async {
+      // Recovery may finish after the adult left this flow and signed in
+      // again. Clear only its original session, never that newer sign-in.
+      if (_signInGeneration != origin.signInGeneration) return;
+      final current = await _sessionStore.readSession();
+      if (current != null && current.parent.id != origin.session?.parent.id) {
+        return;
+      }
+      await _sessionStore.clear();
+    });
+  }
+
   Future<AuthSession> login(LoginRequest request) async {
     final session = await _api.login(request);
     await _writeSession(session);
     return session;
+  }
+
+  /// Rechecks the parent password without exposing the cached email address to
+  /// presentation code.
+  ///
+  /// Login can issue a complete replacement token pair, but it must never be
+  /// allowed to switch accounts behind an already-open parent gate. The
+  /// backend identity and the still-active local identity are both verified
+  /// before fresh credentials are persisted.
+  Future<void> reauthenticate(String password) async {
+    if (password.isEmpty) {
+      throw const AppException(
+        'Enter the parent password to continue.',
+        code: 'parent_password_required',
+      );
+    }
+
+    final observedSession = await _requiredSession();
+    final expectedParentId = observedSession.parent.id;
+    final cachedEmail = observedSession.parent.email.trim();
+    if (expectedParentId.isEmpty || cachedEmail.isEmpty) {
+      throw const AppException(
+        'Please sign in as a parent to continue.',
+        code: 'authentication_required',
+        statusCode: 401,
+      );
+    }
+
+    late final AuthSession reauthenticatedSession;
+    try {
+      reauthenticatedSession = await _api.login(
+        LoginRequest(email: cachedEmail, password: password),
+      );
+    } on AppException catch (error) {
+      if (error.code != 'invalid_credentials') {
+        rethrow;
+      }
+      throw const AppException(
+        'That password did not match. Please try again.',
+        code: 'invalid_parent_password',
+      );
+    }
+
+    if (reauthenticatedSession.parent.id != expectedParentId) {
+      throw _accountChangedException;
+    }
+
+    await _withSessionMutationLock(() async {
+      final current = await _requiredSession();
+      _requireExpectedParent(current, expectedParentId);
+      if (reauthenticatedSession.parent.id != current.parent.id) {
+        throw _accountChangedException;
+      }
+
+      // Preserve metadata that may have been refreshed by another request
+      // while the password check was in flight, and replace credentials only.
+      await _sessionStore.writeSession(
+        AuthSession(
+          parent: current.parent,
+          accessToken: reauthenticatedSession.accessToken,
+          refreshToken: reauthenticatedSession.refreshToken,
+          profiles: current.profiles,
+        ),
+      );
+    });
   }
 
   Future<AuthSession?> restoreSession() => _sessionStore.readSession();
@@ -78,6 +175,9 @@ class AuthRepository {
       (activeSession) => _api.currentParent(activeSession.accessToken),
       expectedParentId: originatingParentId,
     );
+    if (parent.id != originatingParentId) {
+      throw _accountChangedException;
+    }
     await _updateSession(
       (activeSession) => activeSession.copyWith(parent: parent),
       expectedParentId: originatingParentId,
@@ -89,7 +189,10 @@ class AuthRepository {
     final originatingSession = await _requiredSession();
     final originatingParentId = originatingSession.parent.id;
     final rawProfiles = await _withAuthenticatedSession(
-      (session) => _api.fetchKidProfiles(session.accessToken),
+      (session) => _api.fetchKidProfiles(
+        session.accessToken,
+        expectedParentId: originatingParentId,
+      ),
       expectedParentId: originatingParentId,
     );
     final updatedSession = await _updateSession((activeSession) {
@@ -111,7 +214,10 @@ class AuthRepository {
     final originatingSession = await _requiredSession();
     final originatingParentId = originatingSession.parent.id;
     final rawProfiles = await _withAuthenticatedSession(
-      (session) => _api.fetchKidProfiles(session.accessToken),
+      (session) => _api.fetchKidProfiles(
+        session.accessToken,
+        expectedParentId: originatingParentId,
+      ),
       expectedParentId: originatingParentId,
     );
 
@@ -150,8 +256,20 @@ class AuthRepository {
     late KidProfile profile;
     await _updateSession((activeSession) {
       profile = _ownedProfile(createdProfile, activeSession.parent.id);
+      final existingIndex = activeSession.profiles.indexWhere(
+        (cached) => cached.id == profile.id,
+      );
+      final profiles = activeSession.profiles
+          .where((cached) => cached.id != profile.id)
+          .toList(growable: true);
+      // An operation_id replay returns the same backend identity. Upsert it
+      // at its original position, also removing any older duplicate copies.
+      profiles.insert(
+        existingIndex < 0 ? profiles.length : existingIndex,
+        profile,
+      );
       return activeSession.copyWith(
-        profiles: [...activeSession.profiles, profile],
+        profiles: List<KidProfile>.unmodifiable(profiles),
       );
     }, expectedParentId: originatingParentId);
     await _writeSelectedKidForParent(profile.id, originatingParentId);
@@ -238,33 +356,95 @@ class AuthRepository {
     return null;
   }
 
+  /// Permanently deletes the signed-in parent account after backend password
+  /// reauthentication. Local credentials are cleared only after the server
+  /// confirms deletion, so validation or connectivity failures remain
+  /// recoverable on this device.
+  Future<void> deleteAccount({required String password}) async {
+    if (password.isEmpty) {
+      throw const AppException(
+        'Enter your current password to delete this account.',
+        code: 'current_password_required',
+      );
+    }
+
+    final originatingSession = await _requiredSession();
+    final originatingParentId = originatingSession.parent.id;
+    await _withAuthenticatedSession(
+      (session) => _api.deleteAccount(
+        password: password,
+        accessToken: session.accessToken,
+      ),
+      expectedParentId: originatingParentId,
+    );
+    await _clearDeletedAccountSession(originatingParentId);
+  }
+
   Future<void> selectKid(KidProfile profile) {
-    return _sessionStore.writeSelectedKidId(profile.id);
+    final profileId = profile.id.trim();
+    if (profileId.isEmpty) {
+      throw const AppException(
+        'Choose a child profile from this family.',
+        code: 'profile_not_in_session',
+      );
+    }
+
+    return _withSessionMutationLock(() async {
+      final current = await _requiredSession();
+      final isCurrentMember = current.profiles.any(
+        (cachedProfile) => cachedProfile.id == profileId,
+      );
+      if (!isCurrentMember) {
+        throw const AppException(
+          'That child profile is not available for this family.',
+          code: 'profile_not_in_session',
+        );
+      }
+      await _sessionStore.writeSelectedKidId(profileId);
+    });
   }
 
   Future<void> logout() async {
-    final session = await _sessionStore.readSession();
+    final origin = await _withSessionMutationLock(() async {
+      final session = await _sessionStore.readSession();
+      return (session: session, signInGeneration: _signInGeneration);
+    });
+    final session = origin.session;
     try {
       if (session != null &&
           session.accessToken.isNotEmpty &&
           session.refreshToken != null &&
           session.refreshToken!.isNotEmpty) {
-        await _withAuthenticatedSession(
-          (activeSession) => _api.logout(
+        await _withAuthenticatedSession((activeSession) {
+          if (_signInGeneration != origin.signInGeneration) {
+            throw _accountChangedException;
+          }
+          return _api.logout(
             accessToken: activeSession.accessToken,
             refreshToken: activeSession.refreshToken!,
-          ),
-        );
+          );
+        }, expectedParentId: session.parent.id);
       }
     } finally {
-      await _clearSession();
+      await _withSessionMutationLock(() async {
+        if (_signInGeneration != origin.signInGeneration) return;
+        final current = await _sessionStore.readSession();
+        if (current == null ||
+            (session != null && current.parent.id == session.parent.id)) {
+          await _sessionStore.clear();
+        }
+      });
     }
   }
 
   Future<AuthSession> _requiredSession() async {
     final session = await _sessionStore.readSession();
     if (session == null || session.accessToken.isEmpty) {
-      throw const AppException('Please sign in as a parent to continue.');
+      throw const AppException(
+        'Please sign in as a parent to continue.',
+        code: 'authentication_required',
+        statusCode: 401,
+      );
     }
     return session;
   }
@@ -348,19 +528,22 @@ class AuthRepository {
 
     // The shared result can have originated from another repository instance.
     // Keep this store's current account/profile metadata and apply only tokens.
-    final refreshedSession = session.copyWith(
-      accessToken: sharedRefreshResult.accessToken,
-      refreshToken: sharedRefreshResult.refreshToken,
-    );
-
     return _withSessionMutationLock(() async {
       final current = await _sessionStore.readSession();
       if (current == null) {
-        throw const AppException('Please sign in as a parent to continue.');
+        throw const AppException(
+          'Please sign in as a parent to continue.',
+          code: 'authentication_required',
+          statusCode: 401,
+        );
       }
       if (!_hasSameCredentials(current, session)) {
         return current;
       }
+      final refreshedSession = current.copyWith(
+        accessToken: sharedRefreshResult.accessToken,
+        refreshToken: sharedRefreshResult.refreshToken,
+      );
       await _sessionStore.writeSession(refreshedSession);
       return refreshedSession;
     });
@@ -389,7 +572,10 @@ class AuthRepository {
   }
 
   Future<void> _writeSession(AuthSession session) {
-    return _withSessionMutationLock(() => _sessionStore.writeSession(session));
+    return _withSessionMutationLock(() async {
+      await _sessionStore.writeSession(session);
+      _signInGeneration += 1;
+    });
   }
 
   Future<AuthSession> _updateSession(
@@ -416,8 +602,14 @@ class AuthRepository {
     });
   }
 
-  Future<void> _clearSession() {
-    return _withSessionMutationLock(_sessionStore.clear);
+  Future<void> _clearDeletedAccountSession(String expectedParentId) {
+    return _withSessionMutationLock(() async {
+      final current = await _sessionStore.readSession();
+      if (current != null) {
+        _requireExpectedParent(current, expectedParentId);
+      }
+      await _sessionStore.clear();
+    });
   }
 
   static Future<T> _withSessionMutationLock<T>(Future<T> Function() mutation) {

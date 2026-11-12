@@ -2,8 +2,23 @@ import 'dart:collection';
 
 import 'package:flutter/material.dart';
 
+import '../../../core/config/app_config.dart';
+import '../../milestones/domain/level_milestone.dart';
+
 /// The game engines understood by the backend and mobile app.
-enum GameType { quiz, memory, ordering, matching, maze, path, aim }
+enum GameType { quiz, memory, ordering, matching, maze, path, aim, puzzle }
+
+/// Catalogue sections describe the activity, independently of its wire engine.
+enum GameCategory { puzzle, quiz, game, matching }
+
+extension GameCategoryLabel on GameCategory {
+  String get label => switch (this) {
+    GameCategory.puzzle => 'Puzzles',
+    GameCategory.quiz => 'Quizzes',
+    GameCategory.game => 'Games',
+    GameCategory.matching => 'Matching',
+  };
+}
 
 extension GameTypeValue on GameType {
   String get wireName => name;
@@ -16,6 +31,7 @@ extension GameTypeValue on GameType {
     GameType.maze => 'Maze',
     GameType.path => 'Path',
     GameType.aim => 'Aim',
+    GameType.puzzle => 'Puzzle',
   };
 
   MiniGameType get legacyType => switch (this) {
@@ -24,6 +40,7 @@ extension GameTypeValue on GameType {
     GameType.matching => MiniGameType.matching,
     GameType.ordering || GameType.path => MiniGameType.dragAndDrop,
     GameType.maze || GameType.aim => MiniGameType.puzzle,
+    GameType.puzzle => MiniGameType.jigsaw,
   };
 
   static GameType parse(Object? value) {
@@ -36,14 +53,16 @@ extension GameTypeValue on GameType {
       'maze' => GameType.maze,
       'path' => GameType.path,
       'aim' || 'aiming' => GameType.aim,
+      'puzzle' || 'jigsaw' => GameType.puzzle,
       _ => throw FormatException('Unsupported game type: $value'),
     };
   }
 }
 
 /// Kept as a presentation compatibility bridge while the screens migrate to
-/// the seven backend-driven [GameType] engines.
-enum MiniGameType { dragAndDrop, matching, memory, quiz, puzzle }
+/// the backend-driven [GameType] engines. The older `puzzle` value still maps
+/// to the maze engine; `jigsaw` is reserved for Puzzle Quest.
+enum MiniGameType { dragAndDrop, matching, memory, quiz, puzzle, jigsaw }
 
 /// One ordered, server-authored level. Engine-specific content stays in
 /// [config], allowing new content to be shipped without a mobile app release.
@@ -183,6 +202,7 @@ class GameSubmission {
     required this.feedback,
     required this.progress,
     required this.idempotentReplay,
+    this.levelMilestone,
   });
 
   final String attemptId;
@@ -198,6 +218,7 @@ class GameSubmission {
   final String feedback;
   final GameProgress progress;
   final bool idempotentReplay;
+  final LevelMilestone? levelMilestone;
 
   factory GameSubmission.fromJson(Map<String, dynamic> json) {
     final score = _asInt(json['score']);
@@ -223,6 +244,7 @@ class GameSubmission {
         fallbackProfileId: _string(json['profile_id'] ?? json['profile']),
       ),
       idempotentReplay: _asBool(json['idempotent_replay']),
+      levelMilestone: LevelMilestone.tryParse(json['level_milestone']),
     );
   }
 }
@@ -288,9 +310,25 @@ class MiniGame {
         MiniGameType.matching => GameType.matching,
         MiniGameType.dragAndDrop => GameType.ordering,
         MiniGameType.puzzle => GameType.maze,
+        MiniGameType.jigsaw => GameType.puzzle,
       };
 
-  String get typeLabel => gameType.label;
+  // Catalogue summaries omit level configs, so the garden's stable identity
+  // must also identify it before its detail is fetched. Its matching wire type
+  // remains the engine/API dispatch contract, not its presentation category.
+  bool get isArkGarden =>
+      slug == 'noahs-ark-garden' ||
+      (gameType == GameType.matching &&
+          levels.any((level) => level.config['mode'] == 'ark_garden'));
+
+  GameCategory get category => switch (gameType) {
+    GameType.puzzle => GameCategory.puzzle,
+    GameType.quiz => GameCategory.quiz,
+    GameType.matching when !isArkGarden => GameCategory.matching,
+    _ => GameCategory.game,
+  };
+
+  String get typeLabel => isArkGarden ? 'Game' : gameType.label;
   bool get hasStarted => playerProgress.hasStarted;
 
   GameLevel? level(int levelNumber) {
@@ -302,7 +340,10 @@ class MiniGame {
     return null;
   }
 
-  factory MiniGame.fromJson(Map<String, dynamic> json) {
+  factory MiniGame.fromJson(
+    Map<String, dynamic> json, {
+    ContentMediaPolicy mediaPolicy = AppConfig.contentMediaPolicy,
+  }) {
     final gameType = GameTypeValue.parse(json['game_type'] ?? json['type']);
     final slug = _string(json['slug'] ?? json['id']);
     if (slug.isEmpty) {
@@ -349,7 +390,7 @@ class MiniGame {
       estimatedDurationSeconds: durationSeconds,
       imageAsset: coverAssetKey,
       coverAssetKey: coverAssetKey,
-      coverImageUrl: _nullableString(
+      coverImageUrl: mediaPolicy.sanitize(
         json['cover_image_url'] ?? json['image_url'],
       ),
       accentColor: _string(json['accent_color'], fallback: '#FF7043'),
@@ -409,11 +450,6 @@ String _string(Object? value, {String fallback = ''}) {
   return text.isEmpty ? fallback : text;
 }
 
-String? _nullableString(Object? value) {
-  final text = _string(value);
-  return text.isEmpty ? null : text;
-}
-
 int _asInt(Object? value, {int fallback = 0}) {
   if (value is int) {
     return value;
@@ -459,6 +495,7 @@ String _durationLabel(int seconds) {
 }
 
 const _canonicalGameCoverAssets = <String, String>{
+  'noahs-ark-garden': 'assets/images/stories/noah-builds-the-ark-v2.webp',
   'ark-animal-match': 'assets/images/stories/noah-builds-the-ark-v2.webp',
   'creation-order': 'assets/images/stories/creation-week-v2.webp',
   'david-sling-shot': 'assets/images/stories/david-and-goliath-v2.webp',
@@ -468,6 +505,7 @@ const _canonicalGameCoverAssets = <String, String>{
   'daniel-memory': 'assets/images/stories/daniel-in-the-lions-den-v2.webp',
   'esther-quiz': 'assets/images/stories/esther-speaks-up-v2.webp',
   'moses-match': 'assets/images/stories/moses-follows-god-v2.webp',
+  'puzzle-quest': 'assets/images/games/puzzle_quest/puzzle-quest-cover-v1.webp',
 };
 
 String _coverAsset(String slug, GameType type, String backendAsset) {
@@ -489,5 +527,7 @@ String _fallbackAsset(GameType type) {
     GameType.maze => 'assets/images/stories/jonah-and-the-big-fish-v2.webp',
     GameType.path => 'assets/images/stories/crossing-the-red-sea-v2.webp',
     GameType.aim => 'assets/images/stories/david-and-goliath-v2.webp',
+    GameType.puzzle =>
+      'assets/images/games/puzzle_quest/puzzle-quest-cover-v1.webp',
   };
 }

@@ -1,0 +1,52 @@
+Kingdom Kids car artwork — October 10, 2026
+
+Created with the built-in image generation tool. No existing artwork was overwritten.
+The user approved the wide car illustration, then clarified that all three children
+in the car should replace the Kai-only iPhone Home Screen app icon.
+
+Saved outputs:
+- kingdom-kids-car-banner-v1.png: approved wide illustration
+- kingdom-kids-car-icon-v1.png: square composition for iOS launcher asset generation
+
+Reference images:
+- assets/images/splash/kingdom-kids-splash-opening-v2.png
+- assets/images/mascot/mascot_wave.png (Kai)
+- assets/images/characters/poses/nia-standing.png
+- assets/images/characters/poses/zuri-standing.png
+
+Banner generation prompt:
+Use case: illustration-story. Asset type: Kingdom Kids app banner REVIEW PREVIEW,
+wide horizontal 16:9 composition, high quality polished stylized 3D children's
+storybook illustration. Primary request: create the scene of the existing three
+Kingdom Kids characters sitting together in a car, faithfully matching the attached
+reference poster. Input image 1 is the existing car scene reference for character
+identity, outfits, car, cheerful sunlit garden road; image 2 is Kai's original
+fullbody appearance; image 3 Nia's original appearance; image 4 Zuri's original
+appearance. Preserve all three dark brown skin tones, child proportions, rounded
+facial features, brown eyes, exact hairstyles and clothing. Kai has short twisted
+locs and green tshirt; Nia has tall puff bun with peachpink bow and charcoal floral
+dress with peach trim; Zuri has twin afro puffs with pink bow/headband and pink dress.
+All three seated, seatbelts visible, cheerful expressive but natural smiles; Kai
+waves gently as in reference still image. Camera view from front, the children
+visible through the open-top car windshield, keeping car shape visually coherent.
+Same deep teal car without brand marks. Sunny bright garden path and welcoming
+blue sky, lush green trees, soft pink blossoms, joyful light and crisp readable
+detail. Recompose faithfully for a wide banner: car and three kids centered
+lower-middle, enough breathing room around them and sky above for later title
+overlay. No title or text in this image, no logos, no watermark, no new characters,
+no changed faces or skin tones, no distorted bodies. Preview only.
+
+Square icon edit prompt:
+Use case: precise-object-edit. Edit target: approved Kingdom Kids car banner image.
+Produce a square 1:1 app icon composition for iPhone from this EXACT approved image.
+Change only the crop/framing to bring the three children's heads, seatbelted upper
+bodies, windshield, and recognizable upper front of their teal car closer. Preserve
+their exact faces, dark brown skin tones, hair, clothing, joyful expressions, Kai's
+waving hand, teal car materials, garden backdrop, colors, lighting and polished 3D
+cartoon illustration style. Tight square framing: the three children are large,
+clearly readable in the upper-middle, with enough visible teal car hood/headlights
+below to understand they're sitting together in the car. Garden foliage and sky
+surround them. Use the full square edge to edge, no border, no text, no logo, no UI,
+no already rounded corners, no new characters, no changed appearance, no added
+props, no alpha. This is the existing approved artwork adapted to square icon
+framing, not a new character design.

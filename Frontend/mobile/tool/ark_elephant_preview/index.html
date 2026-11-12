@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Ark · Elephant development preview</title>
+  <link rel="stylesheet" href="preview.css">
+  <script type="importmap">
+    {"imports":{"three":"./vendor/three.module.js"}}
+  </script>
+</head>
+<body>
+  <main id="scene" aria-label="Noah's Ark elephant boarding preview">
+    <div id="garden" aria-hidden="true"></div>
+    <canvas id="view"></canvas>
+    <header>
+      <span class="badge">Development preview · one elephant</span>
+      <span id="status" role="status">Loading saved Blender models…</span>
+    </header>
+    <nav aria-label="Preview controls">
+      <button id="start" disabled>Tap elephant</button>
+      <button id="pause" disabled>Pause</button>
+      <button id="replay" disabled>Replay</button>
+    </nav>
+  </main>
+  <script type="module" src="preview.mjs?review=varied-starts-v1"></script>
+</body>
+</html>

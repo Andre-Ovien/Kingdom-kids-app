@@ -2,6 +2,7 @@ import '../../../core/errors/app_exception.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../auth/domain/kid_profile.dart';
 import '../domain/parent_settings.dart';
+import 'parent_settings_store.dart';
 import 'parental_controls_api.dart';
 
 abstract interface class ParentalControlsRepository {
@@ -18,20 +19,34 @@ class RemoteParentalControlsRepository implements ParentalControlsRepository {
   RemoteParentalControlsRepository({
     AuthRepository? authRepository,
     ParentalControlsApi? api,
+    ParentSettingsStore? settingsStore,
   }) : _authRepository = authRepository ?? AuthRepository(),
-       _api = api ?? HttpParentalControlsApi();
+       _api = api ?? HttpParentalControlsApi(),
+       _settingsStore = settingsStore ?? SecureParentSettingsStore();
 
   final AuthRepository _authRepository;
   final ParentalControlsApi _api;
+  final ParentSettingsStore _settingsStore;
 
   @override
   Future<ParentSettings> fetchSettings({required String profileId}) async {
     final activeKid = await _requireActiveKid(profileId);
-    final settings = await _authRepository.withAccessToken(
-      (accessToken) =>
-          _api.fetchSettings(accessToken: accessToken, profileId: activeKid.id),
-    );
-    return _requireMatchingProfile(settings, activeKid.id);
+    try {
+      final settings = await _authRepository.withAccessToken(
+        (accessToken) => _api.fetchSettings(
+          accessToken: accessToken,
+          profileId: activeKid.id,
+        ),
+      );
+      final matchingSettings = _requireMatchingProfile(settings, activeKid.id);
+      await _writeCachedSettings(matchingSettings);
+      return matchingSettings;
+    } on AppException catch (error) {
+      if (!_isRetryableConnectivityFailure(error)) rethrow;
+      final cachedSettings = await _readCachedSettings(activeKid.id);
+      if (cachedSettings != null) return cachedSettings;
+      rethrow;
+    }
   }
 
   @override
@@ -47,15 +62,18 @@ class RemoteParentalControlsRepository implements ParentalControlsRepository {
       );
     }
     final activeKid = await _requireActiveKid(profileId);
-    final settings = await _authRepository.withAccessToken(
-      (accessToken) => _api.updateSettings(
+    final settings = await _authRepository.withAccessToken((accessToken) async {
+      await _requireActiveKid(activeKid.id);
+      return _api.updateSettings(
         accessToken: accessToken,
         profileId: activeKid.id,
         storyTextScale: storyTextScale,
         narrationEnabled: narrationEnabled,
-      ),
-    );
-    return _requireMatchingProfile(settings, activeKid.id);
+      );
+    });
+    final matchingSettings = _requireMatchingProfile(settings, activeKid.id);
+    await _writeCachedSettings(matchingSettings);
+    return matchingSettings;
   }
 
   Future<KidProfile> _requireActiveKid(String profileId) async {
@@ -88,4 +106,28 @@ class RemoteParentalControlsRepository implements ParentalControlsRepository {
     }
     return settings;
   }
+
+  Future<ParentSettings?> _readCachedSettings(String profileId) async {
+    try {
+      final settings = await _settingsStore.readSettings(profileId: profileId);
+      if (settings == null || settings.profileId != profileId) return null;
+      return settings;
+    } on Object {
+      return null;
+    }
+  }
+
+  Future<void> _writeCachedSettings(ParentSettings settings) async {
+    try {
+      await _settingsStore.writeSettings(settings);
+    } on Object {
+      // Secure storage is a resilience aid. A platform storage failure must
+      // never hide a valid, server-confirmed preferences response.
+    }
+  }
+}
+
+bool _isRetryableConnectivityFailure(AppException error) {
+  final code = error.code?.trim().toLowerCase();
+  return code == 'network_error' || code == 'request_timeout';
 }

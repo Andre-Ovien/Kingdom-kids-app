@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "name": "Kingdom Kids wrapped gift release",
+  "cellWidth": 352,
+  "cellHeight": 352,
+  "columns": 10,
+  "frameCount": 80,
+  "fps": 20,
+  "durationSeconds": 4.0,
+  "atlases": [
+    {
+      "asset": "assets/images/milestones/box_reveal_atlas.webp",
+      "firstFrame": 0,
+      "frameCount": 80
+    }
+  ],
+  "posterAsset": "assets/images/milestones/box_reveal_poster.webp",
+  "boxAnchor": [
+    0.5,
+    0.55
+  ],
+  "floorAnchor": [
+    0.5,
+    0.66
+  ],
+  "badgeAnchor": [
+    0.5,
+    0.25
+  ],
+  "timings": {
+    "spotlightHold": 0.6,
+    "shakeStart": 0.6,
+    "openingStarts": 1.6,
+    "boxOpen": 2.0,
+    "badgeStart": 2.0,
+    "badgeEnd": 2.8,
+    "brightStageStart": 2.0,
+    "piecesSettled": 3.1
+  },
+  "decodedAtlasBytes": 39649280,
+  "artworkVersion": "gift-v2"
+}

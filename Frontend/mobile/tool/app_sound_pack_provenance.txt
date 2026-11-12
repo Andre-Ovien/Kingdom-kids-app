@@ -1,0 +1,242 @@
+KINGDOM KIDS ORIGINAL APP SOUND PACK
+
+Provenance
+All seven WAV files were procedurally synthesized from this project's generator.
+The generator composes its own notes, arrangements, instrument resonances and
+short strike textures. No third-party samples, downloaded media, voices, paid
+services or existing-song melodies were used. This statement records provenance;
+it does not grant a license, make a CC0 dedication or waive project ownership.
+
+Character
+app_theme: 28.8-second, 100 BPM original D-major instrumental; warm wooden melody,
+quiet plucked-string accompaniment, low rounded bass, occasional celesta sparkle.
+splash: welcoming rising four-note celesta arrival over a warm lower wooden note.
+streak: cheerful ascending wooden chimes with a soft, harmonious plucked reward.
+level_up: a related, brighter five-note celebration, gently wider in stereo.
+tap: small woody tick with rounded transients; intentionally quiet and very short.
+select: short warm string pluck with a tiny upper wooden response.
+success: compact two-note positive resolution, a quiet lower chord and bright tail.
+
+Playback guidance
+Theme is intended as a quiet bed, typically around 0.2-0.35 player volume; avoid
+stacking multiple instances. The default WAV mix is intentionally below full scale.
+Pause the theme for story narration, gameplay with dedicated audio and background
+app state. UI cues should not repeat on rebuild or play when sound is disabled.
+This note describes asset intent; app lifecycle, audio focus, mute and route
+behavior must be verified by the playback integration.
+
+Loop construction
+The theme is exactly 48 quarter-note beats. Every note release and room-response
+delay wraps circularly across the boundary; there is no gap or artificial full-mix
+fade at the seam. No loop-start sound is repeated as a separate effect. Numeric
+edge continuity is measured on the final quantized PCM, not only the float mix.
+The cycle starts at a naturally quiet stereo crossing within 10 milliseconds of
+the bar boundary, keeping the first preview frame near silence without fading
+out the loop or cutting off preceding note releases.
+
+Verification limits
+Format, duration, DC, peaks, RMS, clipping and boundary continuity were checked
+numerically. These checks do not establish subjective musical quality or loudness
+comfort on a specific phone; review the previews on the actual device before
+finalizing playback volume. The creator did not claim an audible listening review.
+SHA-256 values allow a deterministic rerun to be compared without guessing.
+
+PCM measurements
+[
+  {
+    "file": "app_theme.wav",
+    "duration_seconds": 28.8,
+    "sample_rate_hz": 44100,
+    "channels": 2,
+    "pcm_bits": 16,
+    "bytes": 5080364,
+    "peak_dbfs": -10.715,
+    "rms_dbfs": -24.0,
+    "channel_dc": [
+      -1.4e-08,
+      -8e-09
+    ],
+    "clipped_samples": 0,
+    "first_frame": [
+      -0.00018311,
+      0.00024414
+    ],
+    "last_frame": [
+      -0.00259399,
+      -0.00213623
+    ],
+    "sha256": "bf4723b939cd6eb369beb4776fe7fefd363d0173886868174e925d7dccd124ad",
+    "loop_edge_step": [
+      0.002410889,
+      0.002380371
+    ],
+    "p99_internal_step": [
+      0.012420654,
+      0.015563965
+    ],
+    "rms_internal_step": [
+      0.004625653,
+      0.005713251
+    ],
+    "peak_internal_step": [
+      0.027404785,
+      0.033630371
+    ],
+    "loop_seam_curvature": [
+      0.000213623,
+      0.000244141
+    ]
+  },
+  {
+    "file": "splash.wav",
+    "duration_seconds": 1.25,
+    "sample_rate_hz": 44100,
+    "channels": 2,
+    "pcm_bits": 16,
+    "bytes": 220544,
+    "peak_dbfs": -8.652,
+    "rms_dbfs": -21.0,
+    "channel_dc": [
+      2.15e-07,
+      2.11e-07
+    ],
+    "clipped_samples": 0,
+    "first_frame": [
+      0.0,
+      0.0
+    ],
+    "last_frame": [
+      0.0,
+      0.0
+    ],
+    "sha256": "6f73e0c55c32daf398e7aa8ba5e64c8786a8bc13d75ca0efe8d7dfb2e5769791"
+  },
+  {
+    "file": "streak.wav",
+    "duration_seconds": 1.6,
+    "sample_rate_hz": 44100,
+    "channels": 2,
+    "pcm_bits": 16,
+    "bytes": 282284,
+    "peak_dbfs": -7.426,
+    "rms_dbfs": -20.0,
+    "channel_dc": [
+      -1.25e-07,
+      -1.49e-07
+    ],
+    "clipped_samples": 0,
+    "first_frame": [
+      0.0,
+      0.0
+    ],
+    "last_frame": [
+      0.0,
+      0.0
+    ],
+    "sha256": "6db6bcd70875d73f25b39d3c07a2f694337604b45656029670d220b0f9aa6e1a"
+  },
+  {
+    "file": "level_up.wav",
+    "duration_seconds": 1.85,
+    "sample_rate_hz": 44100,
+    "channels": 2,
+    "pcm_bits": 16,
+    "bytes": 326384,
+    "peak_dbfs": -6.801,
+    "rms_dbfs": -19.615,
+    "channel_dc": [
+      1.59e-07,
+      -2e-07
+    ],
+    "clipped_samples": 0,
+    "first_frame": [
+      0.0,
+      0.0
+    ],
+    "last_frame": [
+      0.0,
+      0.0
+    ],
+    "sha256": "bd7ec15d0b5027fdd441e6b9eef269acb2fad6ff4be95e1b05ecaf8ed0fbfca2"
+  },
+  {
+    "file": "tap.wav",
+    "duration_seconds": 0.08,
+    "sample_rate_hz": 44100,
+    "channels": 2,
+    "pcm_bits": 16,
+    "bytes": 14156,
+    "peak_dbfs": -13.0,
+    "rms_dbfs": -28.201,
+    "channel_dc": [
+      -9.5e-08,
+      -9.5e-08
+    ],
+    "clipped_samples": 0,
+    "first_frame": [
+      0.0,
+      0.0
+    ],
+    "last_frame": [
+      0.0,
+      0.0
+    ],
+    "sha256": "a5471d5199a30dd824a98cb564b825c71ef6ba506776a74981daf5bf84987e8c"
+  },
+  {
+    "file": "select.wav",
+    "duration_seconds": 0.18,
+    "sample_rate_hz": 44100,
+    "channels": 2,
+    "pcm_bits": 16,
+    "bytes": 31796,
+    "peak_dbfs": -15.982,
+    "rms_dbfs": -23.0,
+    "channel_dc": [
+      -8.5e-08,
+      4e-09
+    ],
+    "clipped_samples": 0,
+    "first_frame": [
+      0.0,
+      0.0
+    ],
+    "last_frame": [
+      0.0,
+      0.0
+    ],
+    "sha256": "7b915d56bcb63c6b5db6120c2bcd4b4a913157e4c99ced9009cc461e81191d98"
+  },
+  {
+    "file": "success.wav",
+    "duration_seconds": 0.64,
+    "sample_rate_hz": 44100,
+    "channels": 2,
+    "pcm_bits": 16,
+    "bytes": 112940,
+    "peak_dbfs": -8.939,
+    "rms_dbfs": -21.0,
+    "channel_dc": [
+      1.28e-07,
+      1.44e-07
+    ],
+    "clipped_samples": 0,
+    "first_frame": [
+      0.0,
+      0.0
+    ],
+    "last_frame": [
+      0.0,
+      0.0
+    ],
+    "sha256": "d93af36da0fca1c10d87707c3969366d457b03cbeeebec0bc544c9d339acfae8"
+  }
+]
+
+Total asset bytes: 6068468
+
+Independent final-file verification on 10 October 2026
+A full second generation in a temporary directory reproduced all seven WAV files
+byte for byte. ffmpeg decoded every final WAV without errors. Stereo-to-mono RMS
+loss was no greater than 0.11 dB, so the quiet mix does not depend on cancellation
+prone stereo widening. Files remain audition candidates, without app integration.

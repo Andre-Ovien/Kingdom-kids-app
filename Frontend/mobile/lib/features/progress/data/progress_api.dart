@@ -99,7 +99,17 @@ class HttpProgressApi implements ProgressApi {
         );
       }
       try {
-        return StoryActivityEvent.fromJson(event);
+        final receipt = StoryActivityEvent.fromJson(event);
+        if (receipt.profileId != normalizedProfileId ||
+            receipt.storyId != normalizedStoryId ||
+            receipt.type != eventType ||
+            receipt.operationId != normalizedOperationId) {
+          throw const AppException(
+            'Your story activity was saved, but the receipt did not match.',
+            code: 'progress_response_mismatch',
+          );
+        }
+        return receipt;
       } on FormatException {
         throw const AppException(
           'Your story activity was saved, but we could not read the receipt.',

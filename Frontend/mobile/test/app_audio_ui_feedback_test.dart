@@ -1,0 +1,448 @@
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:mobile/app/router.dart';
+import 'package:mobile/features/auth/data/auth_api.dart';
+import 'package:mobile/features/auth/data/auth_repository.dart';
+import 'package:mobile/features/auth/data/auth_session_store.dart';
+import 'package:mobile/features/auth/domain/auth_session.dart';
+import 'package:mobile/features/auth/domain/kid_profile.dart';
+import 'package:mobile/features/auth/domain/parent_account.dart';
+import 'package:mobile/features/auth/presentation/auth_screen.dart';
+import 'package:mobile/features/auth/presentation/kid_profile_setup_screen.dart';
+import 'package:mobile/features/games/data/game_repository.dart';
+import 'package:mobile/features/games/domain/mini_game.dart';
+import 'package:mobile/features/games/presentation/games_screen.dart';
+import 'package:mobile/features/onboarding/presentation/onboarding_screen.dart';
+import 'package:mobile/shared/audio/app_audio_controller.dart';
+import 'package:mobile/shared/audio/app_audio_scope.dart';
+import 'package:mobile/shared/audio/app_sound_cue.dart';
+import 'package:mobile/shared/widgets/floating_liquid_nav.dart';
+
+void main() {
+  setUp(() {
+    TestWidgetsFlutterBinding.ensureInitialized()
+        .platformDispatcher
+        .accessibilityFeaturesTestValue = const FakeAccessibilityFeatures(
+      disableAnimations: true,
+    );
+  });
+  tearDown(() {
+    TestWidgetsFlutterBinding.ensureInitialized().platformDispatcher
+        .clearAccessibilityFeaturesTestValue();
+  });
+
+  testWidgets(
+    'tab navigation stays silent on changes, rebuilds and reselects',
+    (tester) async {
+      final audio = _RecordingAudio();
+      addTearDown(audio.dispose);
+      await tester.pumpWidget(
+        AppAudioScope(
+          controller: audio,
+          child: MaterialApp(
+            home: const Scaffold(
+              bottomNavigationBar: FloatingLiquidNav(
+                selectedRoute: AppRoutes.home,
+              ),
+            ),
+            routes: {
+              AppRoutes.games: (_) => const Scaffold(
+                bottomNavigationBar: FloatingLiquidNav(
+                  selectedRoute: AppRoutes.games,
+                ),
+              ),
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Home'));
+      audio.notifyListeners();
+      await tester.pump();
+      expect(audio.cues, isEmpty);
+
+      await tester.tap(find.text('Games'));
+      await tester.pumpAndSettle();
+      expect(audio.cues, isEmpty);
+      await tester.tap(find.text('Games'));
+      audio.notifyListeners();
+      await tester.pumpAndSettle();
+      expect(audio.cues, isEmpty);
+    },
+  );
+
+  testWidgets('buddy feedback follows changed pages and accepted selection', (
+    tester,
+  ) async {
+    final audio = _RecordingAudio();
+    addTearDown(audio.dispose);
+    await tester.pumpWidget(
+      AppAudioScope(
+        controller: audio,
+        child: const MaterialApp(home: KidProfileSetupScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('story-buddy-page-0')));
+    audio.notifyListeners();
+    await tester.pumpAndSettle();
+    expect(audio.cues, isEmpty);
+
+    await tester.tap(find.byKey(const ValueKey('story-buddy-page-1')));
+    await tester.pumpAndSettle();
+    expect(audio.cues, [AppSoundCue.select]);
+    await tester.tap(find.byKey(const ValueKey('story-buddy-page-1')));
+    await tester.pumpAndSettle();
+    expect(audio.cues, [AppSoundCue.select]);
+
+    await tester.tap(find.byKey(const Key('select-story-buddy')));
+    await tester.pumpAndSettle();
+    expect(audio.cues, [AppSoundCue.select, AppSoundCue.select]);
+    audio.notifyListeners();
+    await tester.pump();
+    final create = find.byKey(const Key('create-kid-profile-button'));
+    await tester.ensureVisible(create);
+    await tester.tap(create);
+    await tester.pumpAndSettle();
+    expect(audio.cues.where((cue) => cue == AppSoundCue.success), isEmpty);
+  });
+
+  testWidgets(
+    'profile save celebrates once after confirmed picker navigation',
+    (tester) async {
+      final audio = _RecordingAudio();
+      addTearDown(audio.dispose);
+      final store = MemoryAuthSessionStore();
+      await store.writeSession(_session);
+      final repository = AuthRepository(
+        sessionStore: store,
+        api: HttpAuthApi(
+          baseUrl: 'https://kingdom-kids.test/api',
+          client: MockClient((request) async {
+            final body = jsonDecode(request.body) as Map;
+            return http.Response(
+              jsonEncode({
+                'id': 'new-kid',
+                'display_name': 'Ada',
+                'avatar_key': body['avatar_key'],
+              }),
+              201,
+            );
+          }),
+        ),
+      );
+      await tester.pumpWidget(
+        AppAudioScope(
+          controller: audio,
+          child: MaterialApp(
+            home: KidProfileSetupScreen(repository: repository),
+            routes: {
+              AppRoutes.profilePicker: (_) =>
+                  const Scaffold(body: Text('Saved profile picker')),
+            },
+          ),
+        ),
+      );
+      await tester.tap(find.byKey(const Key('select-story-buddy')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('kid-profile-name-field')),
+        'Ada',
+      );
+      final create = find.byKey(const Key('create-kid-profile-button'));
+      await tester.ensureVisible(create);
+      await tester.tap(create);
+      await tester.pumpAndSettle();
+      expect(find.text('Saved profile picker'), findsOneWidget);
+      expect(
+        audio.cues.where((cue) => cue == AppSoundCue.success),
+        hasLength(1),
+      );
+      audio.notifyListeners();
+      await tester.pumpAndSettle();
+      expect(
+        audio.cues.where((cue) => cue == AppSoundCue.success),
+        hasLength(1),
+      );
+    },
+  );
+
+  testWidgets('auth rejects invalid and duplicate submits without extra cues', (
+    tester,
+  ) async {
+    final audio = _RecordingAudio();
+    addTearDown(audio.dispose);
+    final response = Completer<http.Response>();
+    var requests = 0;
+    final repository = AuthRepository(
+      sessionStore: MemoryAuthSessionStore(),
+      api: HttpAuthApi(
+        baseUrl: 'https://kingdom-kids.test/api',
+        client: MockClient((request) async {
+          requests++;
+          return response.future;
+        }),
+      ),
+    );
+    await tester.pumpWidget(
+      AppAudioScope(
+        controller: audio,
+        child: MaterialApp(
+          home: AuthScreen(
+            initialMode: AuthScreenMode.login,
+            repository: repository,
+          ),
+        ),
+      ),
+    );
+    final submit = find.byKey(const Key('auth-submit-button'));
+    await tester.ensureVisible(submit);
+    await tester.tap(submit);
+    await tester.pump();
+    expect(audio.cues, isEmpty);
+    expect(requests, 0);
+    await tester.enterText(
+      find.byKey(const Key('auth-email-field')),
+      'parent@example.com',
+    );
+    await tester.enterText(
+      find.byKey(const Key('auth-password-field')),
+      'strongpassword123',
+    );
+    await tester.ensureVisible(submit);
+    await tester.tap(submit);
+    await tester.pump();
+    await tester.tap(submit);
+    audio.notifyListeners();
+    await tester.pump();
+    expect(audio.cues, [AppSoundCue.tap]);
+    expect(requests, 1);
+    response.complete(http.Response('{"detail":"Try again."}', 400));
+    await tester.pumpAndSettle();
+    expect(audio.cues, [AppSoundCue.tap]);
+  });
+
+  testWidgets('onboarding swipe and explicit Skip both stay quiet', (
+    tester,
+  ) async {
+    final audio = _RecordingAudio();
+    addTearDown(audio.dispose);
+    await tester.pumpWidget(
+      AppAudioScope(
+        controller: audio,
+        child: MaterialApp(
+          home: const OnboardingScreen(),
+          routes: {
+            AppRoutes.auth: (_) => const Scaffold(body: Text('Parent account')),
+          },
+        ),
+      ),
+    );
+    await tester.drag(find.byType(PageView), const Offset(-650, 0));
+    await tester.pumpAndSettle();
+    audio.notifyListeners();
+    await tester.pump();
+    expect(audio.cues, isEmpty);
+    await tester.drag(find.byType(PageView), const Offset(650, 0));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const Key('onboarding-photo-first-skip')).hitTestable(),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Parent account'), findsOneWidget);
+    expect(audio.cues, isEmpty);
+  });
+
+  testWidgets(
+    'direct quest detail and gameplay pushes expose silent route names',
+    (tester) async {
+      _useTallSurface(tester);
+      final audio = _RecordingAudio();
+      addTearDown(audio.dispose);
+      final observer = _RecordingRoutes();
+      await tester.pumpWidget(
+        AppAudioScope(
+          controller: audio,
+          child: MaterialApp(
+            navigatorObservers: [observer],
+            home: _stillGamesFeedback(
+              GamesScreen(
+                repository: _Games(),
+                authRepository: await _activeAuth(),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final card = find.byKey(const Key('game-card-audio-quiz'));
+      await tester.ensureVisible(card);
+      await tester.tap(card);
+      await tester.pumpAndSettle();
+      expect(observer.names.last, AppRoutes.gameDetail);
+      final play = find.byKey(const Key('play-game-button'));
+      await tester.ensureVisible(play);
+      await tester.tap(play);
+      await tester.pumpAndSettle();
+      expect(observer.names.last, '/games/play');
+      expect(audio.cues, isEmpty);
+    },
+  );
+
+  for (final completed in [false, true]) {
+    testWidgets(
+      'quest return celebrates only confirmed new completion: $completed',
+      (tester) async {
+        _useTallSurface(tester);
+        final audio = _RecordingAudio();
+        addTearDown(audio.dispose);
+        final repository = _Games();
+        final observer = _RecordingRoutes();
+        await tester.pumpWidget(
+          AppAudioScope(
+            controller: audio,
+            child: MaterialApp(
+              navigatorObservers: [observer],
+              home: _stillGamesFeedback(
+                GamesScreen(
+                  repository: repository,
+                  authRepository: await _activeAuth(),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final card = find.byKey(const Key('game-card-audio-quiz'));
+        await tester.ensureVisible(card);
+        await tester.tap(card);
+        await tester.pumpAndSettle();
+        repository.completed = completed;
+        observer.navigator!.pop(true);
+        await tester.pumpAndSettle();
+        expect(audio.cues, completed ? [AppSoundCue.success] : isEmpty);
+        if (completed) {
+          await tester.ensureVisible(card);
+          await tester.tap(card);
+          await tester.pumpAndSettle();
+          observer.navigator!.pop(true);
+          await tester.pumpAndSettle();
+          expect(audio.cues, [AppSoundCue.success]);
+        }
+        audio.notifyListeners();
+        await tester.pumpAndSettle();
+        expect(audio.cues, completed ? [AppSoundCue.success] : isEmpty);
+      },
+    );
+  }
+}
+
+void _useTallSurface(WidgetTester tester) {
+  tester.view.devicePixelRatio = 1;
+  tester.view.physicalSize = const Size(800, 1200);
+  addTearDown(tester.view.reset);
+}
+
+class _RecordingAudio extends AppAudioController {
+  final cues = <AppSoundCue>[];
+  @override
+  void playEffect(AppSoundCue cue) => cues.add(cue);
+}
+
+class _RecordingRoutes extends NavigatorObserver {
+  final names = <String?>[];
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    names.add(route.settings.name);
+  }
+}
+
+const _kid = KidProfile(
+  id: 'kid-1',
+  parentId: 'parent-1',
+  displayName: 'Ada',
+  avatarKey: 'dove',
+);
+const _session = AuthSession(
+  parent: ParentAccount(id: 'parent-1', email: 'parent@example.com'),
+  accessToken: 'access',
+  profiles: [_kid],
+);
+
+Future<AuthRepository> _activeAuth() async {
+  final store = MemoryAuthSessionStore();
+  await store.writeSession(_session);
+  await store.writeSelectedKidId(_kid.id);
+  return AuthRepository(sessionStore: store);
+}
+
+class _Games implements GameRepository {
+  bool completed = false;
+  MiniGame get game => MiniGame(
+    id: 'audio-quiz',
+    slug: 'audio-quiz',
+    title: 'Audio Quest',
+    type: MiniGameType.quiz,
+    difficulty: 'Easy',
+    duration: '1 min',
+    imageAsset: 'assets/images/esther.jpeg',
+    description: 'A small quest for navigation and completion checks.',
+    rewardStars: 3,
+    totalLevels: 1,
+    playerProgress: GameProgress(
+      profileId: _kid.id,
+      totalLevels: 1,
+      completedLevels: completed ? 1 : 0,
+    ),
+    levels: [
+      GameLevel(
+        id: 'one',
+        number: 1,
+        title: 'One good choice',
+        instructions: 'Choose the answer.',
+        maxScore: 10,
+        config: {
+          'questions': [
+            {
+              'id': 'q1',
+              'prompt': 'Who was brave?',
+              'options': [
+                {'id': 'a', 'text': 'Esther'},
+                {'id': 'b', 'text': 'Haman'},
+              ],
+            },
+          ],
+        },
+      ),
+    ],
+  );
+
+  @override
+  Future<List<MiniGame>> fetchGames({required String profileId}) async => [
+    game,
+  ];
+  @override
+  Future<MiniGame> fetchGame(String slug, {required String profileId}) async =>
+      game;
+  @override
+  Future<GameSubmission> submitResult({
+    required String slug,
+    required String profileId,
+    required int levelNumber,
+    required String operationId,
+    required Map<String, dynamic> result,
+  }) => throw UnimplementedError('This test never submits gameplay.');
+}
+
+// These tests verify route/audio feedback, independently of the banner clock.
+Widget _stillGamesFeedback(GamesScreen screen) => Builder(
+  builder: (context) => MediaQuery(
+    data: MediaQuery.of(context).copyWith(disableAnimations: true),
+    child: screen,
+  ),
+);

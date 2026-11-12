@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "provenance": "Original native Blender meshes and keyed fin/wing motion; original Ark quadruped rigs/atlases reused.",
+  "native_source": "Motion/creation-world-blender-v1/creation-world-source.blend",
+  "motion_frames": 8,
+  "motion_cell": 224,
+  "animal_source": "assets/images/games/ark_traffic/manifest.json",
+  "decoded_budget_bytes": 41943040,
+  "assets": [
+    "land.png",
+    "empty.png",
+    "forest.png",
+    "bird.png",
+    "background.png",
+    "light.png",
+    "moon.png",
+    "cloud.png",
+    "water.png",
+    "sun.png",
+    "fish.png"
+  ]
+}

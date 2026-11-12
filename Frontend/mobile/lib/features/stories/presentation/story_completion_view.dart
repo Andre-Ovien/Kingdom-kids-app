@@ -10,20 +10,22 @@ import '../domain/story_detail.dart';
 
 /// A focused celebration shown after a child finishes a narrated story.
 ///
-/// This view deliberately celebrates the completed activity without promising
-/// XP or a badge. Story rewards can be introduced once completion is persisted
-/// by the backend.
+/// XP is shown only after the backend confirms a saved story reward.
 class StoryCompletionView extends StatefulWidget {
   const StoryCompletionView({
     required this.story,
     required this.profile,
     required this.onContinue,
+    this.xpAwarded = 0,
+    this.isContinuing = false,
     super.key,
   });
 
   final StoryDetail story;
   final KidProfile profile;
   final VoidCallback onContinue;
+  final int xpAwarded;
+  final bool isContinuing;
 
   @override
   State<StoryCompletionView> createState() => _StoryCompletionViewState();
@@ -179,6 +181,7 @@ class _StoryCompletionViewState extends State<StoryCompletionView>
                                           story: widget.story,
                                           option: option,
                                           ink: _ink,
+                                          xpAwarded: widget.xpAwarded,
                                         ),
                                       ),
                                     ),
@@ -195,6 +198,7 @@ class _StoryCompletionViewState extends State<StoryCompletionView>
                                 ink: _ink,
                                 storyTitle: widget.story.title,
                                 onPressed: widget.onContinue,
+                                isContinuing: widget.isContinuing,
                               ),
                             ),
                           ),
@@ -281,11 +285,13 @@ class _CompletionCopy extends StatelessWidget {
     required this.story,
     required this.option,
     required this.ink,
+    required this.xpAwarded,
   });
 
   final StoryDetail story;
   final KidAvatarOption option;
   final Color ink;
+  final int xpAwarded;
 
   @override
   Widget build(BuildContext context) {
@@ -343,6 +349,21 @@ class _CompletionCopy extends StatelessWidget {
             height: 1.3,
           ),
         ),
+        if (xpAwarded > 0) ...[
+          const SizedBox(height: 14),
+          Semantics(
+            liveRegion: true,
+            child: Text(
+              '+$xpAwarded XP earned',
+              key: const Key('story-completion-xp'),
+              textAlign: TextAlign.center,
+              style: textTheme.titleLarge?.copyWith(
+                color: ink,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -353,11 +374,13 @@ class _ContinueAction extends StatelessWidget {
     required this.ink,
     required this.storyTitle,
     required this.onPressed,
+    required this.isContinuing,
   });
 
   final Color ink;
   final String storyTitle;
   final VoidCallback onPressed;
+  final bool isContinuing;
 
   @override
   Widget build(BuildContext context) {
@@ -373,7 +396,7 @@ class _ContinueAction extends StatelessWidget {
             child: ExcludeSemantics(
               child: FilledButton(
                 key: const Key('story-completion-continue'),
-                onPressed: onPressed,
+                onPressed: isContinuing ? null : onPressed,
                 style: FilledButton.styleFrom(
                   backgroundColor: Colors.white,
                   foregroundColor: ink,
@@ -393,7 +416,9 @@ class _ContinueAction extends StatelessWidget {
                     letterSpacing: 0.2,
                   ),
                 ),
-                child: const Text('Continue'),
+                child: Text(
+                  isContinuing ? 'Saving your progress…' : 'Continue',
+                ),
               ),
             ),
           ),

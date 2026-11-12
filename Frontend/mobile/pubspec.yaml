@@ -1,5 +1,5 @@
 name: mobile
-description: "A new Flutter project."
+description: "A joyful Bible-story, read-along, and learning app for families."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -34,10 +34,19 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
-  flutter_secure_storage: ^9.2.4
+  # Stay on v10 for one shipped migration cycle before v11 removes the legacy
+  # ciphers needed to read installations created with v9.
+  flutter_secure_storage: ^10.3.4
+  flutter_local_notifications: ^22.3.0
   flutter_tts: ^4.2.5
+  flutter_timezone: ^5.1.0
   http: ^1.5.0
   just_audio: ^0.10.6
+  audio_session: ^0.2.4
+  timezone: ^0.11.1
+  url_launcher: ^6.3.2
+  video_player: ^2.13.0
+  webview_flutter: 4.9.0
 
 dev_dependencies:
   flutter_test:
@@ -49,6 +58,18 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/images/branding/kingdom-kids-car-icon-v1.png
+  image_path_ios: assets/images/branding/kingdom-kids-car-icon-v1.png
+  adaptive_icon_background: "#72C8EE"
+  adaptive_icon_foreground: assets/images/branding/kingdom-kids-car-icon-v1.png
+  adaptive_icon_foreground_inset: 16
+  min_sdk_android: 24
+  remove_alpha_ios: true
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -61,14 +82,53 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
+  fonts:
+    - family: OnboardingPoppins
+      fonts:
+        - asset: assets/fonts/OnboardingPoppins-Regular.ttf
+    - family: SplashKaushanScript
+      fonts:
+        - asset: assets/fonts/KaushanScript-Regular.ttf
+    - family: SplashBricolageGrotesque
+      fonts:
+        - asset: assets/fonts/BricolageGrotesque-Variable.ttf
+          weight: 800
+
   # To add assets to your application, add an assets section, like this:
   assets:
+    - assets/policies/privacy-policy.json
     - assets/images/
     - assets/images/characters/
+    - assets/images/home/
     - assets/images/characters/poses/
     - assets/images/mascot/
     - assets/images/onboarding/
+    - assets/images/onboarding/photos/
+    - assets/images/onboarding/family-20261111/
+    - assets/fonts/OnboardingPoppins-OFL.txt
+    - assets/images/splash/
+    - assets/fonts/KaushanScript-OFL.txt
+    - assets/fonts/BricolageGrotesque-OFL.txt
     - assets/images/stories/
+    - assets/images/games/
+    - assets/images/games/matching/
+    - assets/images/games/puzzle_quest/
+    - assets/images/games/ark_traffic/
+    - assets/images/games/creation_world/
+    - assets/images/games/wise_builders/
+    - assets/games/ark_garden/
+    - assets/games/ark_garden/assets/
+    - assets/games/ark_garden/assets/licenses/
+    - assets/games/ark_garden/vendor/
+    - assets/games/ark_garden/vendor/loaders/
+    - assets/games/ark_garden/vendor/utils/
+    - assets/videos/
+    - assets/audio/david/
+    - assets/audio/app/app_theme.wav
+    - assets/audio/app/tap.wav
+    - assets/audio/app/select.wav
+    - assets/audio/app/success.wav
+    - assets/audio/app/streak.wav
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

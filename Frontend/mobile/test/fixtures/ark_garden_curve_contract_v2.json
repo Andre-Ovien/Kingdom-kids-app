@@ -1,0 +1,838 @@
+{
+  "mode": "ark_garden",
+  "garden": {
+    "version": 2,
+    "tick_ms": 100,
+    "time_limit_ticks": 600,
+    "world": {
+      "width": 32,
+      "height": 14
+    },
+    "projection": {
+      "ground_y_scale": 0.45,
+      "elevation_y_scale": 0.8
+    },
+    "animals": [
+      {
+        "id": "elephant",
+        "species": "elephant",
+        "label": "Elephant",
+        "speed_units_per_second": 10,
+        "body_length_units": 0.2,
+        "route": [
+          {
+            "x": 3,
+            "y": 1.0,
+            "z": 0,
+            "phase": "garden"
+          },
+          {
+            "x": 28,
+            "y": 2.3,
+            "z": 0,
+            "phase": "garden"
+          },
+          {
+            "x": 28,
+            "y": 3,
+            "z": 0,
+            "phase": "stairs"
+          },
+          {
+            "x": 28,
+            "y": 8,
+            "z": 4.3,
+            "phase": "stairs"
+          },
+          {
+            "x": 28,
+            "y": 9,
+            "z": 4.3,
+            "phase": "door"
+          },
+          {
+            "x": 28,
+            "y": 13,
+            "z": 4.3,
+            "phase": "interior"
+          }
+        ],
+        "body_width_units": 0.2,
+        "body_rear_units": 0.1,
+        "queue_gate_distance_units": 0,
+        "approach_curves": [
+          [
+            {
+              "x": 3,
+              "y": 1.0,
+              "z": 0
+            },
+            {
+              "x": 6,
+              "y": 1.0,
+              "z": 0
+            },
+            {
+              "x": 9,
+              "y": 1.0,
+              "z": 0
+            },
+            {
+              "x": 28,
+              "y": 0.3,
+              "z": 0
+            },
+            {
+              "x": 28,
+              "y": 1.3,
+              "z": 0
+            },
+            {
+              "x": 28,
+              "y": 2.3,
+              "z": 0
+            }
+          ]
+        ]
+      },
+      {
+        "id": "lion",
+        "species": "lion",
+        "label": "Lion",
+        "speed_units_per_second": 10,
+        "body_length_units": 0.2,
+        "route": [
+          {
+            "x": 3,
+            "y": 2.2,
+            "z": 0,
+            "phase": "garden"
+          },
+          {
+            "x": 28,
+            "y": 2.3,
+            "z": 0,
+            "phase": "garden"
+          },
+          {
+            "x": 28,
+            "y": 3,
+            "z": 0,
+            "phase": "stairs"
+          },
+          {
+            "x": 28,
+            "y": 8,
+            "z": 4.3,
+            "phase": "stairs"
+          },
+          {
+            "x": 28,
+            "y": 9,
+            "z": 4.3,
+            "phase": "door"
+          },
+          {
+            "x": 28,
+            "y": 13,
+            "z": 4.3,
+            "phase": "interior"
+          }
+        ],
+        "body_width_units": 0.2,
+        "body_rear_units": 0.1,
+        "queue_gate_distance_units": 0,
+        "approach_curves": [
+          [
+            {
+              "x": 3,
+              "y": 2.2,
+              "z": 0
+            },
+            {
+              "x": 6,
+              "y": 2.2,
+              "z": 0
+            },
+            {
+              "x": 9,
+              "y": 2.2,
+              "z": 0
+            },
+            {
+              "x": 28,
+              "y": 0.3,
+              "z": 0
+            },
+            {
+              "x": 28,
+              "y": 1.3,
+              "z": 0
+            },
+            {
+              "x": 28,
+              "y": 2.3,
+              "z": 0
+            }
+          ]
+        ]
+      },
+      {
+        "id": "giraffe",
+        "species": "giraffe",
+        "label": "Giraffe",
+        "speed_units_per_second": 10,
+        "body_length_units": 0.2,
+        "route": [
+          {
+            "x": 3,
+            "y": 3.4,
+            "z": 0,
+            "phase": "garden"
+          },
+          {
+            "x": 28,
+            "y": 2.3,
+            "z": 0,
+            "phase": "garden"
+          },
+          {
+            "x": 28,
+            "y": 3,
+            "z": 0,
+            "phase": "stairs"
+          },
+          {
+            "x": 28,
+            "y": 8,
+            "z": 4.3,
+            "phase": "stairs"
+          },
+          {
+            "x": 28,
+            "y": 9,
+            "z": 4.3,
+            "phase": "door"
+          },
+          {
+            "x": 28,
+            "y": 13,
+            "z": 4.3,
+            "phase": "interior"
+          }
+        ],
+        "body_width_units": 0.2,
+        "body_rear_units": 0.1,
+        "queue_gate_distance_units": 0,
+        "approach_curves": [
+          [
+            {
+              "x": 3,
+              "y": 3.4,
+              "z": 0
+            },
+            {
+              "x": 6,
+              "y": 3.4,
+              "z": 0
+            },
+            {
+              "x": 9,
+              "y": 3.4,
+              "z": 0
+            },
+            {
+              "x": 28,
+              "y": 0.3,
+              "z": 0
+            },
+            {
+              "x": 28,
+              "y": 1.3,
+              "z": 0
+            },
+            {
+              "x": 28,
+              "y": 2.3,
+              "z": 0
+            }
+          ]
+        ]
+      },
+      {
+        "id": "zebra",
+        "species": "zebra",
+        "label": "Zebra",
+        "speed_units_per_second": 10,
+        "body_length_units": 0.2,
+        "route": [
+          {
+            "x": 3,
+            "y": 4.6,
+            "z": 0,
+            "phase": "garden"
+          },
+          {
+            "x": 28,
+            "y": 2.3,
+            "z": 0,
+            "phase": "garden"
+          },
+          {
+            "x": 28,
+            "y": 3,
+            "z": 0,
+            "phase": "stairs"
+          },
+          {
+            "x": 28,
+            "y": 8,
+            "z": 4.3,
+            "phase": "stairs"
+          },
+          {
+            "x": 28,
+            "y": 9,
+            "z": 4.3,
+            "phase": "door"
+          },
+          {
+            "x": 28,
+            "y": 13,
+            "z": 4.3,
+            "phase": "interior"
+          }
+        ],
+        "body_width_units": 0.2,
+        "body_rear_units": 0.1,
+        "queue_gate_distance_units": 0,
+        "approach_curves": [
+          [
+            {
+              "x": 3,
+              "y": 4.6,
+              "z": 0
+            },
+            {
+              "x": 6,
+              "y": 4.6,
+              "z": 0
+            },
+            {
+              "x": 9,
+              "y": 4.6,
+              "z": 0
+            },
+            {
+              "x": 28,
+              "y": 0.3,
+              "z": 0
+            },
+            {
+              "x": 28,
+              "y": 1.3,
+              "z": 0
+            },
+            {
+              "x": 28,
+              "y": 2.3,
+              "z": 0
+            }
+          ]
+        ]
+      },
+      {
+        "id": "dove",
+        "species": "dove",
+        "label": "Dove",
+        "speed_units_per_second": 10,
+        "body_length_units": 0.2,
+        "route": [
+          {
+            "x": 3,
+            "y": 5.8,
+            "z": 0,
+            "phase": "garden"
+          },
+          {
+            "x": 28,
+            "y": 2.3,
+            "z": 0,
+            "phase": "garden"
+          },
+          {
+            "x": 28,
+            "y": 3,
+            "z": 0,
+            "phase": "stairs"
+          },
+          {
+            "x": 28,
+            "y": 8,
+            "z": 4.3,
+            "phase": "stairs"
+          },
+          {
+            "x": 28,
+            "y": 9,
+            "z": 4.3,
+            "phase": "door"
+          },
+          {
+            "x": 28,
+            "y": 13,
+            "z": 4.3,
+            "phase": "interior"
+          }
+        ],
+        "body_width_units": 0.2,
+        "body_rear_units": 0.1,
+        "queue_gate_distance_units": 0,
+        "approach_curves": [
+          [
+            {
+              "x": 3,
+              "y": 5.8,
+              "z": 0
+            },
+            {
+              "x": 6,
+              "y": 5.8,
+              "z": 0
+            },
+            {
+              "x": 9,
+              "y": 5.8,
+              "z": 0
+            },
+            {
+              "x": 28,
+              "y": 0.3,
+              "z": 0
+            },
+            {
+              "x": 28,
+              "y": 1.3,
+              "z": 0
+            },
+            {
+              "x": 28,
+              "y": 2.3,
+              "z": 0
+            }
+          ]
+        ]
+      },
+      {
+        "id": "sheep",
+        "species": "sheep",
+        "label": "Sheep",
+        "speed_units_per_second": 10,
+        "body_length_units": 0.2,
+        "route": [
+          {
+            "x": 3,
+            "y": 7.0,
+            "z": 0,
+            "phase": "garden"
+          },
+          {
+            "x": 28,
+            "y": 2.3,
+            "z": 0,
+            "phase": "garden"
+          },
+          {
+            "x": 28,
+            "y": 3,
+            "z": 0,
+            "phase": "stairs"
+          },
+          {
+            "x": 28,
+            "y": 8,
+            "z": 4.3,
+            "phase": "stairs"
+          },
+          {
+            "x": 28,
+            "y": 9,
+            "z": 4.3,
+            "phase": "door"
+          },
+          {
+            "x": 28,
+            "y": 13,
+            "z": 4.3,
+            "phase": "interior"
+          }
+        ],
+        "body_width_units": 0.2,
+        "body_rear_units": 0.1,
+        "queue_gate_distance_units": 0,
+        "approach_curves": [
+          [
+            {
+              "x": 3,
+              "y": 7.0,
+              "z": 0
+            },
+            {
+              "x": 6,
+              "y": 7.0,
+              "z": 0
+            },
+            {
+              "x": 9,
+              "y": 7.0,
+              "z": 0
+            },
+            {
+              "x": 28,
+              "y": 0.3,
+              "z": 0
+            },
+            {
+              "x": 28,
+              "y": 1.3,
+              "z": 0
+            },
+            {
+              "x": 28,
+              "y": 2.3,
+              "z": 0
+            }
+          ]
+        ]
+      },
+      {
+        "id": "camel",
+        "species": "camel",
+        "label": "Camel",
+        "speed_units_per_second": 10,
+        "body_length_units": 0.2,
+        "route": [
+          {
+            "x": 3,
+            "y": 8.2,
+            "z": 0,
+            "phase": "garden"
+          },
+          {
+            "x": 28,
+            "y": 2.3,
+            "z": 0,
+            "phase": "garden"
+          },
+          {
+            "x": 28,
+            "y": 3,
+            "z": 0,
+            "phase": "stairs"
+          },
+          {
+            "x": 28,
+            "y": 8,
+            "z": 4.3,
+            "phase": "stairs"
+          },
+          {
+            "x": 28,
+            "y": 9,
+            "z": 4.3,
+            "phase": "door"
+          },
+          {
+            "x": 28,
+            "y": 13,
+            "z": 4.3,
+            "phase": "interior"
+          }
+        ],
+        "body_width_units": 0.2,
+        "body_rear_units": 0.1,
+        "queue_gate_distance_units": 0,
+        "approach_curves": [
+          [
+            {
+              "x": 3,
+              "y": 8.2,
+              "z": 0
+            },
+            {
+              "x": 6,
+              "y": 8.2,
+              "z": 0
+            },
+            {
+              "x": 9,
+              "y": 8.2,
+              "z": 0
+            },
+            {
+              "x": 28,
+              "y": 0.3,
+              "z": 0
+            },
+            {
+              "x": 28,
+              "y": 1.3,
+              "z": 0
+            },
+            {
+              "x": 28,
+              "y": 2.3,
+              "z": 0
+            }
+          ]
+        ]
+      },
+      {
+        "id": "donkey",
+        "species": "donkey",
+        "label": "Donkey",
+        "speed_units_per_second": 10,
+        "body_length_units": 0.2,
+        "route": [
+          {
+            "x": 3,
+            "y": 9.4,
+            "z": 0,
+            "phase": "garden"
+          },
+          {
+            "x": 28,
+            "y": 2.3,
+            "z": 0,
+            "phase": "garden"
+          },
+          {
+            "x": 28,
+            "y": 3,
+            "z": 0,
+            "phase": "stairs"
+          },
+          {
+            "x": 28,
+            "y": 8,
+            "z": 4.3,
+            "phase": "stairs"
+          },
+          {
+            "x": 28,
+            "y": 9,
+            "z": 4.3,
+            "phase": "door"
+          },
+          {
+            "x": 28,
+            "y": 13,
+            "z": 4.3,
+            "phase": "interior"
+          }
+        ],
+        "body_width_units": 0.2,
+        "body_rear_units": 0.1,
+        "queue_gate_distance_units": 0,
+        "approach_curves": [
+          [
+            {
+              "x": 3,
+              "y": 9.4,
+              "z": 0
+            },
+            {
+              "x": 6,
+              "y": 9.4,
+              "z": 0
+            },
+            {
+              "x": 9,
+              "y": 9.4,
+              "z": 0
+            },
+            {
+              "x": 28,
+              "y": 0.3,
+              "z": 0
+            },
+            {
+              "x": 28,
+              "y": 1.3,
+              "z": 0
+            },
+            {
+              "x": 28,
+              "y": 2.3,
+              "z": 0
+            }
+          ]
+        ]
+      },
+      {
+        "id": "deer",
+        "species": "deer",
+        "label": "Deer",
+        "speed_units_per_second": 10,
+        "body_length_units": 0.2,
+        "route": [
+          {
+            "x": 3,
+            "y": 10.6,
+            "z": 0,
+            "phase": "garden"
+          },
+          {
+            "x": 28,
+            "y": 2.3,
+            "z": 0,
+            "phase": "garden"
+          },
+          {
+            "x": 28,
+            "y": 3,
+            "z": 0,
+            "phase": "stairs"
+          },
+          {
+            "x": 28,
+            "y": 8,
+            "z": 4.3,
+            "phase": "stairs"
+          },
+          {
+            "x": 28,
+            "y": 9,
+            "z": 4.3,
+            "phase": "door"
+          },
+          {
+            "x": 28,
+            "y": 13,
+            "z": 4.3,
+            "phase": "interior"
+          }
+        ],
+        "body_width_units": 0.2,
+        "body_rear_units": 0.1,
+        "queue_gate_distance_units": 0,
+        "approach_curves": [
+          [
+            {
+              "x": 3,
+              "y": 10.6,
+              "z": 0
+            },
+            {
+              "x": 6,
+              "y": 10.6,
+              "z": 0
+            },
+            {
+              "x": 9,
+              "y": 10.6,
+              "z": 0
+            },
+            {
+              "x": 28,
+              "y": 0.3,
+              "z": 0
+            },
+            {
+              "x": 28,
+              "y": 1.3,
+              "z": 0
+            },
+            {
+              "x": 28,
+              "y": 2.3,
+              "z": 0
+            }
+          ]
+        ]
+      },
+      {
+        "id": "rabbit",
+        "species": "rabbit",
+        "label": "Rabbit",
+        "speed_units_per_second": 10,
+        "body_length_units": 0.2,
+        "route": [
+          {
+            "x": 3,
+            "y": 11.799999999999999,
+            "z": 0,
+            "phase": "garden"
+          },
+          {
+            "x": 28,
+            "y": 2.3,
+            "z": 0,
+            "phase": "garden"
+          },
+          {
+            "x": 28,
+            "y": 3,
+            "z": 0,
+            "phase": "stairs"
+          },
+          {
+            "x": 28,
+            "y": 8,
+            "z": 4.3,
+            "phase": "stairs"
+          },
+          {
+            "x": 28,
+            "y": 9,
+            "z": 4.3,
+            "phase": "door"
+          },
+          {
+            "x": 28,
+            "y": 13,
+            "z": 4.3,
+            "phase": "interior"
+          }
+        ],
+        "body_width_units": 0.2,
+        "body_rear_units": 0.1,
+        "queue_gate_distance_units": 0,
+        "approach_curves": [
+          [
+            {
+              "x": 3,
+              "y": 11.799999999999999,
+              "z": 0
+            },
+            {
+              "x": 6,
+              "y": 11.799999999999999,
+              "z": 0
+            },
+            {
+              "x": 9,
+              "y": 11.799999999999999,
+              "z": 0
+            },
+            {
+              "x": 28,
+              "y": 0.3,
+              "z": 0
+            },
+            {
+              "x": 28,
+              "y": 1.3,
+              "z": 0
+            },
+            {
+              "x": 28,
+              "y": 2.3,
+              "z": 0
+            }
+          ]
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,917 @@
+{
+  "version": 2,
+  "scope": "native export diagnostics only; garden placement and traffic not yet activated",
+  "native": {
+    "elephant": {
+      "asset": "elephant-review.glb",
+      "asset_sha256": "f19d828962b25222b4862b3a824c91317d39e90278f9e9263facaa5b6c4e5331",
+      "height_units": 3.3,
+      "normalization_factor": 0.3159499404404154,
+      "dimensions": [
+        1.2053533396569327,
+        3.3,
+        3.789126461042909
+      ],
+      "speed_units_per_second": 0.18956996426424924,
+      "gait_envelope": {
+        "width": 1.3345108746845664,
+        "length": 3.935298185940117,
+        "minY": -0.09405522501866583,
+        "maxY": 3.3651196110616435,
+        "poses": 343,
+        "phaseSamples": 49,
+        "blendSamples": 7,
+        "straight": {
+          "width": 1.3337004762048141,
+          "length": 3.92225447895848,
+          "minZ": -1.954709644409204,
+          "maxZ": 1.96112723947924,
+          "minY": -0.08970593397941377,
+          "maxY": 3.3622462233879267
+        },
+        "guard": 0.06,
+        "basis": "sampled native gait and blends with guard; visual review required"
+      },
+      "clips": {
+        "walk": "Elephant_RigAction",
+        "left": "ElephantTurnLeft",
+        "right": "ElephantTurnRight"
+      },
+      "gait_duration": 2,
+      "forward_yaw": 0
+    },
+    "sheep": {
+      "asset": "sheep-review.glb",
+      "asset_sha256": "b0b263a46ecc3d457be1c7ff752d0c6274abbc9d4c5111ca35f0738577cf4e92",
+      "height_units": 1.4,
+      "normalization_factor": 0.34086068705045036,
+      "dimensions": [
+        0.7184519977895873,
+        1.4,
+        2.0008337018684985
+      ],
+      "speed_units_per_second": 0.8348973496476322,
+      "gait_envelope": {
+        "width": 0.8522451457019962,
+        "length": 2.8042899619395274,
+        "minY": -0.07991048516514768,
+        "maxY": 1.4778768142467593,
+        "poses": 343,
+        "phaseSamples": 49,
+        "blendSamples": 7,
+        "straight": {
+          "width": 0.8520850767952037,
+          "length": 2.500221035109199,
+          "minZ": -1.2501105175545995,
+          "maxZ": 1.0605039127880402,
+          "minY": -0.0616180730333827,
+          "maxY": 1.4772283233059904
+        },
+        "guard": 0.06,
+        "basis": "sampled native gait and blends with guard; visual review required"
+      },
+      "clips": {
+        "walk": "WalkSlow",
+        "left": "SheepTurnLeft",
+        "right": "SheepTurnRight"
+      },
+      "gait_duration": 2,
+      "forward_yaw": 0
+    },
+    "zebra": {
+      "asset": "zebra-review.glb",
+      "asset_sha256": "45db69cc5e1953481dc8e3e4dac5f3c25967740ef1da908ab6568d48fb579447",
+      "height_units": 3,
+      "normalization_factor": 0.44460355418626935,
+      "dimensions": [
+        1.0899986106239583,
+        3,
+        3.99749964253425
+      ],
+      "speed_units_per_second": 1.0890030535527644,
+      "gait_envelope": {
+        "width": 1.2102529635241486,
+        "length": 4.713985369098897,
+        "minY": -0.11579973117197312,
+        "maxY": 3.093751297064151,
+        "poses": 343,
+        "phaseSamples": 49,
+        "blendSamples": 7,
+        "straight": {
+          "width": 1.2100541551375494,
+          "length": 4.317156536573773,
+          "minZ": -2.1585782682868864,
+          "maxZ": 2.060413188462522,
+          "minY": -0.08329080341819749,
+          "maxY": 3.0928686537892607
+        },
+        "guard": 0.06,
+        "basis": "sampled native gait and blends with guard; visual review required"
+      },
+      "clips": {
+        "walk": "WalkSlow",
+        "left": "ZebraTurnLeft",
+        "right": "ZebraTurnRight"
+      },
+      "gait_duration": 2,
+      "forward_yaw": 0
+    },
+    "donkey": {
+      "asset": "donkey-review.glb",
+      "asset_sha256": "84fd04635fc211dfd122b55f934b902192decd2fbc9cce7b83f0754bbf280c13",
+      "height_units": 1.9,
+      "normalization_factor": 0.49614959721389873,
+      "dimensions": [
+        0.549964086304242,
+        1.9,
+        2.3162709542141298
+      ],
+      "speed_units_per_second": 1.4043877530644564,
+      "gait_envelope": {
+        "width": 0.8172927292585683,
+        "length": 3.1178774706379735,
+        "minY": -0.077810879054043,
+        "maxY": 1.9697496732675013,
+        "poses": 343,
+        "phaseSamples": 49,
+        "blendSamples": 7,
+        "straight": {
+          "width": 0.8166272830219071,
+          "length": 2.932839639417856,
+          "minZ": -1.466419819708928,
+          "maxZ": 1.2357356657456566,
+          "minY": -0.07343021355102186,
+          "maxY": 1.969733142611053
+        },
+        "guard": 0.06,
+        "basis": "sampled native gait and blends with guard; visual review required"
+      },
+      "clips": {
+        "walk": "Walk",
+        "left": "DonkeyTurnLeft",
+        "right": "DonkeyTurnRight"
+      },
+      "gait_duration": 1.1666666269302368,
+      "forward_yaw": 0
+    },
+    "deer": {
+      "asset": "deer-review.glb",
+      "asset_sha256": "9b6273e7c852f5b30fdbb52a3b654c48a524394fdc34e3336f710551709d145a",
+      "height_units": 2.1,
+      "normalization_factor": 0.4997316728424601,
+      "dimensions": [
+        0.7112059332397456,
+        2.1,
+        2.1925882384591224
+      ],
+      "speed_units_per_second": 1.4145270803390353,
+      "gait_envelope": {
+        "width": 0.8866171153078258,
+        "length": 3.0598002079843187,
+        "minY": -0.07911234351737734,
+        "maxY": 2.179819670659818,
+        "poses": 343,
+        "phaseSamples": 49,
+        "blendSamples": 7,
+        "straight": {
+          "width": 0.8795274821918224,
+          "length": 2.874775657392351,
+          "minZ": -1.4373878286961754,
+          "maxZ": 1.2060599898378248,
+          "minY": -0.074700031932339,
+          "maxY": 2.179723536642291
+        },
+        "guard": 0.06,
+        "basis": "sampled native gait and blends with guard; visual review required"
+      },
+      "clips": {
+        "walk": "Walk",
+        "left": "DeerTurnLeft",
+        "right": "DeerTurnRight"
+      },
+      "gait_duration": 1.1666666269302368,
+      "forward_yaw": 0
+    },
+    "rabbit": {
+      "asset": "rabbit-review.glb",
+      "asset_sha256": "ed99fb548d4a9bbde7e31e0de2820d362ff8744e4cda2b1f21405f0a4b27d70b",
+      "height_units": 0.9,
+      "normalization_factor": 0.09346018806780669,
+      "dimensions": [
+        0.6288785638074096,
+        0.9,
+        1.9140245644681306
+      ],
+      "speed_units_per_second": 1.841843852060412,
+      "gait_envelope": {
+        "width": 0.8483650975408961,
+        "length": 2.679659861419874,
+        "minY": -0.11202786333618946,
+        "maxY": 1.1141863066990285,
+        "poses": 343,
+        "phaseSamples": 49,
+        "blendSamples": 7,
+        "straight": {
+          "width": 0.8483650975408961,
+          "length": 2.679659861419874,
+          "minZ": -1.339829930709937,
+          "maxZ": 1.133389437922794,
+          "minY": -0.11173032810408864,
+          "maxY": 1.1141863066990285
+        },
+        "guard": 0.06,
+        "basis": "sampled native gait and blends with guard; visual review required"
+      },
+      "clips": {
+        "walk": "Running",
+        "left": "RabbitTurnLeft",
+        "right": "RabbitTurnRight"
+      },
+      "gait_duration": 0.6666666865348816,
+      "turn_curvature": 0.45,
+      "forward_yaw": 0
+    },
+    "dove": {
+      "asset": "dove-review.glb",
+      "asset_sha256": "5ae85d015a65ddda2a97d14433fe9925afa11328599dfb0fca1582e1dbe0aea9",
+      "height_units": 0.55,
+      "normalization_factor": 2.314202763424157,
+      "dimensions": [
+        1.3998669045538923,
+        0.55,
+        0.9244138909922055
+      ],
+      "speed_units_per_second": 1.2,
+      "gait_envelope": {
+        "width": 1.6596398860016341,
+        "length": 1.076919002270623,
+        "minY": -0.1574226095704321,
+        "maxY": 0.8922048402162865,
+        "poses": 343,
+        "phaseSamples": 49,
+        "blendSamples": 7,
+        "straight": {
+          "width": 1.519866931137734,
+          "length": 1.0769189907158894,
+          "minZ": -0.5377566220702656,
+          "maxZ": 0.5384594953579447,
+          "minY": -0.07981168117513046,
+          "maxY": 0.8267692055278559
+        },
+        "guard": 0.06,
+        "basis": "sampled native gait and blends with guard; visual review required"
+      },
+      "clips": {
+        "walk": "flap-wings-animation",
+        "left": "DoveTurnLeft",
+        "right": "DoveTurnRight"
+      },
+      "gait_duration": 1,
+      "turn_curvature": 0.6,
+      "forward_yaw": 0,
+      "flight_altitude": 1,
+      "flight_clearance": {
+        "altitude": 1,
+        "stairRiseAhead": 0.7381832707493057,
+        "lowestAboveSteps": 0.10439411968026224,
+        "highestAboveDeck": 1.8922048402162865,
+        "basis": "sampled whole-wing envelope and conservative tread/door bounds; visual review required"
+      }
+    },
+    "lion": {
+      "asset": "lion-review.glb",
+      "asset_sha256": "cbfa74e6c9705280cf83ce7a0f0abf00d3afa09a68b1065c94f88b0872c5ba3b",
+      "height_units": 1.3,
+      "normalization_factor": 42.40703826362579,
+      "dimensions": [
+        0.5572150122814606,
+        1.3,
+        1.9990303343358704
+      ],
+      "speed_units_per_second": 0.2965733174494139,
+      "gait_envelope": {
+        "width": 0.8442148469411026,
+        "length": 2.243369646913476,
+        "minY": -0.0823484501754861,
+        "maxY": 1.3734907215029895,
+        "poses": 343,
+        "phaseSamples": 49,
+        "blendSamples": 7,
+        "straight": {
+          "width": 0.7863631520766718,
+          "length": 2.243369646913476,
+          "minZ": -1.121684823456738,
+          "maxZ": 1.0598035036290414,
+          "minY": -0.0809029197915147,
+          "maxY": 1.3656659901362205
+        },
+        "guard": 0.06,
+        "basis": "sampled native gait and blends with guard; visual review required"
+      },
+      "clips": {
+        "walk": "LionWalk",
+        "left": "LionTurnLeft",
+        "right": "LionTurnRight"
+      },
+      "gait_duration": 3.3333332538604736,
+      "turn_curvature": 0.45,
+      "forward_yaw": 0,
+      "calibration": {
+        "sourceSpeed": 0.006993492816115778,
+        "evidence": [
+          {
+            "name": "Horse_L_Finger0",
+            "minY": 0.0028087889590357506,
+            "yRange": 0.002510030474928088,
+            "zSpan": 0.014011383156199772,
+            "stanceSpeed": 0.006829500205355082,
+            "stanceSamples": 114
+          },
+          {
+            "name": "Horse_R_Finger0",
+            "minY": 0.0026296919949845054,
+            "yRange": 0.002303913645671218,
+            "zSpan": 0.013826647907330484,
+            "stanceSpeed": 0.007168837541120481,
+            "stanceSamples": 123
+          },
+          {
+            "name": "Horse_L_Toe0",
+            "minY": 0.0026377160868323235,
+            "yRange": 0.0020981843878684096,
+            "zSpan": 0.013272913505222774,
+            "stanceSpeed": 0.006826952833521203,
+            "stanceSamples": 139
+          },
+          {
+            "name": "Horse_R_Toe0",
+            "minY": 0.002602364330450641,
+            "yRange": 0.0029487453761648788,
+            "zSpan": 0.014992208716224984,
+            "stanceSpeed": 0.0071486806844663475,
+            "stanceSamples": 143
+          }
+        ],
+        "basis": "mean of per-foot median backward velocities while within bottom20% native height range; approximate stance calibration",
+        "samples": 240
+      }
+    },
+    "camel": {
+      "asset": "camel-review.glb",
+      "asset_sha256": "447e35b599a15391a932dc0c6205c8dac8964302ba3d0305f6c42ab3db03fe68",
+      "height_units": 2.3,
+      "normalization_factor": 0.3779827679178358,
+      "dimensions": [
+        0.6180524586321549,
+        2.3,
+        2.9407649489735808
+      ],
+      "speed_units_per_second": 1.4870729581543471,
+      "gait_envelope": {
+        "width": 0.7777911848200609,
+        "length": 3.2406445095592136,
+        "minY": -0.07817757494317779,
+        "maxY": 2.360000179660747,
+        "poses": 343,
+        "phaseSamples": 49,
+        "blendSamples": 7,
+        "straight": {
+          "width": 0.7394934091114245,
+          "length": 3.2406445095592136,
+          "minZ": -1.6203222547796068,
+          "maxZ": 1.5414598027844868,
+          "minY": -0.07815828965725381,
+          "maxY": 2.3600001262677943
+        },
+        "guard": 0.06,
+        "basis": "sampled native gait and blends with guard; visual review required"
+      },
+      "clips": {
+        "walk": "CamelWalk",
+        "left": "CamelTurnLeft",
+        "right": "CamelTurnRight"
+      },
+      "gait_duration": 1.3333333730697632,
+      "turn_curvature": 0.4,
+      "forward_yaw": 0,
+      "calibration": {
+        "sourceSpeed": 3.934234796856137,
+        "evidence": [
+          {
+            "name": "Camelus_Hoof_L",
+            "minY": 0.09637887331150594,
+            "yRange": 0.19662278778114564,
+            "zSpan": 3.031637463455937,
+            "stanceSpeed": 4.588169029945929,
+            "stanceSamples": 109
+          },
+          {
+            "name": "Camelus_Hoof_R",
+            "minY": 0.06043822279796479,
+            "yRange": 0.3030723733781691,
+            "zSpan": 3.0006852372683013,
+            "stanceSpeed": 3.5378816996774267,
+            "stanceSamples": 110
+          },
+          {
+            "name": "Camelus_Hoof_back_L",
+            "minY": 0.13801745880064448,
+            "yRange": 0.38576470638926935,
+            "zSpan": 2.844764686758048,
+            "stanceSpeed": 3.806230807284343,
+            "stanceSamples": 104
+          },
+          {
+            "name": "Camelus_Hoof_back_R",
+            "minY": 0.1380154873799912,
+            "yRange": 0.38573146130423924,
+            "zSpan": 2.84491854725613,
+            "stanceSpeed": 3.8046576505168503,
+            "stanceSamples": 101
+          }
+        ],
+        "basis": "mean of per-foot median backward velocities while within bottom20% native height range; approximate stance calibration",
+        "samples": 240
+      }
+    },
+    "giraffe": {
+      "asset": "giraffe-review.glb",
+      "asset_sha256": "eec740e250c59d28795fad37cad58ada5aba389cfbf064fa49f639306992ddf3",
+      "height_units": 3.3,
+      "normalization_factor": 25.491638062230805,
+      "dimensions": [
+        0.6512904409006093,
+        3.3,
+        2.187282158166903
+      ],
+      "speed_units_per_second": 0.464618354267393,
+      "gait_envelope": {
+        "width": 0.8506879596763564,
+        "length": 2.4056293286672084,
+        "minY": -0.08510994967164462,
+        "maxY": 3.416386989081514,
+        "poses": 343,
+        "phaseSamples": 49,
+        "blendSamples": 7,
+        "straight": {
+          "width": 0.8506879596763561,
+          "length": 2.4056293286672084,
+          "minZ": -1.2028146643336042,
+          "maxZ": 1.1855419980602362,
+          "minY": -0.0849105864327998,
+          "maxY": 3.4159076748827477
+        },
+        "guard": 0.06,
+        "basis": "sampled native gait and blends with guard; visual review required"
+      },
+      "clips": {
+        "walk": "GiraffeWalk",
+        "left": "GiraffeTurnLeft",
+        "right": "GiraffeTurnRight"
+      },
+      "gait_duration": 3.3333332538604736,
+      "turn_curvature": 0.35,
+      "forward_yaw": 0,
+      "calibration": {
+        "sourceSpeed": 0.018226304372169235,
+        "evidence": [
+          {
+            "name": "left_f_foot",
+            "minY": 0.00635770875732504,
+            "yRange": 0.008066208507254525,
+            "zSpan": 0.03593207004807754,
+            "stanceSpeed": 0.01801009137017453,
+            "stanceSamples": 153
+          },
+          {
+            "name": "right_f_foot",
+            "minY": 0.0056780630877127265,
+            "yRange": 0.009087432604362426,
+            "zSpan": 0.03651884152058991,
+            "stanceSpeed": 0.022231922649727388,
+            "stanceSamples": 120
+          },
+          {
+            "name": "left_r_foot",
+            "minY": 0.006471448726964053,
+            "yRange": 0.0026866285192737316,
+            "zSpan": 0.02905384177516626,
+            "stanceSpeed": 0.014367300866959046,
+            "stanceSamples": 126
+          },
+          {
+            "name": "right_r_foot",
+            "minY": 0.006968244167081816,
+            "yRange": 0.002732131430106515,
+            "zSpan": 0.029606769152062798,
+            "stanceSpeed": 0.01829590260181598,
+            "stanceSamples": 115
+          }
+        ],
+        "basis": "mean of per-foot median backward velocities while within bottom20% native height range; approximate stance calibration",
+        "samples": 240
+      }
+    }
+  },
+  "diagnostics": [
+    {
+      "id": "elephant",
+      "loops": {
+        "walk": {
+          "name": "Elephant_RigAction",
+          "duration": 2,
+          "loopError": 0
+        },
+        "left": {
+          "name": "ElephantTurnLeft",
+          "duration": 2,
+          "loopError": 0
+        },
+        "right": {
+          "name": "ElephantTurnRight",
+          "duration": 2,
+          "loopError": 0
+        }
+      },
+      "dimensions": [
+        1.2053533396569327,
+        3.3,
+        3.789126461042909
+      ],
+      "endpoint": 0.29529035559079597,
+      "speed": 0.18956996426424924
+    },
+    {
+      "id": "sheep",
+      "loops": {
+        "walk": {
+          "name": "WalkSlow",
+          "duration": 2,
+          "loopError": 0
+        },
+        "left": {
+          "name": "SheepTurnLeft",
+          "duration": 2,
+          "loopError": 0
+        },
+        "right": {
+          "name": "SheepTurnRight",
+          "duration": 2,
+          "loopError": 0
+        }
+      },
+      "dimensions": [
+        0.7184519977895873,
+        1.4,
+        2.0008337018684985
+      ],
+      "endpoint": 0.9998894824454005,
+      "speed": 0.8348973496476322
+    },
+    {
+      "id": "zebra",
+      "loops": {
+        "walk": {
+          "name": "WalkSlow",
+          "duration": 2,
+          "loopError": 0
+        },
+        "left": {
+          "name": "ZebraTurnLeft",
+          "duration": 2,
+          "loopError": 5.960464477539063e-8
+        },
+        "right": {
+          "name": "ZebraTurnRight",
+          "duration": 2,
+          "loopError": 0
+        }
+      },
+      "dimensions": [
+        1.0899986106239583,
+        3,
+        3.99749964253425
+      ],
+      "endpoint": 0.09142173171311363,
+      "speed": 1.0890030535527644
+    },
+    {
+      "id": "donkey",
+      "loops": {
+        "walk": {
+          "name": "Walk",
+          "duration": 1.1666666269302368,
+          "loopError": 0
+        },
+        "left": {
+          "name": "DonkeyTurnLeft",
+          "duration": 1.1666666269302368,
+          "loopError": 0
+        },
+        "right": {
+          "name": "DonkeyTurnRight",
+          "duration": 1.1666666269302368,
+          "loopError": 0
+        }
+      },
+      "dimensions": [
+        0.549964086304242,
+        1.9,
+        2.3162709542141298
+      ],
+      "endpoint": 0.783580180291072,
+      "speed": 1.4043877530644564
+    },
+    {
+      "id": "deer",
+      "loops": {
+        "walk": {
+          "name": "Walk",
+          "duration": 1.1666666269302368,
+          "loopError": 0
+        },
+        "left": {
+          "name": "DeerTurnLeft",
+          "duration": 1.1666666269302368,
+          "loopError": 0
+        },
+        "right": {
+          "name": "DeerTurnRight",
+          "duration": 1.1666666269302368,
+          "loopError": 0
+        }
+      },
+      "dimensions": [
+        0.7112059332397456,
+        2.1,
+        2.1925882384591224
+      ],
+      "endpoint": 0.8126121713038246,
+      "speed": 1.4145270803390353
+    },
+    {
+      "id": "rabbit",
+      "loops": {
+        "walk": {
+          "name": "Running",
+          "duration": 0.6666666865348816,
+          "loopError": 0
+        },
+        "left": {
+          "name": "RabbitTurnLeft",
+          "duration": 0.6666666865348816,
+          "loopError": 0
+        },
+        "right": {
+          "name": "RabbitTurnRight",
+          "duration": 0.6666666865348816,
+          "loopError": 0
+        }
+      },
+      "dimensions": [
+        0.6288785638074096,
+        0.9,
+        1.9140245644681306
+      ],
+      "endpoint": 0.9101700692900629,
+      "speed": 1.841843852060412
+    },
+    {
+      "id": "dove",
+      "loops": {
+        "walk": {
+          "name": "flap-wings-animation",
+          "duration": 1,
+          "loopError": 1.1920928955078125e-7
+        },
+        "left": {
+          "name": "DoveTurnLeft",
+          "duration": 1,
+          "loopError": 1.1920928955078125e-7
+        },
+        "right": {
+          "name": "DoveTurnRight",
+          "duration": 1,
+          "loopError": 1.1920928955078125e-7
+        }
+      },
+      "dimensions": [
+        1.3998669045538923,
+        0.55,
+        0.9244138909922055
+      ],
+      "endpoint": 1.7122433779297344,
+      "speed": 1.2
+    },
+    {
+      "id": "lion",
+      "loops": {
+        "walk": {
+          "name": "LionWalk",
+          "duration": 3.3333332538604736,
+          "loopError": 0
+        },
+        "left": {
+          "name": "LionTurnLeft",
+          "duration": 3.3333332538604736,
+          "loopError": 0
+        },
+        "right": {
+          "name": "LionTurnRight",
+          "duration": 3.3333332538604736,
+          "loopError": 0
+        }
+      },
+      "dimensions": [
+        0.5572150122814606,
+        1.3,
+        1.9990303343358704
+      ],
+      "endpoint": 1.128315176543262,
+      "speed": 0.2965733174494139,
+      "calibration": {
+        "sourceSpeed": 0.006993492816115778,
+        "evidence": [
+          {
+            "name": "Horse_L_Finger0",
+            "minY": 0.0028087889590357506,
+            "yRange": 0.002510030474928088,
+            "zSpan": 0.014011383156199772,
+            "stanceSpeed": 0.006829500205355082,
+            "stanceSamples": 114
+          },
+          {
+            "name": "Horse_R_Finger0",
+            "minY": 0.0026296919949845054,
+            "yRange": 0.002303913645671218,
+            "zSpan": 0.013826647907330484,
+            "stanceSpeed": 0.007168837541120481,
+            "stanceSamples": 123
+          },
+          {
+            "name": "Horse_L_Toe0",
+            "minY": 0.0026377160868323235,
+            "yRange": 0.0020981843878684096,
+            "zSpan": 0.013272913505222774,
+            "stanceSpeed": 0.006826952833521203,
+            "stanceSamples": 139
+          },
+          {
+            "name": "Horse_R_Toe0",
+            "minY": 0.002602364330450641,
+            "yRange": 0.0029487453761648788,
+            "zSpan": 0.014992208716224984,
+            "stanceSpeed": 0.0071486806844663475,
+            "stanceSamples": 143
+          }
+        ],
+        "basis": "mean of per-foot median backward velocities while within bottom20% native height range; approximate stance calibration",
+        "samples": 240
+      }
+    },
+    {
+      "id": "camel",
+      "loops": {
+        "walk": {
+          "name": "CamelWalk",
+          "duration": 1.3333333730697632,
+          "loopError": 0
+        },
+        "left": {
+          "name": "CamelTurnLeft",
+          "duration": 1.3333333730697632,
+          "loopError": 0
+        },
+        "right": {
+          "name": "CamelTurnRight",
+          "duration": 1.3333333730697632,
+          "loopError": 0
+        }
+      },
+      "dimensions": [
+        0.6180524586321549,
+        2.3,
+        2.9407649489735808
+      ],
+      "endpoint": 0.6296777452203932,
+      "speed": 1.4870729581543471,
+      "calibration": {
+        "sourceSpeed": 3.934234796856137,
+        "evidence": [
+          {
+            "name": "Camelus_Hoof_L",
+            "minY": 0.09637887331150594,
+            "yRange": 0.19662278778114564,
+            "zSpan": 3.031637463455937,
+            "stanceSpeed": 4.588169029945929,
+            "stanceSamples": 109
+          },
+          {
+            "name": "Camelus_Hoof_R",
+            "minY": 0.06043822279796479,
+            "yRange": 0.3030723733781691,
+            "zSpan": 3.0006852372683013,
+            "stanceSpeed": 3.5378816996774267,
+            "stanceSamples": 110
+          },
+          {
+            "name": "Camelus_Hoof_back_L",
+            "minY": 0.13801745880064448,
+            "yRange": 0.38576470638926935,
+            "zSpan": 2.844764686758048,
+            "stanceSpeed": 3.806230807284343,
+            "stanceSamples": 104
+          },
+          {
+            "name": "Camelus_Hoof_back_R",
+            "minY": 0.1380154873799912,
+            "yRange": 0.38573146130423924,
+            "zSpan": 2.84491854725613,
+            "stanceSpeed": 3.8046576505168503,
+            "stanceSamples": 101
+          }
+        ],
+        "basis": "mean of per-foot median backward velocities while within bottom20% native height range; approximate stance calibration",
+        "samples": 240
+      }
+    },
+    {
+      "id": "giraffe",
+      "loops": {
+        "walk": {
+          "name": "GiraffeWalk",
+          "duration": 3.3333332538604736,
+          "loopError": 1.862645149230957e-9
+        },
+        "left": {
+          "name": "GiraffeTurnLeft",
+          "duration": 3.3333332538604736,
+          "loopError": 1.862645149230957e-9
+        },
+        "right": {
+          "name": "GiraffeTurnRight",
+          "duration": 3.3333332538604736,
+          "loopError": 1.862645149230957e-9
+        }
+      },
+      "dimensions": [
+        0.6512904409006093,
+        3.3,
+        2.187282158166903
+      ],
+      "endpoint": 1.0471853356663958,
+      "speed": 0.464618354267393,
+      "calibration": {
+        "sourceSpeed": 0.018226304372169235,
+        "evidence": [
+          {
+            "name": "left_f_foot",
+            "minY": 0.00635770875732504,
+            "yRange": 0.008066208507254525,
+            "zSpan": 0.03593207004807754,
+            "stanceSpeed": 0.01801009137017453,
+            "stanceSamples": 153
+          },
+          {
+            "name": "right_f_foot",
+            "minY": 0.0056780630877127265,
+            "yRange": 0.009087432604362426,
+            "zSpan": 0.03651884152058991,
+            "stanceSpeed": 0.022231922649727388,
+            "stanceSamples": 120
+          },
+          {
+            "name": "left_r_foot",
+            "minY": 0.006471448726964053,
+            "yRange": 0.0026866285192737316,
+            "zSpan": 0.02905384177516626,
+            "stanceSpeed": 0.014367300866959046,
+            "stanceSamples": 126
+          },
+          {
+            "name": "right_r_foot",
+            "minY": 0.006968244167081816,
+            "yRange": 0.002732131430106515,
+            "zSpan": 0.029606769152062798,
+            "stanceSpeed": 0.01829590260181598,
+            "stanceSamples": 115
+          }
+        ],
+        "basis": "mean of per-foot median backward velocities while within bottom20% native height range; approximate stance calibration",
+        "samples": 240
+      }
+    }
+  ],
+  "signatures": {
+    "elephant": "{\"height\":3.3,\"maxWidth\":2.5,\"forwardYaw\":0,\"walkName\":\"Elephant_RigAction\",\"turnNames\":{\"left\":\"ElephantTurnLeft\",\"right\":\"ElephantTurnRight\"},\"sourceStanceSpeed\":0.6}",
+    "sheep": "{\"height\":1.4,\"maxWidth\":2.5,\"forwardYaw\":0,\"walkName\":\"WalkSlow\",\"turnNames\":{\"left\":\"SheepTurnLeft\",\"right\":\"SheepTurnRight\"},\"sourceStanceSpeed\":2.44938}",
+    "zebra": "{\"height\":3,\"maxWidth\":2.5,\"forwardYaw\":0,\"walkName\":\"WalkSlow\",\"turnNames\":{\"left\":\"ZebraTurnLeft\",\"right\":\"ZebraTurnRight\"},\"expectedGaitDuration\":2,\"sourceStanceSpeed\":2.44938}",
+    "donkey": "{\"height\":1.9,\"maxWidth\":2.5,\"forwardYaw\":0,\"walkName\":\"Walk\",\"turnNames\":{\"left\":\"DonkeyTurnLeft\",\"right\":\"DonkeyTurnRight\"},\"expectedGaitDuration\":1.1666666666666667,\"sourceStanceSpeed\":2.8305732}",
+    "deer": "{\"height\":2.1,\"maxWidth\":2.5,\"forwardYaw\":0,\"walkName\":\"Walk\",\"turnNames\":{\"left\":\"DeerTurnLeft\",\"right\":\"DeerTurnRight\"},\"expectedGaitDuration\":1.1666666666666667,\"sourceStanceSpeed\":2.8305732}",
+    "rabbit": "{\"height\":0.9,\"maxWidth\":2.5,\"forwardYaw\":0,\"walkName\":\"Running\",\"turnNames\":{\"left\":\"RabbitTurnLeft\",\"right\":\"RabbitTurnRight\"},\"expectedGaitDuration\":0.6666666666666666,\"turnCurvature\":0.45,\"sourceStanceSpeed\":19.707256}",
+    "dove": "{\"height\":0.55,\"maxWidth\":2.5,\"forwardYaw\":0,\"walkName\":\"flap-wings-animation\",\"turnNames\":{\"left\":\"DoveTurnLeft\",\"right\":\"DoveTurnRight\"},\"expectedGaitDuration\":1,\"turnCurvature\":0.6}",
+    "lion": "{\"height\":1.3,\"maxWidth\":2.5,\"forwardYaw\":0,\"walkName\":\"LionWalk\",\"turnNames\":{\"left\":\"LionTurnLeft\",\"right\":\"LionTurnRight\"},\"expectedGaitDuration\":3.3333333333333335,\"turnCurvature\":0.45,\"feet\":[\"Horse_L_Finger0\",\"Horse_R_Finger0\",\"Horse_L_Toe0\",\"Horse_R_Toe0\"]}",
+    "camel": "{\"height\":2.3,\"maxWidth\":2.5,\"forwardYaw\":0,\"walkName\":\"CamelWalk\",\"turnNames\":{\"left\":\"CamelTurnLeft\",\"right\":\"CamelTurnRight\"},\"expectedGaitDuration\":1.3333333333333333,\"turnCurvature\":0.4,\"feet\":[\"Camelus_Hoof_L\",\"Camelus_Hoof_R\",\"Camelus_Hoof_back_L\",\"Camelus_Hoof_back_R\"]}",
+    "giraffe": "{\"height\":3.3,\"maxWidth\":2.5,\"forwardYaw\":0,\"walkName\":\"GiraffeWalk\",\"turnNames\":{\"left\":\"GiraffeTurnLeft\",\"right\":\"GiraffeTurnRight\"},\"expectedGaitDuration\":3.3333333333333335,\"turnCurvature\":0.35,\"feet\":[\"left_f_foot\",\"right_f_foot\",\"left_r_foot\",\"right_r_foot\"]}"
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "scope": "actual renderer post-draw arrival acknowledgment regression",
+  "failedDraw": {
+    "arrived": 10,
+    "acknowledgments": 0
+  },
+  "successfulDrawAcknowledgments": [
+    {
+      "type": "animalEntered",
+      "id": "elephant",
+      "visualOnly": true
+    },
+    {
+      "type": "animalEntered",
+      "id": "sheep",
+      "visualOnly": true
+    },
+    {
+      "type": "animalEntered",
+      "id": "zebra",
+      "visualOnly": true
+    },
+    {
+      "type": "animalEntered",
+      "id": "donkey",
+      "visualOnly": true
+    },
+    {
+      "type": "animalEntered",
+      "id": "deer",
+      "visualOnly": true
+    },
+    {
+      "type": "animalEntered",
+      "id": "rabbit",
+      "visualOnly": true
+    },
+    {
+      "type": "animalEntered",
+      "id": "dove",
+      "visualOnly": true
+    },
+    {
+      "type": "animalEntered",
+      "id": "lion",
+      "visualOnly": true
+    },
+    {
+      "type": "animalEntered",
+      "id": "camel",
+      "visualOnly": true
+    },
+    {
+      "type": "animalEntered",
+      "id": "giraffe",
+      "visualOnly": true
+    }
+  ],
+  "expectedInjectedErrors": [
+    "INTENTIONAL_ARK_ARRIVAL_DRAW_FAILURE"
+  ],
+  "unexpectedErrors": [],
+  "passed": true
+}

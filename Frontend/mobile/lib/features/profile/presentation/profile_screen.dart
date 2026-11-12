@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -9,7 +8,7 @@ import '../../../shared/widgets/floating_liquid_nav.dart';
 import '../../../shared/widgets/liquid_glass.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../auth/domain/kid_profile.dart';
-import '../../auth/presentation/kid_character_pose.dart';
+import '../../auth/presentation/adult_gate.dart';
 import '../../auth/presentation/kid_profile_avatar.dart';
 import '../../auth/presentation/session_expiry_navigation.dart';
 import '../data/profile_repository.dart';
@@ -102,9 +101,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (mounted && returnToSignInIfSessionExpired(context, error)) return;
       if (!mounted) return;
       if (isRefresh && _summary != null) {
-        _showMessage(error.message);
+        _showMessage(error.userMessage);
       } else {
-        setState(() => _errorMessage = error.message);
+        setState(() => _errorMessage = error.userMessage);
       }
     } catch (_) {
       if (!mounted) return;
@@ -134,7 +133,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       await Navigator.of(context).pushNamed(route, arguments: profiles);
     } on AppException catch (error) {
       if (mounted && returnToSignInIfSessionExpired(context, error)) return;
-      if (mounted) _showMessage(error.message);
+      if (mounted) _showMessage(error.userMessage);
     } catch (_) {
       if (mounted) {
         _showMessage('We could not open your family profiles. Try again.');
@@ -147,6 +146,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _editProfile() async {
     final profile = _activeProfile;
     if (profile == null) return;
+    final authorized = await showAdultGate(
+      context: context,
+      repository: _authRepository,
+      title: 'Edit child profile',
+      reason: 'Enter the parent password before changing this profile.',
+    );
+    if (!mounted || !authorized) return;
+
     final saved = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -187,7 +194,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (mounted && returnToSignInIfSessionExpired(context, error)) {
         return null;
       }
-      return error.message;
+      return error.userMessage;
     } catch (_) {
       return 'We could not save those changes. Please try again.';
     }
@@ -244,7 +251,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             )
                           else if (_summary != null)
                             _ProfileContent(
-                              profile: _activeProfile!,
                               summary: _summary!,
                               isSwitching: _isSwitching,
                               onEdit: _editProfile,
@@ -347,14 +353,12 @@ class _ProfileTopBar extends StatelessWidget {
 
 class _ProfileContent extends StatelessWidget {
   const _ProfileContent({
-    required this.profile,
     required this.summary,
     required this.isSwitching,
     required this.onEdit,
     required this.onSwitch,
   });
 
-  final KidProfile profile;
   final ProfileProgressSummary summary;
   final bool isSwitching;
   final VoidCallback onEdit;
@@ -374,34 +378,18 @@ class _ProfileContent extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _ProfileHero(
-          profile: profile,
           level: summary.level,
           nextBadge: nextBadge,
           isSwitching: isSwitching,
           onEdit: onEdit,
           onSwitch: onSwitch,
         ),
-        const SizedBox(height: 22),
-        _SectionHeading(
-          title: 'Progress overview',
-          trailing: _progressOverviewLabel(summary.stats),
-        ),
-        const SizedBox(height: 13),
-        _StatsGrid(stats: summary.stats, badgeCount: summary.badges.length),
         const SizedBox(height: 24),
         _ActivityCard(
           streak: summary.activityStreak,
           weeks: summary.weeklyActivity,
           lastActivityAt: summary.lastActivityAt,
         ),
-        const SizedBox(height: 30),
-        _SectionHeading(
-          title: 'My badges',
-          trailing:
-              '${summary.stats.earnedBadges}/${summary.badges.length} earned',
-        ),
-        const SizedBox(height: 13),
-        _BadgeShelf(badges: summary.badges),
       ],
     );
   }
@@ -409,7 +397,6 @@ class _ProfileContent extends StatelessWidget {
 
 class _ProfileHero extends StatelessWidget {
   const _ProfileHero({
-    required this.profile,
     required this.level,
     required this.nextBadge,
     required this.isSwitching,
@@ -417,7 +404,6 @@ class _ProfileHero extends StatelessWidget {
     required this.onSwitch,
   });
 
-  final KidProfile profile;
   final ProfileLevel level;
   final ProfileBadge? nextBadge;
   final bool isSwitching;
@@ -427,7 +413,7 @@ class _ProfileHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    final largeText = MediaQuery.textScalerOf(context).scale(14) > 18;
     final levelFloor = math.max(0, (level.number - 1) * 300);
     final levelTarget = math.max(1, level.nextLevelXp - levelFloor);
     final levelXp = (level.xp - levelFloor).clamp(0, levelTarget);
@@ -436,1100 +422,242 @@ class _ProfileHero extends StatelessWidget {
     final challengeComplete = nextBadge?.earned ?? false;
     return Container(
       key: const Key('profile-live-hero'),
-      padding: const EdgeInsets.fromLTRB(18, 19, 17, 17),
-      decoration: BoxDecoration(
+      padding: const EdgeInsets.all(22),
+      clipBehavior: Clip.antiAlias,
+      decoration: ShapeDecoration(
         color: isDark ? const Color(0xFF514582) : const Color(0xFFB7A5FF),
-        borderRadius: BorderRadius.circular(25),
-        border: Border.all(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.13)
-              : const Color(0xFF171421).withValues(alpha: 0.13),
+        shape: RoundedSuperellipseBorder(
+          borderRadius: BorderRadius.circular(46),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF5E4BAE).withValues(alpha: 0.16),
-            blurRadius: 18,
-            offset: const Offset(0, 9),
-          ),
-        ],
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 9,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: foreground,
-                    borderRadius: BorderRadius.circular(99),
-                  ),
-                  child: Text(
-                    challengeComplete ? 'QUEST BOARD' : 'NEXT QUEST',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: isDark ? const Color(0xFF514582) : Colors.white,
-                      fontSize: 9.5,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0.8,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: foreground,
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                    child: Text(
+                      challengeComplete ? 'QUEST BOARD' : 'NEXT QUEST',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: isDark ? const Color(0xFF514582) : Colors.white,
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.8,
+                      ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  nextBadge?.title ?? 'Begin the adventure',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: foreground,
-                    fontSize: 27,
-                    height: 0.98,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -1,
+              ),
+              const SizedBox(width: 12),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    key: const Key('profile-edit'),
+                    tooltip: 'Edit profile',
+                    onPressed: onEdit,
+                    style: IconButton.styleFrom(
+                      backgroundColor: foreground,
+                      foregroundColor: isDark
+                          ? const Color(0xFF514582)
+                          : Colors.white,
+                    ),
+                    icon: const Icon(
+                      Icons.edit_rounded,
+                      semanticLabel: 'Edit profile',
+                      size: 18,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  nextBadge?.description ??
-                      'Play a game round to start collecting progress.',
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: muted,
-                    fontWeight: FontWeight.w600,
-                    height: 1.28,
-                  ),
-                ),
-                if (nextBadge != null) ...[
-                  const SizedBox(height: 13),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: LinearProgressIndicator(
-                          value: nextBadge!.completion,
-                          minHeight: 7,
-                          borderRadius: BorderRadius.circular(9),
-                          backgroundColor: foreground.withValues(alpha: 0.16),
-                          valueColor: AlwaysStoppedAnimation(foreground),
-                        ),
+                  const SizedBox(width: 6),
+                  IconButton(
+                    key: const Key('profile-switch'),
+                    tooltip: 'Switch child',
+                    onPressed: isSwitching ? null : onSwitch,
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.white.withValues(alpha: 0.3),
+                      foregroundColor: foreground,
+                      disabledBackgroundColor: Colors.white.withValues(
+                        alpha: 0.14,
                       ),
-                      const SizedBox(width: 8),
-                      Flexible(
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            '${nextBadge!.progress}/${nextBadge!.target}',
-                            style: Theme.of(context).textTheme.labelSmall
-                                ?.copyWith(
-                                  color: foreground,
-                                  fontWeight: FontWeight.w900,
-                                ),
+                    ),
+                    icon: isSwitching
+                        ? SizedBox.square(
+                            dimension: 17,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: foreground,
+                            ),
+                          )
+                        : const Icon(
+                            Icons.switch_account_rounded,
+                            semanticLabel: 'Switch child',
+                            size: 19,
                           ),
-                        ),
-                      ),
-                    ],
                   ),
                 ],
-                const SizedBox(height: 15),
-                Text(
-                  'Level ${level.number}  •  ${level.title}',
-                  key: const Key('profile-level-title'),
-                  maxLines: 2,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: foreground,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Semantics(
-                  label: '$levelXp of $levelTarget experience points',
-                  child: TweenAnimationBuilder<double>(
-                    tween: Tween(begin: 0, end: level.progress),
-                    duration: const Duration(milliseconds: 800),
-                    curve: Curves.easeOutCubic,
-                    builder: (context, value, _) => LinearProgressIndicator(
-                      value: value,
-                      minHeight: 7,
-                      borderRadius: BorderRadius.circular(9),
-                      backgroundColor: foreground.withValues(alpha: 0.16),
-                      valueColor: AlwaysStoppedAnimation(foreground),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  '$levelXp of $levelTarget XP',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: muted,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 13),
-          SizedBox(
-            width: 112,
-            child: Column(
-              children: [
-                Container(
-                  height: 151,
-                  width: 112,
-                  padding: const EdgeInsets.fromLTRB(4, 3, 4, 1),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.17),
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.2),
-                    ),
-                  ),
-                  child: TweenAnimationBuilder<double>(
-                    tween: Tween(begin: 0.86, end: 1),
-                    duration: reduceMotion
-                        ? Duration.zero
-                        : const Duration(milliseconds: 520),
-                    curve: Curves.easeOutBack,
-                    builder: (context, value, child) =>
-                        Transform.scale(scale: value, child: child),
-                    child: KidProfileCharacterPose(
-                      key: const Key('profile-hero-character-pose'),
-                      profile: profile,
-                      pose: KidCharacterPose.wave,
-                      fit: BoxFit.contain,
-                      fallbackSize: 96,
-                      semanticLabel:
-                          '${kidAvatarOptionFor(profile.avatarKey).label} waving on ${profile.displayName}\'s profile',
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    IconButton(
-                      key: const Key('profile-edit'),
-                      tooltip: 'Edit profile',
-                      onPressed: onEdit,
-                      style: IconButton.styleFrom(
-                        backgroundColor: foreground,
-                        foregroundColor: isDark
-                            ? const Color(0xFF514582)
-                            : Colors.white,
-                      ),
-                      icon: const Icon(
-                        Icons.edit_rounded,
-                        semanticLabel: 'Edit profile',
-                        size: 18,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    IconButton(
-                      key: const Key('profile-switch'),
-                      tooltip: 'Switch child',
-                      onPressed: isSwitching ? null : onSwitch,
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.white.withValues(alpha: 0.3),
-                        foregroundColor: foreground,
-                        disabledBackgroundColor: Colors.white.withValues(
-                          alpha: 0.14,
-                        ),
-                      ),
-                      icon: isSwitching
-                          ? SizedBox.square(
-                              dimension: 17,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: foreground,
-                              ),
-                            )
-                          : const Icon(
-                              Icons.switch_account_rounded,
-                              semanticLabel: 'Switch child',
-                              size: 19,
-                            ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatsGrid extends StatelessWidget {
-  const _StatsGrid({required this.stats, required this.badgeCount});
-
-  final ProfileStats stats;
-  final int badgeCount;
-
-  @override
-  Widget build(BuildContext context) {
-    final items = [
-      _LiveStat(
-        value: '${stats.completedGameLevels}/${stats.totalGameLevels}',
-        label: 'Levels won',
-        icon: Icons.flag_rounded,
-        color: const Color(0xFF9B92F6),
-      ),
-      _LiveStat(
-        value: '${stats.gameStars}/${stats.maxGameStars}',
-        label: 'Stars',
-        icon: Icons.star_rounded,
-        color: const Color(0xFFE5A0F2),
-      ),
-      _LiveStat(
-        value: '${stats.gamesStarted}',
-        label: 'Games tried',
-        icon: Icons.extension_rounded,
-        color: const Color(0xFFFFC45B),
-      ),
-      _LiveStat(
-        value: '${stats.earnedBadges}/$badgeCount',
-        label: 'Badges',
-        icon: Icons.workspace_premium_rounded,
-        color: const Color(0xFF63D276),
-      ),
-      _LiveStat(
-        value: '${stats.storiesStarted}/${stats.totalStories}',
-        label: 'Stories explored',
-        icon: Icons.auto_stories_rounded,
-        color: const Color(0xFF66C9E8),
-      ),
-      _LiveStat(
-        value: '${stats.storiesCompleted}/${stats.totalStories}',
-        label: 'Stories completed',
-        icon: Icons.menu_book_rounded,
-        color: const Color(0xFFFF9078),
-      ),
-    ];
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        const gap = 10.0;
-        final cardWidth = math.max(126.0, (constraints.maxWidth - gap) / 2);
-        return Wrap(
-          spacing: gap,
-          runSpacing: gap,
-          children: [
-            for (final item in items)
-              SizedBox(
-                width: cardWidth,
-                child: _StatCard(stat: item),
               ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-String _progressOverviewLabel(ProfileStats stats) {
-  final storyLabel = stats.storiesStarted == 1 ? 'story' : 'stories';
-  final gameLabel = stats.gamesStarted == 1 ? 'game' : 'games';
-  return '${stats.storiesStarted} $storyLabel • ${stats.gamesStarted} $gameLabel';
-}
-
-class _StatCard extends StatelessWidget {
-  const _StatCard({required this.stat});
-
-  final _LiveStat stat;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final foreground = isDark ? Colors.white : const Color(0xFF171421);
-    return Container(
-      constraints: const BoxConstraints(minHeight: 132),
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: isDark
-            ? Color.alphaBlend(Colors.black.withValues(alpha: 0.28), stat.color)
-            : stat.color,
-        borderRadius: BorderRadius.circular(21),
-        border: Border.all(color: foreground.withValues(alpha: 0.15)),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            right: -25,
-            bottom: -38,
-            child: Container(
-              width: 108,
-              height: 108,
-              decoration: BoxDecoration(
-                color: foreground.withValues(alpha: 0.07),
-                shape: BoxShape.circle,
-              ),
-            ),
+            ],
           ),
-          Positioned(
-            right: 30,
-            bottom: -45,
-            child: Container(
-              width: 82,
-              height: 82,
-              decoration: BoxDecoration(
-                color: foreground.withValues(alpha: 0.055),
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 13, 13, 14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 34,
-                      height: 34,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.32),
-                        borderRadius: BorderRadius.circular(11),
-                      ),
-                      child: Icon(stat.icon, color: foreground, size: 20),
-                    ),
-                    const Spacer(),
-                    Icon(
-                      Icons.more_horiz_rounded,
-                      color: foreground.withValues(alpha: 0.55),
-                      size: 19,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 13),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    stat.value,
+          const SizedBox(height: 12),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final stacked = largeText || constraints.maxWidth < 280;
+              final heading = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    nextBadge?.title ?? 'Begin the adventure',
+                    maxLines: largeText ? null : 2,
+                    overflow: largeText
+                        ? TextOverflow.visible
+                        : TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       color: foreground,
-                      fontSize: 28,
+                      fontSize: 27,
+                      height: 0.98,
                       fontWeight: FontWeight.w900,
-                      height: 0.95,
-                      letterSpacing: -0.8,
+                      letterSpacing: -1,
                     ),
                   ),
+                  const SizedBox(height: 8),
+                  Text(
+                    nextBadge?.description ??
+                        'Play a game round to start collecting progress.',
+                    maxLines: largeText ? null : 3,
+                    overflow: largeText
+                        ? TextOverflow.visible
+                        : TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: muted,
+                      fontWeight: FontWeight.w600,
+                      height: 1.28,
+                    ),
+                  ),
+                ],
+              );
+              final chest = Image.asset(
+                'assets/images/quest-chest-premium-v1.png',
+                key: const Key('profile-quest-chest'),
+                width: stacked ? 72 : 96,
+                height: stacked ? 72 : 96,
+                fit: BoxFit.contain,
+                filterQuality: FilterQuality.high,
+                cacheWidth: 384,
+                excludeFromSemantics: true,
+                errorBuilder: (_, _, _) => const SizedBox.shrink(),
+              );
+              if (stacked) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    heading,
+                    const SizedBox(height: 8),
+                    Align(alignment: Alignment.centerRight, child: chest),
+                  ],
+                );
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(child: heading),
+                  const SizedBox(width: 8),
+                  chest,
+                ],
+              );
+            },
+          ),
+          if (nextBadge != null) ...[
+            const SizedBox(height: 13),
+            Row(
+              children: [
+                Expanded(
+                  child: LinearProgressIndicator(
+                    value: nextBadge!.completion,
+                    minHeight: 7,
+                    borderRadius: BorderRadius.circular(9),
+                    backgroundColor: foreground.withValues(alpha: 0.16),
+                    valueColor: AlwaysStoppedAnimation(foreground),
+                  ),
                 ),
-                const SizedBox(height: 5),
-                Text(
-                  stat.label,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: foreground.withValues(alpha: 0.75),
-                    fontWeight: FontWeight.w800,
+                const SizedBox(width: 8),
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      '${nextBadge!.progress}/${nextBadge!.target}',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: foreground,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
                   ),
                 ),
               ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SectionHeading extends StatelessWidget {
-  const _SectionHeading({required this.title, required this.trailing});
-
-  final String title;
-  final String trailing;
-
-  @override
-  Widget build(BuildContext context) {
-    final titleWidget = Text(
-      title,
-      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-        fontSize: 20,
-        fontWeight: FontWeight.w800,
-        letterSpacing: -0.3,
-      ),
-    );
-    final trailingWidget = Text(
-      trailing,
-      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-        color: const Color(0xFF2D7D6F),
-        fontWeight: FontWeight.w700,
-      ),
-    );
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
-        final shouldStack = constraints.maxWidth < 330 || textScale > 1.35;
-        if (shouldStack) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [titleWidget, const SizedBox(height: 4), trailingWidget],
-          );
-        }
-        return Row(
-          children: [
-            Expanded(child: titleWidget),
-            trailingWidget,
           ],
-        );
-      },
-    );
-  }
-}
-
-class _BadgeShelf extends StatefulWidget {
-  const _BadgeShelf({required this.badges});
-
-  final List<ProfileBadge> badges;
-
-  @override
-  State<_BadgeShelf> createState() => _BadgeShelfState();
-}
-
-class _BadgeShelfState extends State<_BadgeShelf> with WidgetsBindingObserver {
-  static const _autoAdvanceDelay = Duration(milliseconds: 2800);
-  static const _slideDuration = Duration(milliseconds: 360);
-  static const _virtualAnchor = 100000;
-
-  late final PageController _pageController;
-  Timer? _autoAdvanceTimer;
-  int _virtualPage = 0;
-  bool _appIsActive = true;
-  int _updateGeneration = 0;
-
-  int get _badgeIndex =>
-      widget.badges.isEmpty ? 0 : _virtualPage % widget.badges.length;
-
-  static int _initialVirtualPage(int badgeCount) {
-    if (badgeCount <= 1) return 0;
-    return _virtualAnchor - (_virtualAnchor % badgeCount);
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _appIsActive =
-        WidgetsBinding.instance.lifecycleState == null ||
-        WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
-    _virtualPage = _initialVirtualPage(widget.badges.length);
-    _pageController = PageController(
-      viewportFraction: 0.88,
-      initialPage: _virtualPage,
-    );
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _scheduleAutoAdvance();
-  }
-
-  @override
-  void didUpdateWidget(covariant _BadgeShelf oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    _cancelAutoAdvance();
-    final generation = ++_updateGeneration;
-    final oldIndex = oldWidget.badges.isEmpty
-        ? 0
-        : _virtualPage % oldWidget.badges.length;
-    final oldKey = oldWidget.badges.isEmpty
-        ? null
-        : oldWidget.badges[oldIndex].key;
-    final sameBadgeOrder =
-        oldWidget.badges.length == widget.badges.length &&
-        List.generate(
-          widget.badges.length,
-          (index) => oldWidget.badges[index].key == widget.badges[index].key,
-        ).every((matches) => matches);
-    if (sameBadgeOrder) {
-      _scheduleAutoAdvance();
-      return;
-    }
-
-    final preservedIndex = oldKey == null
-        ? -1
-        : widget.badges.indexWhere((badge) => badge.key == oldKey);
-    if (widget.badges.length <= 1) {
-      _virtualPage = 0;
-    } else {
-      final logicalIndex = preservedIndex >= 0
-          ? preservedIndex
-          : oldIndex.clamp(0, widget.badges.length - 1);
-      final cycleBase = _virtualPage - (_virtualPage % widget.badges.length);
-      final candidates = <int>[
-        cycleBase + logicalIndex,
-        cycleBase + logicalIndex - widget.badges.length,
-        cycleBase + logicalIndex + widget.badges.length,
-      ].where((page) => page >= 0).toList(growable: false);
-      candidates.sort(
-        (left, right) =>
-            (left - _virtualPage).abs().compareTo((right - _virtualPage).abs()),
-      );
-      _virtualPage = candidates.first;
-      if (_virtualPage < 100) {
-        _virtualPage = _initialVirtualPage(widget.badges.length) + logicalIndex;
-      }
-    }
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || generation != _updateGeneration) return;
-      if (_pageController.hasClients && widget.badges.isNotEmpty) {
-        _pageController.jumpToPage(_virtualPage);
-      }
-      _scheduleAutoAdvance();
-    });
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    _appIsActive = state == AppLifecycleState.resumed;
-    if (_appIsActive) {
-      _scheduleAutoAdvance();
-    } else {
-      _cancelAutoAdvance();
-    }
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    _cancelAutoAdvance();
-    _pageController.dispose();
-    super.dispose();
-  }
-
-  bool get _motionIsReduced {
-    final mediaQuery = MediaQuery.of(context);
-    return mediaQuery.disableAnimations || mediaQuery.accessibleNavigation;
-  }
-
-  bool get _canAutoAdvance {
-    final mediaQuery = MediaQuery.of(context);
-    return mounted &&
-        _appIsActive &&
-        widget.badges.length > 1 &&
-        !mediaQuery.disableAnimations &&
-        !mediaQuery.accessibleNavigation;
-  }
-
-  bool get _isVisible {
-    final renderObject = context.findRenderObject();
-    if (renderObject is! RenderBox ||
-        !renderObject.attached ||
-        !renderObject.hasSize) {
-      return false;
-    }
-    final top = renderObject.localToGlobal(Offset.zero).dy;
-    final bottom = top + renderObject.size.height;
-    final screenHeight = MediaQuery.sizeOf(context).height;
-    return bottom > 0 && top < screenHeight;
-  }
-
-  void _cancelAutoAdvance() {
-    _autoAdvanceTimer?.cancel();
-    _autoAdvanceTimer = null;
-  }
-
-  void _scheduleAutoAdvance() {
-    _cancelAutoAdvance();
-    if (!_canAutoAdvance) return;
-    _autoAdvanceTimer = Timer(_autoAdvanceDelay, () {
-      if (!mounted) return;
-      final route = ModalRoute.of(context);
-      if (!_canAutoAdvance ||
-          !_isVisible ||
-          !TickerMode.valuesOf(context).enabled ||
-          (route != null && !route.isCurrent) ||
-          !_pageController.hasClients ||
-          _pageController.position.isScrollingNotifier.value) {
-        _scheduleAutoAdvance();
-        return;
-      }
-      _goToVirtualPage(_virtualPage + 1);
-    });
-  }
-
-  void _goToVirtualPage(int page) {
-    if (!_pageController.hasClients ||
-        page < 0 ||
-        widget.badges.length <= 1 ||
-        page == _virtualPage) {
-      _scheduleAutoAdvance();
-      return;
-    }
-    _cancelAutoAdvance();
-    if (_motionIsReduced) {
-      _pageController.jumpToPage(page);
-    } else {
-      _pageController.animateToPage(
-        page,
-        duration: _slideDuration,
-        curve: Curves.easeOutCubic,
-      );
-    }
-  }
-
-  void _onPageChanged(int page) {
-    if (page == _virtualPage) return;
-    setState(() => _virtualPage = page);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (widget.badges.isEmpty) {
-      return const _InlineEmptyMessage(
-        icon: Icons.workspace_premium_outlined,
-        message: 'New badges are coming soon.',
-      );
-    }
-    final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
-    final extraHeight = math.min(2.0, math.max(0.0, textScale - 1)) * 180;
-    if (widget.badges.length == 1) {
-      return SizedBox(
-        key: const Key('profile-badges'),
-        height: 420 + extraHeight,
-        child: _BadgeCard(badge: widget.badges.single),
-      );
-    }
-    final currentBadge = widget.badges[_badgeIndex];
-
-    return SizedBox(
-      key: const Key('profile-badges'),
-      height: 420 + extraHeight,
-      child: Stack(
-        children: [
+          const SizedBox(height: 15),
+          Text(
+            'Level ${level.number}  •  ${level.title}',
+            key: const Key('profile-level-title'),
+            maxLines: 2,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: foreground,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 6),
           Semantics(
-            container: true,
-            explicitChildNodes: true,
-            liveRegion: true,
-            label: _badgeCarouselSemanticLabel(
-              currentBadge,
-              position: _badgeIndex + 1,
-              total: widget.badges.length,
-            ),
-            hint: 'Swipe left or right to explore the endless badge loop.',
-            onIncrease: () => _goToVirtualPage(_virtualPage + 1),
-            onDecrease: () => _goToVirtualPage(_virtualPage - 1),
-            child: ExcludeSemantics(
-              child: NotificationListener<ScrollNotification>(
-                onNotification: (notification) {
-                  if (notification is ScrollStartNotification) {
-                    _cancelAutoAdvance();
-                  } else if (notification is ScrollEndNotification) {
-                    _scheduleAutoAdvance();
-                  }
-                  return false;
-                },
-                child: PageView.builder(
-                  key: const Key('profile-badge-carousel'),
-                  controller: _pageController,
-                  clipBehavior: Clip.none,
-                  allowImplicitScrolling: true,
-                  onPageChanged: _onPageChanged,
-                  itemBuilder: (context, virtualIndex) {
-                    final badge =
-                        widget.badges[virtualIndex % widget.badges.length];
-                    return AnimatedBuilder(
-                      animation: _pageController,
-                      child: Padding(
-                        key: ValueKey('badge-${badge.key}-$virtualIndex'),
-                        padding: const EdgeInsets.fromLTRB(7, 5, 7, 7),
-                        child: _BadgeCard(badge: badge),
-                      ),
-                      builder: (context, child) {
-                        var activePage = _virtualPage.toDouble();
-                        if (_pageController.hasClients &&
-                            _pageController.position.hasContentDimensions) {
-                          activePage =
-                              _pageController.page ?? _virtualPage.toDouble();
-                        }
-                        final distance = (activePage - virtualIndex)
-                            .abs()
-                            .clamp(0.0, 1.0);
-                        return Transform.scale(
-                          scale: 1 - (distance * 0.045),
-                          child: Opacity(
-                            opacity: 1 - (distance * 0.18),
-                            child: child,
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
+            label: level.isMaxLevel
+                ? 'Maximum level achieved. ${level.xp} total experience points'
+                : '$levelXp of $levelTarget experience points',
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: level.progress),
+              duration: const Duration(milliseconds: 800),
+              curve: Curves.easeOutCubic,
+              builder: (context, value, _) => LinearProgressIndicator(
+                key: const Key('profile-level-progress'),
+                value: value,
+                minHeight: 7,
+                borderRadius: BorderRadius.circular(9),
+                backgroundColor: foreground.withValues(alpha: 0.16),
+                valueColor: AlwaysStoppedAnimation(foreground),
               ),
             ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            level.isMaxLevel
+                ? 'Maximum level achieved • ${level.xp} total XP'
+                : '$levelXp of $levelTarget XP',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: muted,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 7),
+          Text(
+            'Earn XP with stories, quests, and daily streaks.',
+            key: const Key('profile-xp-sources'),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: muted, height: 1.3),
           ),
         ],
       ),
     );
   }
-}
-
-class _BadgeCard extends StatelessWidget {
-  const _BadgeCard({required this.badge});
-
-  final ProfileBadge badge;
-
-  @override
-  Widget build(BuildContext context) {
-    const ink = Color(0xFF111111);
-    final palette = _badgeArtworkPalette(badge.iconKey);
-    final progressLabel = badge.earned
-        ? 'UNLOCKED'
-        : '${badge.progress} OF ${badge.target} COMPLETE';
-    return Semantics(
-      container: true,
-      excludeSemantics: true,
-      label: badge.earned
-          ? '${badge.title} badge earned. ${badge.description}'
-          : '${badge.title} badge locked. ${badge.progress} of ${badge.target}. ${badge.description}',
-      child: Container(
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFFEFA),
-          borderRadius: BorderRadius.circular(25),
-          boxShadow: [
-            BoxShadow(
-              color: ink.withValues(alpha: 0.12),
-              blurRadius: 10,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
-        foregroundDecoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(25),
-          border: Border.all(color: ink, width: 3.2),
-        ),
-        child: Column(
-          children: [
-            Expanded(
-              flex: 62,
-              child: Container(
-                width: double.infinity,
-                color: const Color(0xFFFFFEFA),
-                padding: const EdgeInsets.fromLTRB(20, 19, 20, 17),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      _badgeIcon(badge.iconKey),
-                      color: palette.accent,
-                      size: 34,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      badge.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(
-                            color: ink,
-                            fontSize: 26,
-                            height: 0.98,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -1.1,
-                          ),
-                    ),
-                    const SizedBox(height: 13),
-                    Expanded(
-                      child: Text(
-                        badge.description,
-                        maxLines: 4,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: ink,
-                          fontSize: 14.5,
-                          height: 1.35,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            progressLabel,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.labelMedium
-                                ?.copyWith(
-                                  color: ink,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: 1.45,
-                                ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Icon(
-                          badge.earned
-                              ? Icons.check_circle_rounded
-                              : Icons.arrow_forward_rounded,
-                          color: ink,
-                          size: 21,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    LinearProgressIndicator(
-                      value: badge.completion,
-                      minHeight: 6,
-                      borderRadius: BorderRadius.circular(99),
-                      backgroundColor: ink.withValues(alpha: 0.12),
-                      valueColor: const AlwaysStoppedAnimation(ink),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Container(height: 3.2, color: ink),
-            Expanded(
-              flex: 38,
-              child: _BadgeArtwork(
-                icon: _badgeIcon(badge.iconKey),
-                palette: palette,
-                earned: badge.earned,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _BadgeArtwork extends StatelessWidget {
-  const _BadgeArtwork({
-    required this.icon,
-    required this.palette,
-    required this.earned,
-  });
-
-  final IconData icon;
-  final _BadgeArtworkPalette palette;
-  final bool earned;
-
-  @override
-  Widget build(BuildContext context) {
-    const ink = Color(0xFF111111);
-    return ColoredBox(
-      color: palette.background,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          CustomPaint(
-            painter: _BadgeArtworkPainter(
-              accent: palette.accent,
-              secondary: palette.secondary,
-            ),
-          ),
-          Center(
-            child: Transform.rotate(
-              angle: palette.rotation,
-              child: Container(
-                width: 116,
-                height: 116,
-                decoration: BoxDecoration(
-                  color: palette.tile,
-                  shape: palette.isCircular
-                      ? BoxShape.circle
-                      : BoxShape.rectangle,
-                  borderRadius: palette.isCircular
-                      ? null
-                      : BorderRadius.circular(27),
-                  border: Border.all(color: ink, width: 3),
-                  boxShadow: const [
-                    BoxShadow(color: ink, offset: Offset(6, 7)),
-                  ],
-                ),
-                child: Icon(
-                  earned ? icon : Icons.lock_rounded,
-                  color: ink,
-                  size: 62,
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 18,
-            top: 16,
-            child: Icon(Icons.auto_awesome_rounded, color: ink, size: 24),
-          ),
-          Positioned(
-            right: 20,
-            bottom: 18,
-            child: Container(
-              width: 17,
-              height: 17,
-              decoration: BoxDecoration(
-                color: palette.tile,
-                shape: BoxShape.circle,
-                border: Border.all(color: ink, width: 2),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BadgeArtworkPainter extends CustomPainter {
-  const _BadgeArtworkPainter({required this.accent, required this.secondary});
-
-  final Color accent;
-  final Color secondary;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const ink = Color(0xFF111111);
-    final fill = Paint()..style = PaintingStyle.fill;
-    final outline = Paint()
-      ..color = ink
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3;
-
-    final lowerWave = Path()
-      ..moveTo(-8, size.height * 0.72)
-      ..cubicTo(
-        size.width * 0.18,
-        size.height * 0.42,
-        size.width * 0.28,
-        size.height * 1.05,
-        size.width * 0.5,
-        size.height * 0.72,
-      )
-      ..cubicTo(
-        size.width * 0.68,
-        size.height * 0.46,
-        size.width * 0.82,
-        size.height * 0.95,
-        size.width + 8,
-        size.height * 0.62,
-      )
-      ..lineTo(size.width + 8, size.height + 8)
-      ..lineTo(-8, size.height + 8)
-      ..close();
-    fill.color = accent;
-    canvas
-      ..drawPath(lowerWave, fill)
-      ..drawPath(lowerWave, outline);
-
-    final cornerBlob = Path()
-      ..moveTo(-8, -8)
-      ..lineTo(size.width * 0.29, -8)
-      ..cubicTo(
-        size.width * 0.36,
-        size.height * 0.1,
-        size.width * 0.2,
-        size.height * 0.21,
-        size.width * 0.08,
-        size.height * 0.16,
-      )
-      ..cubicTo(
-        size.width * 0.02,
-        size.height * 0.14,
-        0,
-        size.height * 0.25,
-        -8,
-        size.height * 0.28,
-      )
-      ..close();
-    fill.color = secondary;
-    canvas
-      ..drawPath(cornerBlob, fill)
-      ..drawPath(cornerBlob, outline);
-
-    fill.color = const Color(0xFFFFFEFA);
-    for (final offset in [
-      Offset(size.width * 0.18, size.height * 0.54),
-      Offset(size.width * 0.82, size.height * 0.25),
-      Offset(size.width * 0.72, size.height * 0.84),
-    ]) {
-      canvas.drawCircle(offset, 3.5, fill);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _BadgeArtworkPainter oldDelegate) =>
-      accent != oldDelegate.accent || secondary != oldDelegate.secondary;
-}
-
-class _BadgeArtworkPalette {
-  const _BadgeArtworkPalette({
-    required this.background,
-    required this.accent,
-    required this.secondary,
-    required this.tile,
-    required this.rotation,
-    this.isCircular = false,
-  });
-
-  final Color background;
-  final Color accent;
-  final Color secondary;
-  final Color tile;
-  final double rotation;
-  final bool isCircular;
-}
-
-_BadgeArtworkPalette _badgeArtworkPalette(String iconKey) => switch (iconKey) {
-  'star' || 'stars' => const _BadgeArtworkPalette(
-    background: Color(0xFF8E7CFF),
-    accent: Color(0xFFFF95C8),
-    secondary: Color(0xFFFFC928),
-    tile: Color(0xFFFFF3A8),
-    rotation: 0.08,
-    isCircular: true,
-  ),
-  'trophy' => const _BadgeArtworkPalette(
-    background: Color(0xFF00C98B),
-    accent: Color(0xFFFF7047),
-    secondary: Color(0xFFFFD36A),
-    tile: Color(0xFFFFF1D2),
-    rotation: -0.08,
-  ),
-  'compass' => const _BadgeArtworkPalette(
-    background: Color(0xFF62C8FF),
-    accent: Color(0xFFFFC928),
-    secondary: Color(0xFFFF7A59),
-    tile: Color(0xFFF6E9FF),
-    rotation: 0.06,
-    isCircular: true,
-  ),
-  'crown' => const _BadgeArtworkPalette(
-    background: Color(0xFFFF91B8),
-    accent: Color(0xFF806BEB),
-    secondary: Color(0xFFFFCE2F),
-    tile: Color(0xFFBFF6DD),
-    rotation: -0.07,
-  ),
-  _ => const _BadgeArtworkPalette(
-    background: Color(0xFFFFC928),
-    accent: Color(0xFFFF754B),
-    secondary: Color(0xFF00B887),
-    tile: Color(0xFFFFF1D2),
-    rotation: -0.07,
-    isCircular: true,
-  ),
-};
-
-String _badgeCarouselSemanticLabel(
-  ProfileBadge badge, {
-  required int position,
-  required int total,
-}) {
-  final detail = badge.earned
-      ? '${badge.title} badge earned. ${badge.description}'
-      : '${badge.title} badge locked. ${badge.progress} of ${badge.target}. ${badge.description}';
-  return 'Showing badge $position of $total. $detail';
 }
 
 class _ActivityCard extends StatelessWidget {
@@ -2422,29 +1550,6 @@ class _ProfileBackdrop extends StatelessWidget {
     );
   }
 }
-
-class _LiveStat {
-  const _LiveStat({
-    required this.value,
-    required this.label,
-    required this.icon,
-    required this.color,
-  });
-
-  final String value;
-  final String label;
-  final IconData icon;
-  final Color color;
-}
-
-IconData _badgeIcon(String iconKey) => switch (iconKey) {
-  'play-spark' => Icons.rocket_launch_rounded,
-  'star' => Icons.star_rounded,
-  'trophy' => Icons.emoji_events_rounded,
-  'compass' => Icons.explore_rounded,
-  'crown' => Icons.workspace_premium_rounded,
-  _ => Icons.auto_awesome_rounded,
-};
 
 String _lastActivityLabel(DateTime? value) {
   if (value == null) return 'No game activity yet';

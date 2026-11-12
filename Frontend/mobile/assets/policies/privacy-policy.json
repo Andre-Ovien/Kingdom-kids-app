@@ -1,0 +1,298 @@
+{
+  "schema_version": 1,
+  "title": "Privacy policy",
+  "last_updated": "11 November 2026",
+  "canonical_url": "https://kingdom-kids.app/privacy/",
+  "contact_email": "privacy@kingdom-kids.app",
+  "contact_is_provisional": true,
+  "source_sha256": {
+    "privacy.astro": "5d3de183336dca9f728deba74e1acf37343ae83f9a51db372502719760985d82",
+    "site.ts": "dee3dfb3bd8c938acee118c4ae9cae65674915deb35a5519c0892d34dc9f0522"
+  },
+  "sections": [
+    {
+      "id": "scope-title",
+      "title": "1. Scope and who the service is for",
+      "blocks": [
+        {
+          "kind": "paragraph",
+          "text": "This policy applies to the Kingdom Kids website, iOS and Android apps, and supporting API. The app offers Bible stories, read-aloud features, games, and progress views for children, while a parent or guardian creates and manages the family account."
+        },
+        {
+          "kind": "paragraph",
+          "text": "Read-aloud features can use a device voice or prerecorded synthetic character narration delivered from controlled media hosts. The app does not require a child to record their voice."
+        },
+        {
+          "kind": "paragraph",
+          "text": "A child is not asked to create an account or provide an email address or password. Parents should use a nickname—not a full legal name—when creating a child profile."
+        }
+      ]
+    },
+    {
+      "id": "collect-title",
+      "title": "2. Information we handle",
+      "blocks": [
+        {
+          "kind": "heading",
+          "text": "Parent account and security information"
+        },
+        {
+          "kind": "bullet",
+          "text": "Parent email address and account identifiers."
+        },
+        {
+          "kind": "bullet",
+          "text": "A one-way password hash; the service does not store the readable account password."
+        },
+        {
+          "kind": "bullet",
+          "text": "Email-verification, password-reset, and account-deletion challenge records, attempt counts, expiry times, and security lockouts."
+        },
+        {
+          "kind": "bullet",
+          "text": "Access and refresh tokens used to maintain a signed-in session."
+        },
+        {
+          "kind": "heading",
+          "text": "Minimal child-profile information"
+        },
+        {
+          "kind": "bullet",
+          "text": "A parent-entered display name or nickname and a chosen character/avatar."
+        },
+        {
+          "kind": "bullet",
+          "text": "Reading preferences such as text size and whether narration is enabled."
+        },
+        {
+          "kind": "bullet",
+          "text": "Learning activity tied to the profile: stories started or completed, game attempts and submitted answers, scores, stars, completed levels, badges, and the last-played time."
+        },
+        {
+          "kind": "bullet",
+          "text": "Daily streak dates and the device timezone offset used to calculate a local day."
+        },
+        {
+          "kind": "heading",
+          "text": "Website and waitlist information"
+        },
+        {
+          "kind": "bullet",
+          "text": "A grown-up’s email, consent time, and signup source when they ask to join the launch waitlist."
+        },
+        {
+          "kind": "bullet",
+          "text": "Standard technical request information—such as IP address, request time, browser type, and error or security events—may be processed by the production host, reverse proxy, or API to deliver and protect the service."
+        },
+        {
+          "kind": "heading",
+          "text": "Information kept on the device"
+        },
+        {
+          "kind": "paragraph",
+          "text": "Session tokens, the selected profile, preferences, first-launch state, and optional reminder settings are stored using the device’s protected storage. Reminder notifications are scheduled locally after a grown-up grants notification permission."
+        }
+      ]
+    },
+    {
+      "id": "not-collect-title",
+      "title": "3. What the current product does not collect",
+      "blocks": [
+        {
+          "kind": "paragraph",
+          "text": "The current app does not ask for or integrate:"
+        },
+        {
+          "kind": "bullet",
+          "text": "A child’s email address, password, birth date, school, home address, or precise location."
+        },
+        {
+          "kind": "bullet",
+          "text": "Contacts, photos, camera, microphone, or advertising identifiers."
+        },
+        {
+          "kind": "bullet",
+          "text": "Third-party advertising, behavioural advertising, or third-party analytics SDKs."
+        },
+        {
+          "kind": "paragraph",
+          "text": "If a future release changes these practices, this policy and the relevant app-store disclosures must be updated before that release is made available."
+        }
+      ]
+    },
+    {
+      "id": "use-title",
+      "title": "4. Why we use information",
+      "blocks": [
+        {
+          "kind": "bullet",
+          "text": "Create, verify, secure, and recover a parent account."
+        },
+        {
+          "kind": "bullet",
+          "text": "Keep each child profile’s content preferences and progress separate."
+        },
+        {
+          "kind": "bullet",
+          "text": "Evaluate game activity, award progress, and show family-facing summaries."
+        },
+        {
+          "kind": "bullet",
+          "text": "Calculate streaks using the profile’s local day without requesting precise location."
+        },
+        {
+          "kind": "bullet",
+          "text": "Deliver requested launch updates to waitlist subscribers."
+        },
+        {
+          "kind": "bullet",
+          "text": "Prevent abuse, investigate errors, protect accounts, and operate the service."
+        },
+        {
+          "kind": "bullet",
+          "text": "Comply with applicable law and respond to valid legal requests."
+        }
+      ]
+    },
+    {
+      "id": "share-title",
+      "title": "5. When information may be shared",
+      "blocks": [
+        {
+          "kind": "paragraph",
+          "text": "Kingdom Kids does not sell or rent personal information."
+        },
+        {
+          "kind": "paragraph",
+          "text": "Information may be disclosed only as needed to:"
+        },
+        {
+          "kind": "bullet",
+          "text": "Vendors operating the production infrastructure, such as hosting, database, content-delivery, security, and transactional-email providers, under appropriate data-protection terms."
+        },
+        {
+          "kind": "bullet",
+          "text": "Comply with law, court orders, or valid government requests, or protect people and the service from harm."
+        },
+        {
+          "kind": "bullet",
+          "text": "Complete a merger, financing, acquisition, or sale of assets, subject to notice and continued protection of the information."
+        },
+        {
+          "kind": "paragraph",
+          "text": "Production vendors have not yet been named in this pre-launch policy. Their identities, regions, contracts, and any international transfer safeguards must be reviewed and this policy updated before launch."
+        }
+      ]
+    },
+    {
+      "id": "retention-title",
+      "title": "6. Retention and deletion",
+      "blocks": [
+        {
+          "kind": "bullet",
+          "text": "Parent account and associated child-profile data are kept while the account remains open."
+        },
+        {
+          "kind": "bullet",
+          "text": "The self-service deletion flow removes the parent account, child profiles, preferences, story activity, streak history, game progress and attempts, and a waitlist entry using the same email from the active service."
+        },
+        {
+          "kind": "bullet",
+          "text": "Deletion requests submitted through the public page are completed only after the requester verifies control of the grown-up email address using a short-lived code. This process can be used for both verified accounts and accounts still waiting for email verification."
+        },
+        {
+          "kind": "bullet",
+          "text": "Waitlist-only information is kept until launch communications are complete or the grown-up asks for removal."
+        },
+        {
+          "kind": "bullet",
+          "text": "Email-verification, password-reset, and account-deletion challenges are short-lived and retained only as needed for account security."
+        },
+        {
+          "kind": "paragraph",
+          "text": "Production log and backup schedules are not yet finalized. They must be documented before launch. Once configured, deleted information may remain temporarily in access-restricted backups until their normal rotation, and must not be restored to the active service except for disaster recovery."
+        }
+      ]
+    },
+    {
+      "id": "children-title",
+      "title": "7. Children and parent controls",
+      "blocks": [
+        {
+          "kind": "paragraph",
+          "text": "The child experience is attached to a grown-up’s verified account. A parent chooses the child-profile nickname and avatar, can review profile information and progress, and can delete the entire family account. Kingdom Kids does not use child-profile activity for advertising or build advertising profiles."
+        },
+        {
+          "kind": "paragraph",
+          "text": "If a parent believes a child supplied information beyond what the app requests, they should delete the account or contact the privacy address below so it can be investigated and removed."
+        }
+      ]
+    },
+    {
+      "id": "security-title",
+      "title": "8. Security",
+      "blocks": [
+        {
+          "kind": "paragraph",
+          "text": "The production service is intended to require HTTPS, hash passwords with Django’s password-security system, restrict data to the authenticated parent account, throttle sensitive endpoints, and store mobile session data in protected device storage. No security control can guarantee absolute protection, so suspected incidents should be reported promptly."
+        }
+      ]
+    },
+    {
+      "id": "choices-title",
+      "title": "9. Family choices and rights",
+      "blocks": [
+        {
+          "kind": "bullet",
+          "text": "Use the account-deletion page to permanently delete an account.",
+          "source_links": [
+            "/account-deletion/"
+          ]
+        },
+        {
+          "kind": "bullet",
+          "text": "Turn optional notifications off in the app or device settings."
+        },
+        {
+          "kind": "bullet",
+          "text": "Ask to access, correct, or remove information, including a waitlist-only email."
+        },
+        {
+          "kind": "bullet",
+          "text": "Exercise any additional privacy rights available in the family’s country or region."
+        },
+        {
+          "kind": "paragraph",
+          "text": "We may need to verify that a requester controls the relevant parent account or email before completing a request."
+        }
+      ]
+    },
+    {
+      "id": "changes-title",
+      "title": "10. Changes to this policy",
+      "blocks": [
+        {
+          "kind": "paragraph",
+          "text": "This page will show a revised date when the policy changes. Material changes affecting family data should be communicated in the app, by email, or through another appropriate notice before they take effect."
+        }
+      ]
+    },
+    {
+      "id": "contact-title",
+      "title": "11. Contact",
+      "blocks": [
+        {
+          "kind": "paragraph",
+          "text": "Privacy questions or requests can be sent to privacy@kingdom-kids.app.",
+          "source_links": [
+            "mailto:privacy@kingdom-kids.app"
+          ]
+        },
+        {
+          "kind": "paragraph",
+          "text": "Pre-launch status: This privacy inbox is provisional and must be provisioned, monitored, and tested before launch."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,432 @@
+[
+  {
+    "id": "elephant",
+    "turn": {
+      "distance": 4.899999999999999,
+      "curvature": 0.43037374593414457
+    },
+    "samples": [
+      {
+        "phase": "approach",
+        "heading": 2.4892200470282364,
+        "curvature": 0.43037374593414457,
+        "gaitWeights": {
+          "walk": 0.13541261339602428,
+          "left": 0.8645873866039757,
+          "right": 0
+        },
+        "animationTime": 1.8479765980737888
+      },
+      {
+        "phase": "stairs",
+        "heading": 3.141592653589793,
+        "curvature": 0,
+        "gaitWeights": {
+          "walk": 1,
+          "left": 0,
+          "right": 0
+        },
+        "animationTime": 1.9245947953426707
+      },
+      {
+        "phase": "door",
+        "heading": 3.141592653589793,
+        "curvature": 0,
+        "gaitWeights": {
+          "walk": 1,
+          "left": 0,
+          "right": 0
+        },
+        "animationTime": 1.4065502884472636
+      }
+    ],
+    "nativeSkeletonChanges": true
+  },
+  {
+    "id": "sheep",
+    "turn": {
+      "distance": 18.099999999999987,
+      "curvature": 0.09832922891397694
+    },
+    "samples": [
+      {
+        "phase": "approach",
+        "heading": 3.1068308114728533,
+        "curvature": 0.09832922891397694,
+        "gaitWeights": {
+          "walk": 0.8822586150760727,
+          "left": 0.11774138492392733,
+          "right": 0
+        },
+        "animationTime": 1.6793118431135028
+      },
+      {
+        "phase": "stairs",
+        "heading": 3.141592653589793,
+        "curvature": 0,
+        "gaitWeights": {
+          "walk": 0.989213137151254,
+          "left": 0.010786862848746026,
+          "right": 0
+        },
+        "animationTime": 0.6560859480913663
+      },
+      {
+        "phase": "door",
+        "heading": 3.141592653589793,
+        "curvature": 0,
+        "gaitWeights": {
+          "walk": 0.9999999999999998,
+          "left": 2.4990944779085603e-16,
+          "right": 0
+        },
+        "animationTime": 0.07488794064519766
+      }
+    ],
+    "nativeSkeletonChanges": true
+  },
+  {
+    "id": "zebra",
+    "turn": {
+      "distance": 17.899999999999984,
+      "curvature": -0.39306233509602717
+    },
+    "samples": [
+      {
+        "phase": "approach",
+        "heading": -2.3611077515918715,
+        "curvature": -0.39306233509602717,
+        "gaitWeights": {
+          "walk": 0.28593766809453613,
+          "left": 0,
+          "right": 0.7140623319054639
+        },
+        "animationTime": 0.43705216583462203
+      },
+      {
+        "phase": "stairs",
+        "heading": 3.141592653589793,
+        "curvature": 0,
+        "gaitWeights": {
+          "walk": 0.9999986415890818,
+          "left": 0,
+          "right": 0.0000013584109181397075
+        },
+        "animationTime": 1.3965965382988017
+      },
+      {
+        "phase": "door",
+        "heading": 3.141592653589793,
+        "curvature": 0,
+        "gaitWeights": {
+          "walk": 1,
+          "left": 0,
+          "right": 4.7808757214254966e-17
+        },
+        "animationTime": 0.6176348951559198
+      }
+    ],
+    "nativeSkeletonChanges": true
+  },
+  {
+    "id": "donkey",
+    "turn": {
+      "distance": 0.5,
+      "curvature": 0.2754483538890878
+    },
+    "samples": [
+      {
+        "phase": "approach",
+        "heading": -1.9644958110094763,
+        "curvature": 0.2754483538890878,
+        "gaitWeights": {
+          "walk": 0.836803722630289,
+          "left": 0.16319627736971096,
+          "right": 0
+        },
+        "animationTime": 0.3560270295073214
+      },
+      {
+        "phase": "stairs",
+        "heading": 3.141592653589793,
+        "curvature": 0,
+        "gaitWeights": {
+          "walk": 1,
+          "left": 2.329340604949326e-21,
+          "right": 2.42861286636753e-17
+        },
+        "animationTime": 0.39313931547963143
+      },
+      {
+        "phase": "door",
+        "heading": 3.141592653589793,
+        "curvature": 0,
+        "gaitWeights": {
+          "walk": 1,
+          "left": 1.8250177686823505e-29,
+          "right": 1.902796707638154e-25
+        },
+        "animationTime": 0.15920905462872526
+      }
+    ],
+    "nativeSkeletonChanges": true
+  },
+  {
+    "id": "deer",
+    "turn": {
+      "distance": 17.899999999999984,
+      "curvature": 0.26694829468370546
+    },
+    "samples": [
+      {
+        "phase": "approach",
+        "heading": 3.050227214177164,
+        "curvature": 0.26694829468370546,
+        "gaitWeights": {
+          "walk": 0.6835746482545279,
+          "left": 0.31642535174547215,
+          "right": 2.6020852139652106e-18
+        },
+        "animationTime": 0.9877397500646801
+      },
+      {
+        "phase": "stairs",
+        "heading": 3.141592653589793,
+        "curvature": 0,
+        "gaitWeights": {
+          "walk": 0.92486448025944,
+          "left": 0.07513551974056001,
+          "right": 3.8296192781413566e-19
+        },
+        "animationTime": 0.3959129718019696
+      },
+      {
+        "phase": "door",
+        "heading": 3.141592653589793,
+        "curvature": 0,
+        "gaitWeights": {
+          "walk": 0.9999999993270497,
+          "left": 6.72950224136961e-10,
+          "right": 3.429993111759389e-27
+        },
+        "animationTime": 0.12184620238307886
+      }
+    ],
+    "nativeSkeletonChanges": true
+  },
+  {
+    "id": "rabbit",
+    "turn": {
+      "distance": 2.3000000000000007,
+      "curvature": -0.3047768047672753
+    },
+    "samples": [
+      {
+        "phase": "approach",
+        "heading": 1.281895078607216,
+        "curvature": -0.3047768047672753,
+        "gaitWeights": {
+          "walk": 0.3507057445250279,
+          "left": 0,
+          "right": 0.6492942554749721
+        },
+        "animationTime": 0.5820819505589003
+      },
+      {
+        "phase": "stairs",
+        "heading": 3.141592653589793,
+        "curvature": 0,
+        "gaitWeights": {
+          "walk": 1,
+          "left": 2.0816681711721685e-17,
+          "right": 3.2526065174565133e-19
+        },
+        "animationTime": 0.21364691679223213
+      },
+      {
+        "phase": "door",
+        "heading": 3.141592653589793,
+        "curvature": 0,
+        "gaitWeights": {
+          "walk": 1,
+          "left": 1.3730695354467432e-23,
+          "right": 2.1454211491355363e-25
+        },
+        "animationTime": 0.48313620714505845
+      }
+    ],
+    "nativeSkeletonChanges": true
+  },
+  {
+    "id": "dove",
+    "turn": {
+      "distance": 18.19999999999999,
+      "curvature": -0.0787939623057191
+    },
+    "samples": [
+      {
+        "phase": "approach",
+        "heading": -3.1141048612565556,
+        "curvature": -0.0787939623057191,
+        "gaitWeights": {
+          "walk": 0.9612649514333143,
+          "left": 0.0076946919608195,
+          "right": 0.03104035660586622
+        },
+        "animationTime": 0.3000000000000007
+      },
+      {
+        "phase": "stairs",
+        "heading": 3.141592653589793,
+        "curvature": 0,
+        "gaitWeights": {
+          "walk": 0.9766151437670727,
+          "left": 0.002830718978532667,
+          "right": 0.02055413725439458
+        },
+        "animationTime": 0
+      },
+      {
+        "phase": "door",
+        "heading": 3.141592653589793,
+        "curvature": 0,
+        "gaitWeights": {
+          "walk": 0.9913971921571563,
+          "left": 0.0010413633159359935,
+          "right": 0.007561444526907803
+        },
+        "animationTime": 0.5
+      }
+    ],
+    "nativeSkeletonChanges": true
+  },
+  {
+    "id": "lion",
+    "turn": {
+      "distance": 1.7000000000000004,
+      "curvature": -0.4439516022157218
+    },
+    "samples": [
+      {
+        "phase": "approach",
+        "heading": -1.5492240564510948,
+        "curvature": -0.4439516022157218,
+        "gaitWeights": {
+          "walk": 0.013441911549747276,
+          "left": 0,
+          "right": 0.9865580884502527
+        },
+        "animationTime": 2.3988075018228727
+      },
+      {
+        "phase": "stairs",
+        "heading": 3.141592653589793,
+        "curvature": 0,
+        "gaitWeights": {
+          "walk": 1,
+          "left": 0,
+          "right": 0
+        },
+        "animationTime": 1.316450094872522
+      },
+      {
+        "phase": "door",
+        "heading": 3.141592653589793,
+        "curvature": 0,
+        "gaitWeights": {
+          "walk": 1,
+          "left": 0,
+          "right": 0
+        },
+        "animationTime": 1.165091941543558
+      }
+    ],
+    "nativeSkeletonChanges": true
+  },
+  {
+    "id": "camel",
+    "turn": {
+      "distance": 17.899999999999984,
+      "curvature": -0.24163724161068675
+    },
+    "samples": [
+      {
+        "phase": "approach",
+        "heading": -2.9128754991957293,
+        "curvature": -0.24163724161068675,
+        "gaitWeights": {
+          "walk": 0.395906895973296,
+          "left": 2.0122792321330962e-16,
+          "right": 0.6040931040267038
+        },
+        "animationTime": 0.03706877327491931
+      },
+      {
+        "phase": "stairs",
+        "heading": 3.141592653589793,
+        "curvature": 0,
+        "gaitWeights": {
+          "walk": 0.9701451356099206,
+          "left": 4.440299862412871e-18,
+          "right": 0.02985486439007945
+        },
+        "animationTime": 1.1811836636407076
+      },
+      {
+        "phase": "door",
+        "heading": 3.141592653589793,
+        "curvature": 0,
+        "gaitWeights": {
+          "walk": 0.9999999993396679,
+          "left": 9.821088566142689e-26,
+          "right": 6.603321315852388e-10
+        },
+        "animationTime": 1.1359113773155052
+      }
+    ],
+    "nativeSkeletonChanges": true
+  },
+  {
+    "id": "giraffe",
+    "turn": {
+      "distance": 0.8999999999999999,
+      "curvature": 0.29136266538567573
+    },
+    "samples": [
+      {
+        "phase": "approach",
+        "heading": 1.2486825549991483,
+        "curvature": 0.29136266538567573,
+        "gaitWeights": {
+          "walk": 0.1704027521957885,
+          "left": 0.8295972478042115,
+          "right": 0
+        },
+        "animationTime": 1.9370737116468713
+      },
+      {
+        "phase": "stairs",
+        "heading": 3.141592653589793,
+        "curvature": 0,
+        "gaitWeights": {
+          "walk": 1,
+          "left": 0,
+          "right": 0
+        },
+        "animationTime": 0.9413659381956805
+      },
+      {
+        "phase": "door",
+        "heading": 3.141592653589793,
+        "curvature": 0,
+        "gaitWeights": {
+          "walk": 1,
+          "left": 0,
+          "right": 0
+        },
+        "animationTime": 1.19984424876791
+      }
+    ],
+    "nativeSkeletonChanges": true
+  }
+]

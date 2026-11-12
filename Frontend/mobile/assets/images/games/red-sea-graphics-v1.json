@@ -1,0 +1,228 @@
+{
+  "version": 1,
+  "clips": {
+    "moses_ready": {
+      "asset": "assets/images/games/red-sea-moses-ready-v1.webp",
+      "cellWidth": 320,
+      "cellHeight": 384,
+      "columns": 1,
+      "frameCount": 1,
+      "durationSeconds": 1.0,
+      "loop": false,
+      "footAnchor": [
+        162.099,
+        346.782
+      ],
+      "bodyHeight": 220.993
+    },
+    "moses_action": {
+      "asset": "assets/images/games/red-sea-moses-action-v1.webp",
+      "cellWidth": 320,
+      "cellHeight": 384,
+      "columns": 9,
+      "frameCount": 63,
+      "durationSeconds": 2.6,
+      "loop": false,
+      "footAnchor": [
+        162.099,
+        346.782
+      ],
+      "bodyHeight": 220.993
+    },
+    "traveller_0_idle": {
+      "asset": "assets/images/games/red-sea-traveller-0-idle-v1.webp",
+      "cellWidth": 128,
+      "cellHeight": 192,
+      "columns": 1,
+      "frameCount": 1,
+      "durationSeconds": 1.0,
+      "loop": false,
+      "footAnchor": [
+        64.0,
+        175.003
+      ],
+      "bodyHeight": 148.76
+    },
+    "traveller_0_turn": {
+      "asset": "assets/images/games/red-sea-traveller-0-turn-v1.webp",
+      "cellWidth": 128,
+      "cellHeight": 192,
+      "columns": 4,
+      "frameCount": 8,
+      "durationSeconds": 0.38,
+      "loop": false,
+      "footAnchor": [
+        64.0,
+        175.003
+      ],
+      "bodyHeight": 148.76
+    },
+    "traveller_0_walk": {
+      "asset": "assets/images/games/red-sea-traveller-0-walk-v1.webp",
+      "cellWidth": 128,
+      "cellHeight": 192,
+      "columns": 6,
+      "frameCount": 24,
+      "durationSeconds": 0.9,
+      "loop": true,
+      "footAnchor": [
+        64.0,
+        175.003
+      ],
+      "bodyHeight": 148.76
+    },
+    "traveller_0_back": {
+      "asset": "assets/images/games/red-sea-traveller-0-back-v1.webp",
+      "cellWidth": 128,
+      "cellHeight": 192,
+      "columns": 1,
+      "frameCount": 1,
+      "durationSeconds": 1.0,
+      "loop": false,
+      "footAnchor": [
+        64.0,
+        175.003
+      ],
+      "bodyHeight": 148.76
+    },
+    "traveller_1_idle": {
+      "asset": "assets/images/games/red-sea-traveller-1-idle-v1.webp",
+      "cellWidth": 128,
+      "cellHeight": 192,
+      "columns": 1,
+      "frameCount": 1,
+      "durationSeconds": 1.0,
+      "loop": false,
+      "footAnchor": [
+        64.0,
+        174.856
+      ],
+      "bodyHeight": 148.593
+    },
+    "traveller_1_turn": {
+      "asset": "assets/images/games/red-sea-traveller-1-turn-v1.webp",
+      "cellWidth": 128,
+      "cellHeight": 192,
+      "columns": 4,
+      "frameCount": 8,
+      "durationSeconds": 0.38,
+      "loop": false,
+      "footAnchor": [
+        64.0,
+        174.856
+      ],
+      "bodyHeight": 148.593
+    },
+    "traveller_1_walk": {
+      "asset": "assets/images/games/red-sea-traveller-1-walk-v1.webp",
+      "cellWidth": 128,
+      "cellHeight": 192,
+      "columns": 6,
+      "frameCount": 24,
+      "durationSeconds": 0.9,
+      "loop": true,
+      "footAnchor": [
+        64.0,
+        174.856
+      ],
+      "bodyHeight": 148.593
+    },
+    "traveller_1_back": {
+      "asset": "assets/images/games/red-sea-traveller-1-back-v1.webp",
+      "cellWidth": 128,
+      "cellHeight": 192,
+      "columns": 1,
+      "frameCount": 1,
+      "durationSeconds": 1.0,
+      "loop": false,
+      "footAnchor": [
+        64.0,
+        174.856
+      ],
+      "bodyHeight": 148.593
+    },
+    "traveller_2_idle": {
+      "asset": "assets/images/games/red-sea-traveller-2-idle-v1.webp",
+      "cellWidth": 128,
+      "cellHeight": 192,
+      "columns": 1,
+      "frameCount": 1,
+      "durationSeconds": 1.0,
+      "loop": false,
+      "footAnchor": [
+        64.0,
+        174.595
+      ],
+      "bodyHeight": 148.302
+    },
+    "traveller_2_turn": {
+      "asset": "assets/images/games/red-sea-traveller-2-turn-v1.webp",
+      "cellWidth": 128,
+      "cellHeight": 192,
+      "columns": 4,
+      "frameCount": 8,
+      "durationSeconds": 0.38,
+      "loop": false,
+      "footAnchor": [
+        64.0,
+        174.595
+      ],
+      "bodyHeight": 148.302
+    },
+    "traveller_2_walk": {
+      "asset": "assets/images/games/red-sea-traveller-2-walk-v1.webp",
+      "cellWidth": 128,
+      "cellHeight": 192,
+      "columns": 6,
+      "frameCount": 24,
+      "durationSeconds": 0.9,
+      "loop": true,
+      "footAnchor": [
+        64.0,
+        174.595
+      ],
+      "bodyHeight": 148.302
+    },
+    "traveller_2_back": {
+      "asset": "assets/images/games/red-sea-traveller-2-back-v1.webp",
+      "cellWidth": 128,
+      "cellHeight": 192,
+      "columns": 1,
+      "frameCount": 1,
+      "durationSeconds": 1.0,
+      "loop": false,
+      "footAnchor": [
+        64.0,
+        174.595
+      ],
+      "bodyHeight": 148.302
+    },
+    "sea_ready": {
+      "asset": "assets/images/games/red-sea-sea-opening-v1.webp",
+      "cellWidth": 300,
+      "cellHeight": 650,
+      "columns": 13,
+      "frameCount": 24,
+      "durationSeconds": 1.0,
+      "loop": true
+    },
+    "sea_opening": {
+      "asset": "assets/images/games/red-sea-sea-opening-v1.webp",
+      "cellWidth": 300,
+      "cellHeight": 650,
+      "columns": 13,
+      "frameCount": 64,
+      "durationSeconds": 2.6,
+      "loop": false
+    },
+    "sea_idle": {
+      "asset": "assets/images/games/red-sea-sea-idle-v1.webp",
+      "cellWidth": 300,
+      "cellHeight": 650,
+      "columns": 12,
+      "frameCount": 48,
+      "durationSeconds": 2,
+      "loop": true
+    }
+  }
+}

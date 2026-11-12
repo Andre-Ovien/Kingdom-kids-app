@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:mobile/core/errors/app_exception.dart';
@@ -12,6 +13,7 @@ import 'package:mobile/features/auth/domain/kid_profile.dart';
 import 'package:mobile/features/auth/domain/parent_account.dart';
 import 'package:mobile/features/parental_controls/data/parental_controls_api.dart';
 import 'package:mobile/features/parental_controls/data/parental_controls_repository.dart';
+import 'package:mobile/features/parental_controls/data/parent_settings_store.dart';
 import 'package:mobile/features/parental_controls/domain/parent_settings.dart';
 
 void main() {
@@ -42,6 +44,27 @@ void main() {
         throwsFormatException,
       );
     });
+  });
+
+  group('ParentSettingsStore', () {
+    test(
+      'purges every parent-settings key but preserves unrelated storage',
+      () async {
+        FlutterSecureStorage.setMockInitialValues({
+          'unrelated.plugin.value': 'keep-me',
+        });
+        const storage = FlutterSecureStorage();
+        final store = SecureParentSettingsStore(storage: storage);
+        await store.writeSettings(_settings(profileId: 'kid-1'));
+        await store.writeSettings(_settings(profileId: 'kid-2'));
+
+        await store.purgeAll();
+
+        expect(await store.readSettings(profileId: 'kid-1'), isNull);
+        expect(await store.readSettings(profileId: 'kid-2'), isNull);
+        expect(await storage.read(key: 'unrelated.plugin.value'), 'keep-me');
+      },
+    );
   });
 
   group('HttpParentalControlsApi', () {
@@ -295,26 +318,277 @@ void main() {
         await store.writeSession(_session());
         await store.writeSelectedKidId('kid-1');
         final api = _RecordingParentalControlsApi();
+        final settingsStore = MemoryParentSettingsStore();
         final repository = RemoteParentalControlsRepository(
           authRepository: AuthRepository(sessionStore: store),
           api: api,
+          settingsStore: settingsStore,
         );
 
         final fetched = await repository.fetchSettings(profileId: ' kid-1 ');
+        final fetchedCache = await settingsStore.readSettings(
+          profileId: 'kid-1',
+        );
         final updated = await repository.updateSettings(
           profileId: 'kid-1',
           storyTextScale: StoryTextScale.extraLarge,
           narrationEnabled: false,
         );
+        final updatedCache = await settingsStore.readSettings(
+          profileId: 'kid-1',
+        );
 
         expect(fetched.profileId, 'kid-1');
+        expect(fetchedCache, same(fetched));
         expect(updated.profileId, 'kid-1');
+        expect(updatedCache, same(updated));
         expect(api.fetchCalls, 1);
         expect(api.updateCalls, 1);
         expect(api.accessTokens, ['access-token', 'access-token']);
         expect(api.profileIds, ['kid-1', 'kid-1']);
         expect(api.updatedScale, StoryTextScale.extraLarge);
         expect(api.updatedNarration, isFalse);
+      },
+    );
+
+    test('fails closed when the first settings fetch is offline', () async {
+      final api = _RecordingParentalControlsApi()
+        ..fetchError = const AppException(
+          'No connection.',
+          code: 'network_error',
+        );
+      final repository = await _authenticatedRepository(
+        api: api,
+        settingsStore: MemoryParentSettingsStore(),
+      );
+
+      await expectLater(
+        repository.fetchSettings(profileId: 'kid-1'),
+        throwsA(
+          isA<AppException>().having(
+            (error) => error.code,
+            'code',
+            'network_error',
+          ),
+        ),
+      );
+      expect(api.fetchCalls, 1);
+    });
+
+    test('returns the last server-confirmed settings while offline', () async {
+      final api = _RecordingParentalControlsApi()
+        ..fetchResult = _settings(
+          storyTextScale: StoryTextScale.large,
+          narrationEnabled: true,
+        );
+      final settingsStore = MemoryParentSettingsStore();
+      final repository = await _authenticatedRepository(
+        api: api,
+        settingsStore: settingsStore,
+      );
+
+      final onlineSettings = await repository.fetchSettings(profileId: 'kid-1');
+      api.fetchError = const AppException(
+        'No connection.',
+        code: 'network_error',
+      );
+      final offlineSettings = await repository.fetchSettings(
+        profileId: 'kid-1',
+      );
+
+      expect(offlineSettings, same(onlineSettings));
+      expect(offlineSettings.storyTextScale, StoryTextScale.large);
+      expect(offlineSettings.narrationEnabled, isTrue);
+      expect(api.fetchCalls, 2);
+    });
+
+    test('uses the last server-confirmed settings after a timeout', () async {
+      final cached = _settings(
+        storyTextScale: StoryTextScale.extraLarge,
+        narrationEnabled: false,
+      );
+      final api = _RecordingParentalControlsApi()
+        ..fetchError = const AppException(
+          'Timed out.',
+          code: 'request_timeout',
+        );
+      final repository = await _authenticatedRepository(
+        api: api,
+        settingsStore: MemoryParentSettingsStore(
+          initialSettings: {'kid-1': cached},
+        ),
+      );
+
+      final settings = await repository.fetchSettings(profileId: 'kid-1');
+
+      expect(settings, same(cached));
+    });
+
+    test(
+      'never falls back for permission, validation, or malformed responses',
+      () async {
+        final cached = _settings();
+        final api = _RecordingParentalControlsApi();
+        final repository = await _authenticatedRepository(
+          api: api,
+          settingsStore: MemoryParentSettingsStore(
+            initialSettings: {'kid-1': cached},
+          ),
+        );
+        final errors = <AppException>[
+          const AppException(
+            'A parent needs to help with that.',
+            code: 'permission_denied',
+            statusCode: 403,
+          ),
+          const AppException(
+            'Choose a valid text size.',
+            code: 'invalid_text_scale',
+            statusCode: 400,
+          ),
+          const AppException(
+            'The preferences service sent an incomplete response.',
+            code: 'invalid_preferences_response',
+          ),
+        ];
+
+        for (final error in errors) {
+          api.fetchError = error;
+          await expectLater(
+            repository.fetchSettings(profileId: 'kid-1'),
+            throwsA(same(error)),
+          );
+        }
+      },
+    );
+
+    test('never falls back when there is no active parent session', () async {
+      final api = _RecordingParentalControlsApi()
+        ..fetchError = const AppException(
+          'No connection.',
+          code: 'network_error',
+        );
+      final repository = RemoteParentalControlsRepository(
+        authRepository: AuthRepository(sessionStore: MemoryAuthSessionStore()),
+        api: api,
+        settingsStore: MemoryParentSettingsStore(
+          initialSettings: {'kid-1': _settings()},
+        ),
+      );
+
+      await expectLater(
+        repository.fetchSettings(profileId: 'kid-1'),
+        throwsA(
+          isA<AppException>().having(
+            (error) => error.code,
+            'code',
+            'active_kid_required',
+          ),
+        ),
+      );
+      expect(api.fetchCalls, 0);
+    });
+
+    test('ignores cached settings belonging to another profile', () async {
+      final networkError = const AppException(
+        'No connection.',
+        code: 'network_error',
+      );
+      final api = _RecordingParentalControlsApi()..fetchError = networkError;
+      final repository = await _authenticatedRepository(
+        api: api,
+        settingsStore: MemoryParentSettingsStore(
+          initialSettings: {'kid-1': _settings(profileId: 'kid-2')},
+        ),
+      );
+
+      await expectLater(
+        repository.fetchSettings(profileId: 'kid-1'),
+        throwsA(same(networkError)),
+      );
+    });
+
+    test('cache read failures preserve the connectivity failure', () async {
+      final timeoutError = const AppException(
+        'Timed out.',
+        code: 'request_timeout',
+      );
+      final api = _RecordingParentalControlsApi()..fetchError = timeoutError;
+      final repository = await _authenticatedRepository(
+        api: api,
+        settingsStore: _ThrowingParentSettingsStore(throwOnRead: true),
+      );
+
+      await expectLater(
+        repository.fetchSettings(profileId: 'kid-1'),
+        throwsA(same(timeoutError)),
+      );
+    });
+
+    test('cache write failures never hide a successful fetch', () async {
+      final expected = _settings(
+        storyTextScale: StoryTextScale.large,
+        narrationEnabled: false,
+      );
+      final api = _RecordingParentalControlsApi()..fetchResult = expected;
+      final repository = await _authenticatedRepository(
+        api: api,
+        settingsStore: _ThrowingParentSettingsStore(throwOnWrite: true),
+      );
+
+      final settings = await repository.fetchSettings(profileId: 'kid-1');
+
+      expect(settings, same(expected));
+    });
+
+    test(
+      'an offline update still fails instead of claiming cached success',
+      () async {
+        final networkError = const AppException(
+          'No connection.',
+          code: 'network_error',
+        );
+        final api = _RecordingParentalControlsApi()..updateError = networkError;
+        final cached = _settings();
+        final repository = await _authenticatedRepository(
+          api: api,
+          settingsStore: MemoryParentSettingsStore(
+            initialSettings: {'kid-1': cached},
+          ),
+        );
+
+        await expectLater(
+          repository.updateSettings(
+            profileId: 'kid-1',
+            narrationEnabled: false,
+          ),
+          throwsA(same(networkError)),
+        );
+      },
+    );
+
+    test(
+      'a mismatched network response is rejected and never cached',
+      () async {
+        final settingsStore = MemoryParentSettingsStore();
+        final api = _RecordingParentalControlsApi()
+          ..fetchResult = _settings(profileId: 'kid-2');
+        final repository = await _authenticatedRepository(
+          api: api,
+          settingsStore: settingsStore,
+        );
+
+        await expectLater(
+          repository.fetchSettings(profileId: 'kid-1'),
+          throwsA(
+            isA<AppException>().having(
+              (error) => error.code,
+              'code',
+              'preferences_profile_changed',
+            ),
+          ),
+        );
+        expect(await settingsStore.readSettings(profileId: 'kid-1'), isNull);
       },
     );
   });
@@ -342,10 +616,11 @@ AuthSession _session() => const AuthSession(
 );
 
 ParentSettings _settings({
+  String profileId = 'kid-1',
   StoryTextScale storyTextScale = StoryTextScale.comfortable,
   bool narrationEnabled = true,
 }) => ParentSettings(
-  profileId: 'kid-1',
+  profileId: profileId,
   storyTextScale: storyTextScale,
   narrationEnabled: narrationEnabled,
   updatedAt: DateTime.utc(2026, 7, 15, 14, 30),
@@ -358,6 +633,9 @@ final class _RecordingParentalControlsApi implements ParentalControlsApi {
   final List<String> profileIds = [];
   StoryTextScale? updatedScale;
   bool? updatedNarration;
+  ParentSettings fetchResult = _settings();
+  Object? fetchError;
+  Object? updateError;
 
   @override
   Future<ParentSettings> fetchSettings({
@@ -367,7 +645,8 @@ final class _RecordingParentalControlsApi implements ParentalControlsApi {
     fetchCalls += 1;
     accessTokens.add(accessToken);
     profileIds.add(profileId);
-    return _settings();
+    if (fetchError case final error?) throw error;
+    return fetchResult;
   }
 
   @override
@@ -382,9 +661,48 @@ final class _RecordingParentalControlsApi implements ParentalControlsApi {
     profileIds.add(profileId);
     updatedScale = storyTextScale;
     updatedNarration = narrationEnabled;
+    if (updateError case final error?) throw error;
     return _settings(
       storyTextScale: storyTextScale ?? StoryTextScale.comfortable,
       narrationEnabled: narrationEnabled ?? true,
     );
+  }
+}
+
+Future<RemoteParentalControlsRepository> _authenticatedRepository({
+  required ParentalControlsApi api,
+  required ParentSettingsStore settingsStore,
+}) async {
+  final authStore = MemoryAuthSessionStore();
+  await authStore.writeSession(_session());
+  await authStore.writeSelectedKidId('kid-1');
+  return RemoteParentalControlsRepository(
+    authRepository: AuthRepository(sessionStore: authStore),
+    api: api,
+    settingsStore: settingsStore,
+  );
+}
+
+final class _ThrowingParentSettingsStore implements ParentSettingsStore {
+  _ThrowingParentSettingsStore({
+    this.throwOnRead = false,
+    this.throwOnWrite = false,
+  });
+
+  final bool throwOnRead;
+  final bool throwOnWrite;
+
+  @override
+  Future<void> purgeAll() async {}
+
+  @override
+  Future<ParentSettings?> readSettings({required String profileId}) async {
+    if (throwOnRead) throw StateError('Secure storage read failed.');
+    return null;
+  }
+
+  @override
+  Future<void> writeSettings(ParentSettings settings) async {
+    if (throwOnWrite) throw StateError('Secure storage write failed.');
   }
 }

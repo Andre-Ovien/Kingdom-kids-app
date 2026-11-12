@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:mobile/app/theme_controller.dart';
+import 'package:mobile/core/constants/app_constants.dart';
 import 'package:mobile/features/auth/data/auth_api.dart';
 import 'package:mobile/features/auth/data/auth_repository.dart';
 import 'package:mobile/features/auth/data/auth_session_store.dart';
@@ -13,16 +13,12 @@ import 'package:mobile/features/auth/domain/kid_profile.dart';
 import 'package:mobile/features/auth/domain/parent_account.dart';
 import 'package:mobile/features/parental_controls/data/parental_controls_api.dart';
 import 'package:mobile/features/parental_controls/data/parental_controls_repository.dart';
+import 'package:mobile/features/parental_controls/data/parent_settings_store.dart';
 import 'package:mobile/features/parental_controls/domain/parent_settings.dart';
 import 'package:mobile/features/parental_controls/presentation/parental_controls_screen.dart';
+import 'package:mobile/features/streak/data/streak_reminder_service.dart';
 
 void main() {
-  setUp(() async {
-    final themeStore = MemoryThemePreferenceStore();
-    await AppThemeController.initialize(store: themeStore);
-    await AppThemeController.setMode(ThemeMode.system);
-  });
-
   testWidgets('renders live parent, profile, and backend preferences', (
     tester,
   ) async {
@@ -73,10 +69,16 @@ void main() {
       find.byKey(const Key('settings-account-sync-error')),
       findsOneWidget,
     );
-    expect(find.text('Parent service is resting.'), findsOneWidget);
+    expect(
+      find.text(
+        'Kingdom Kids is having trouble right now. Please try again soon.',
+      ),
+      findsOneWidget,
+    );
     expect(find.byKey(const Key('settings-live-hero')), findsOneWidget);
     expect(find.text('cached@example.com'), findsOneWidget);
-    expect(find.byKey(const Key('settings-theme')), findsOneWidget);
+    expect(find.byKey(const Key('settings-theme')), findsNothing);
+    expect(find.text('App appearance'), findsNothing);
     expect(find.byKey(const Key('settings-sign-out')), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('settings-account-retry')));
@@ -129,6 +131,44 @@ void main() {
     expect(find.text('Extra large'), findsOneWidget);
   });
 
+  testWidgets('enables the 5 PM missed-open reminder from parent settings', (
+    tester,
+  ) async {
+    final harness = await _SettingsHarness.create();
+
+    await tester.pumpWidget(harness.app());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Off — no daily streak reminders'), findsOneWidget);
+    await tester.ensureVisible(
+      find.byKey(const Key('settings-streak-reminders')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('settings-streak-reminders')));
+    await tester.pumpAndSettle();
+
+    expect(harness.streakReminderService.enableCalls, 1);
+    expect(harness.streakReminderService.lastProfile?.id, 'kid-1');
+    expect(
+      find.text('At 5:00 PM only when today’s app visit is still missing'),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('only when today’s app visit is still missing'),
+      findsWidgets,
+    );
+
+    await tester.ensureVisible(
+      find.byKey(const Key('settings-streak-reminders')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('settings-streak-reminders')));
+    await tester.pumpAndSettle();
+
+    expect(harness.streakReminderService.disableCalls, 1);
+    expect(find.text('Off — no daily streak reminders'), findsOneWidget);
+  });
+
   testWidgets('signs out through the authenticated API and clears the device', (
     tester,
   ) async {
@@ -161,6 +201,156 @@ void main() {
     expect(find.text('Route: /auth/login'), findsOneWidget);
   });
 
+  testWidgets('opens the public privacy policy from parent settings', (
+    tester,
+  ) async {
+    final harness = await _SettingsHarness.create();
+
+    await tester.pumpWidget(harness.app());
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const Key('settings-privacy-policy')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('settings-privacy-policy')));
+    await tester.pumpAndSettle();
+
+    expect(harness.launchedUris, [Uri.parse(AppConstants.privacyPolicyUrl)]);
+  });
+
+  testWidgets(
+    'permanent deletion reauthenticates, purges local data, and removes history',
+    (tester) async {
+      final harness = await _SettingsHarness.create();
+      harness.streakReminderService.enabled = true;
+
+      await tester.pumpWidget(harness.app());
+      await tester.pumpAndSettle();
+      expect(
+        await harness.parentSettingsStore.readSettings(profileId: 'kid-1'),
+        isNotNull,
+      );
+
+      await tester.ensureVisible(
+        find.byKey(const Key('settings-delete-account')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('settings-delete-account')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Permanently delete family account?'), findsOneWidget);
+      expect(find.textContaining('This cannot be undone.'), findsOneWidget);
+      expect(find.text('Current password'), findsOneWidget);
+      await tester.enterText(
+        find.byKey(const Key('settings-delete-password')),
+        'correct current password',
+      );
+      await tester.tap(
+        find.byKey(const Key('settings-confirm-delete-account')),
+      );
+      await tester.pumpAndSettle();
+
+      final deletion = harness.requests.singleWhere(
+        (request) =>
+            request.method == 'DELETE' &&
+            request.url.path == '/api/accounts/me/',
+      );
+      expect(deletion.headers['authorization'], 'Bearer access-token');
+      expect(jsonDecode(deletion.body), {
+        'password': 'correct current password',
+      });
+      expect(await harness.store.readSession(), isNull);
+      expect(await harness.store.readSelectedKidId(), isNull);
+      expect(
+        await harness.parentSettingsStore.readSettings(profileId: 'kid-1'),
+        isNull,
+      );
+      expect(harness.streakReminderService.disableCalls, 1);
+      expect(harness.streakReminderService.enabled, isFalse);
+      expect(harness.routedNames.last, '/auth/login');
+      expect(find.text('Route: /auth/login'), findsOneWidget);
+    },
+  );
+
+  testWidgets('failed permanent deletion preserves the signed-in device', (
+    tester,
+  ) async {
+    final harness = await _SettingsHarness.create(deleteFailureStatus: 400);
+
+    await tester.pumpWidget(harness.app());
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const Key('settings-delete-account')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('settings-delete-account')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('settings-delete-password')),
+      'wrong password',
+    );
+    await tester.tap(find.byKey(const Key('settings-confirm-delete-account')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('The password is incorrect.'), findsOneWidget);
+    expect(await harness.store.readSession(), isNotNull);
+    expect(await harness.store.readSelectedKidId(), 'kid-1');
+    expect(
+      await harness.parentSettingsStore.readSettings(profileId: 'kid-1'),
+      isNotNull,
+    );
+    expect(harness.streakReminderService.disableCalls, 0);
+    expect(harness.routedNames, isEmpty);
+    expect(find.byKey(const Key('settings-scroll')), findsOneWidget);
+  });
+
+  testWidgets('expired deletion session clears auth and returns to login', (
+    tester,
+  ) async {
+    final harness = await _SettingsHarness.create(expireDeleteSession: true);
+
+    await tester.pumpWidget(harness.app());
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const Key('settings-delete-account')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('settings-delete-account')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('settings-delete-password')),
+      'current password',
+    );
+    await tester.tap(find.byKey(const Key('settings-confirm-delete-account')));
+    await tester.pumpAndSettle();
+
+    expect(
+      harness.requests.where(
+        (request) =>
+            request.method == 'DELETE' &&
+            request.url.path == '/api/accounts/me/',
+      ),
+      hasLength(1),
+    );
+    expect(
+      harness.requests.where(
+        (request) =>
+            request.method == 'POST' &&
+            request.url.path == '/api/accounts/token/refresh/',
+      ),
+      hasLength(1),
+    );
+    expect(await harness.store.readSession(), isNull);
+    expect(await harness.store.readSelectedKidId(), isNull);
+    expect(
+      await harness.parentSettingsStore.readSettings(profileId: 'kid-1'),
+      isNotNull,
+    );
+    expect(harness.streakReminderService.disableCalls, 0);
+    expect(harness.routedNames.last, '/auth/login');
+    expect(find.text('Route: /auth/login'), findsOneWidget);
+  });
+
   testWidgets('remains usable at compact width with large system text', (
     tester,
   ) async {
@@ -179,7 +369,11 @@ void main() {
 }
 
 class _SettingsHarness {
-  _SettingsHarness._({required this.meFailuresRemaining}) {
+  _SettingsHarness._({
+    required this.meFailuresRemaining,
+    this.deleteFailureStatus,
+    this.expireDeleteSession = false,
+  }) {
     client = MockClient(_respond);
     authRepository = AuthRepository(
       api: HttpAuthApi(
@@ -194,12 +388,19 @@ class _SettingsHarness {
         client: client,
         baseUrl: 'https://kingdom-kids.test/api',
       ),
+      settingsStore: parentSettingsStore,
     );
   }
 
-  static Future<_SettingsHarness> create({int meFailuresRemaining = 0}) async {
+  static Future<_SettingsHarness> create({
+    int meFailuresRemaining = 0,
+    int? deleteFailureStatus,
+    bool expireDeleteSession = false,
+  }) async {
     final harness = _SettingsHarness._(
       meFailuresRemaining: meFailuresRemaining,
+      deleteFailureStatus: deleteFailureStatus,
+      expireDeleteSession: expireDeleteSession,
     );
     await harness.store.writeSession(
       const AuthSession(
@@ -214,12 +415,19 @@ class _SettingsHarness {
   }
 
   final MemoryAuthSessionStore store = MemoryAuthSessionStore();
+  final MemoryParentSettingsStore parentSettingsStore =
+      MemoryParentSettingsStore();
   final List<http.Request> requests = [];
   final List<String?> routedNames = [];
+  final List<Uri> launchedUris = [];
+  final _FakeStreakReminderService streakReminderService =
+      _FakeStreakReminderService();
   late final http.Client client;
   late final AuthRepository authRepository;
   late final ParentalControlsRepository settingsRepository;
   int meFailuresRemaining;
+  final int? deleteFailureStatus;
+  final bool expireDeleteSession;
   int meCalls = 0;
   StoryTextScale storyTextScale = StoryTextScale.comfortable;
   bool narrationEnabled = true;
@@ -237,6 +445,12 @@ class _SettingsHarness {
       home: ParentalControlsScreen(
         authRepository: authRepository,
         settingsRepository: settingsRepository,
+        parentSettingsStore: parentSettingsStore,
+        streakReminderService: streakReminderService,
+        externalUrlLauncher: (uri) async {
+          launchedUris.add(uri);
+          return true;
+        },
       ),
       onGenerateRoute: (settings) {
         routedNames.add(settings.name);
@@ -284,6 +498,36 @@ class _SettingsHarness {
         return http.Response(jsonEncode(_settingsJson), 200);
       case ('POST', '/api/accounts/logout/'):
         return http.Response('', 204);
+      case ('DELETE', '/api/accounts/me/'):
+        if (expireDeleteSession) {
+          return http.Response(
+            jsonEncode({'detail': 'Token has expired.'}),
+            401,
+          );
+        }
+        if (deleteFailureStatus case final status?) {
+          return http.Response(
+            jsonEncode({
+              'password': ['The password is incorrect.'],
+            }),
+            status,
+          );
+        }
+        return http.Response('', 204);
+      case ('POST', '/api/accounts/token/refresh/'):
+        if (expireDeleteSession) {
+          return http.Response(
+            jsonEncode({
+              'code': 'token_not_valid',
+              'detail': 'Token is invalid or expired.',
+            }),
+            401,
+          );
+        }
+        return http.Response(
+          jsonEncode({'access': 'new-access', 'refresh': 'new-refresh'}),
+          200,
+        );
       default:
         return http.Response(
           jsonEncode({'detail': 'Unexpected test request.'}),
@@ -314,3 +558,30 @@ const _profileJson = {
   'created_at': '2026-07-14T10:00:00Z',
   'updated_at': '2026-07-15T12:00:00Z',
 };
+
+final class _FakeStreakReminderService implements StreakReminderService {
+  bool enabled = false;
+  int enableCalls = 0;
+  int disableCalls = 0;
+  KidProfile? lastProfile;
+
+  @override
+  Future<bool> isEnabled() async => enabled;
+
+  @override
+  Future<bool> enable({required KidProfile profile}) async {
+    enableCalls += 1;
+    lastProfile = profile;
+    enabled = true;
+    return true;
+  }
+
+  @override
+  Future<void> disable() async {
+    disableCalls += 1;
+    enabled = false;
+  }
+
+  @override
+  Future<void> refreshAfterAppOpen({required KidProfile profile}) async {}
+}

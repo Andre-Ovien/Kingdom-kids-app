@@ -1,5 +1,7 @@
 import 'package:flutter/widgets.dart';
 
+import '../../../core/config/app_config.dart';
+
 /// Provider-neutral narration information for one story character.
 ///
 /// Provider identifiers intentionally do not belong in this model. The API
@@ -19,6 +21,8 @@ class StoryNarration {
     this.sampleUrl,
     this.audioUrl,
     this.durationSeconds,
+    this.segments = const [],
+    this.words = const [],
   });
 
   final String avatarKey;
@@ -33,8 +37,46 @@ class StoryNarration {
   final bool audioAvailable;
   final String? audioUrl;
   final int? durationSeconds;
+  final List<StoryNarrationSegment> segments;
+  final List<StoryNarrationSegment> words;
 
-  factory StoryNarration.fromJson(Map<String, dynamic> json) {
+  /// Only measured passages that exactly match this edition of the story may
+  /// drive highlighting or seeking. Invalid cues leave ordinary audio playback
+  /// available, without pretending to have word timing information.
+  List<StoryNarrationSegment> segmentsForText(String text) =>
+      _validatedCuesForText(segments, text);
+
+  /// Word highlighting uses only supplied measurements that match the exact
+  /// story body. Paragraph timings never stand in for missing word timings.
+  List<StoryNarrationSegment> wordsForText(String text) =>
+      _validatedCuesForText(words, text);
+
+  static List<StoryNarrationSegment> _validatedCuesForText(
+    List<StoryNarrationSegment> cues,
+    String text,
+  ) {
+    var previousOffset = 0;
+    var previousTime = Duration.zero;
+    for (final segment in cues) {
+      if (segment.startOffset < previousOffset ||
+          segment.endOffset <= segment.startOffset ||
+          segment.endOffset > text.length ||
+          segment.startTime < previousTime ||
+          segment.endTime <= segment.startTime ||
+          text.substring(segment.startOffset, segment.endOffset) !=
+              segment.text) {
+        return const [];
+      }
+      previousOffset = segment.endOffset;
+      previousTime = segment.endTime;
+    }
+    return List<StoryNarrationSegment>.unmodifiable(cues);
+  }
+
+  factory StoryNarration.fromJson(
+    Map<String, dynamic> json, {
+    ContentMediaPolicy mediaPolicy = AppConfig.contentMediaPolicy,
+  }) {
     final rawStatus = _stringFrom(
       json['status'],
       fallback: 'unavailable',
@@ -42,7 +84,7 @@ class StoryNarration {
     final status = _supportedNarrationStatuses.contains(rawStatus)
         ? rawStatus
         : 'unavailable';
-    final audioUrl = _nullableWebUrl(json['audio_url']);
+    final audioUrl = mediaPolicy.sanitize(json['audio_url']);
     return StoryNarration(
       avatarKey: _requiredString(
         json['avatar_key'],
@@ -63,7 +105,7 @@ class StoryNarration {
         fallback: 0.45,
       ).clamp(0.1, 1.0).toDouble(),
       pitch: _doubleFrom(json['pitch'], fallback: 1).clamp(0.5, 2.0).toDouble(),
-      sampleUrl: _nullableWebUrl(json['sample_url']),
+      sampleUrl: mediaPolicy.sanitize(json['sample_url']),
       status: status,
       audioAvailable:
           status == 'ready' &&
@@ -71,7 +113,68 @@ class StoryNarration {
           audioUrl != null,
       audioUrl: audioUrl,
       durationSeconds: _positiveNullableInt(json['duration_seconds']),
+      segments: StoryNarrationSegment.listFromJson(json['segments']),
+      words: StoryNarrationSegment.listFromJson(json['words']),
     );
+  }
+}
+
+/// One recorded passage. Offsets use Dart's UTF-16 string indexing; times are
+/// measured from the beginning of the hosted audio file.
+class StoryNarrationSegment {
+  const StoryNarrationSegment({
+    required this.text,
+    required this.startOffset,
+    required this.endOffset,
+    required this.startTime,
+    required this.endTime,
+  });
+
+  final String text;
+  final int startOffset;
+  final int endOffset;
+  final Duration startTime;
+  final Duration endTime;
+
+  static List<StoryNarrationSegment> listFromJson(Object? value) {
+    if (value is! List) return const [];
+    final segments = <StoryNarrationSegment>[];
+    for (final item in value) {
+      if (item is! Map) return const [];
+      final text = item['text'];
+      final startOffset = item['start_offset'];
+      final endOffset = item['end_offset'];
+      final startSeconds = item['start_seconds'];
+      final endSeconds = item['end_seconds'];
+      if (text is! String ||
+          startOffset is! int ||
+          endOffset is! int ||
+          startOffset < 0 ||
+          endOffset <= startOffset ||
+          startSeconds is! num ||
+          endSeconds is! num ||
+          !startSeconds.isFinite ||
+          !endSeconds.isFinite ||
+          startSeconds < 0 ||
+          endSeconds <= startSeconds) {
+        return const [];
+      }
+      segments.add(
+        StoryNarrationSegment(
+          text: text,
+          startOffset: startOffset,
+          endOffset: endOffset,
+          startTime: Duration(
+            microseconds: (startSeconds * Duration.microsecondsPerSecond)
+                .round(),
+          ),
+          endTime: Duration(
+            microseconds: (endSeconds * Duration.microsecondsPerSecond).round(),
+          ),
+        ),
+      );
+    }
+    return List<StoryNarrationSegment>.unmodifiable(segments);
   }
 }
 
@@ -136,13 +239,16 @@ class StoryDetail {
 
   bool get hasHostedCover => coverImageUrl != null;
 
-  factory StoryDetail.fromJson(Map<String, dynamic> json) {
+  factory StoryDetail.fromJson(
+    Map<String, dynamic> json, {
+    ContentMediaPolicy mediaPolicy = AppConfig.contentMediaPolicy,
+  }) {
     final slug = _requiredString(json['slug'], fieldName: 'slug');
     final title = _requiredString(json['title'], fieldName: 'title');
     final rawCoverAssetKey = _stringFrom(
       json['cover_asset_key'] ?? json['image_asset'],
     );
-    final coverImageUrl = _nullableWebUrl(
+    final coverImageUrl = mediaPolicy.sanitize(
       json['cover_image_url'] ?? json['image_url'],
     );
     final usesLegacyBundledCover =
@@ -163,7 +269,9 @@ class StoryDetail {
         if (payload.isEmpty) {
           throw const FormatException('Story narrations must be objects.');
         }
-        narrations.add(StoryNarration.fromJson(payload));
+        narrations.add(
+          StoryNarration.fromJson(payload, mediaPolicy: mediaPolicy),
+        );
       }
     } else if (rawNarrations != null) {
       throw const FormatException('Story narrations must be a list.');
@@ -176,7 +284,8 @@ class StoryDetail {
       author: _stringFrom(json['author'], fallback: 'Kingdom Kids'),
       category: _stringFrom(json['category']),
       summary: _stringFrom(json['summary']),
-      body: _stringFrom(json['body']),
+      // Passage offsets refer to the exact API body, including whitespace.
+      body: json['body']?.toString() ?? '',
       coverAssetKey: _normalizeCoverAssetKey(rawCoverAssetKey),
       coverImageUrl: coverImageUrl,
       imageAlignment: Alignment(coverFocusX, coverFocusY),
@@ -251,19 +360,6 @@ String _requiredString(Object? value, {required String fieldName}) {
     throw FormatException('Story $fieldName is required.');
   }
   return result;
-}
-
-String? _nullableWebUrl(Object? value) {
-  final raw = _nullableString(value);
-  if (raw == null) return null;
-  final uri = Uri.tryParse(raw);
-  if (uri == null ||
-      !uri.hasScheme ||
-      !uri.hasAuthority ||
-      (uri.scheme != 'https' && uri.scheme != 'http')) {
-    return null;
-  }
-  return uri.toString();
 }
 
 double _doubleFrom(Object? value, {double fallback = 0}) {

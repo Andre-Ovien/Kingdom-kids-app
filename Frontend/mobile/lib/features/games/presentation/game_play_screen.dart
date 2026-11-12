@@ -1,16 +1,26 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/errors/app_exception.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../auth/domain/kid_profile.dart';
 import '../../auth/presentation/kid_profile_avatar.dart';
 import '../../auth/presentation/session_expiry_navigation.dart';
+import '../../milestones/data/level_milestone_store.dart';
+import '../../milestones/domain/level_milestone.dart';
+import '../../milestones/presentation/level_milestone_presenter.dart';
 import '../data/game_repository.dart';
 import '../domain/mini_game.dart';
+import 'david_sling_engine.dart';
 import 'game_cover_image.dart';
 import 'game_engines.dart';
+import 'game_level_completion.dart';
+import 'puzzle_quest_completion.dart';
+import 'red_sea_crossing_engine.dart';
+import 'storm_sailing_engine.dart';
 
 class GamePlayScreen extends StatefulWidget {
   const GamePlayScreen({
@@ -20,12 +30,14 @@ class GamePlayScreen extends StatefulWidget {
     super.key,
     this.startingLevel,
     this.authRepository,
+    this.milestoneStore,
   });
 
   final MiniGame game;
   final KidProfile profile;
   final GameRepository repository;
   final AuthRepository? authRepository;
+  final LevelMilestoneStore? milestoneStore;
   final int? startingLevel;
 
   @override
@@ -34,7 +46,8 @@ class GamePlayScreen extends StatefulWidget {
 
 enum _PlayPhase { intro, playing, result }
 
-class _GamePlayScreenState extends State<GamePlayScreen> {
+class _GamePlayScreenState extends State<GamePlayScreen>
+    with WidgetsBindingObserver {
   late int _levelIndex;
   _PlayPhase _phase = _PlayPhase.intro;
   GameSubmission? _submission;
@@ -44,14 +57,110 @@ class _GamePlayScreenState extends State<GamePlayScreen> {
   bool _canRetrySave = false;
   bool _submitting = false;
   bool _allowExit = false;
+  bool _exitPromptOpen = false;
+  bool _foreground = true;
+  bool _immersive = false;
   int _attempt = 0;
+  late final AuthRepository _authRepository;
+  late final LevelMilestoneStore _milestoneStore;
+  late final LevelMilestonePresenter _milestonePresenter;
+  LevelMilestone? _pendingMilestone;
+  bool _presentingMilestone = false;
 
   List<GameLevel> get _levels => widget.game.levels;
   GameLevel get _level => _levels[_levelIndex];
+  bool get _isDavid => widget.game.gameType == GameType.aim;
+  bool get _isSailing =>
+      _levels.isNotEmpty &&
+      widget.game.gameType == GameType.maze &&
+      _level.config['sailing'] is Map;
+  bool get _isCrossing =>
+      _levels.isNotEmpty &&
+      widget.game.gameType == GameType.path &&
+      _level.config['crossing'] is Map;
+  bool get _isBlenderActivity =>
+      _levels.isNotEmpty &&
+      ((widget.game.gameType == GameType.matching &&
+              {'ark_traffic', 'ark_garden'}.contains(_level.config['mode'])) ||
+          (widget.game.gameType == GameType.ordering &&
+              {
+                'living_world',
+                'wise_builders',
+              }.contains(_level.config['mode'])));
+  bool get _isMatchingStudio =>
+      _levels.isNotEmpty &&
+      widget.game.gameType == GameType.matching &&
+      {
+        'coat_studio',
+        'harvest_chain',
+        'sheep_reunion',
+        'creation_bloom',
+        'esther_table',
+      }.contains(_level.config['mode']);
+  bool get _isFullScreenGame =>
+      _isDavid ||
+      _isSailing ||
+      _isCrossing ||
+      _isBlenderActivity ||
+      _isMatchingStudio;
+  bool get _opensDirectly =>
+      _isFullScreenGame || widget.game.gameType == GameType.puzzle;
+
+  void _setImmersiveGame(bool immersive) {
+    _immersive = immersive;
+    unawaited(
+      SystemChrome.setEnabledSystemUIMode(
+        immersive ? SystemUiMode.immersiveSticky : SystemUiMode.edgeToEdge,
+      ).catchError((Object _) {}),
+    );
+  }
+
+  void _syncImmersiveGame() {
+    final immersive =
+        _isFullScreenGame &&
+        _foreground &&
+        !_presentingMilestone &&
+        ModalRoute.of(context)?.isCurrent == true;
+    if (_immersive != immersive) _setImmersiveGame(immersive);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncImmersiveGame();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final foreground = state == AppLifecycleState.resumed;
+    if (_foreground != foreground && mounted) {
+      setState(() => _foreground = foreground);
+    }
+    _syncImmersiveGame();
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_presentMilestone());
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    if (_immersive) {
+      _setImmersiveGame(false);
+    }
+    super.dispose();
+  }
 
   @override
   void initState() {
     super.initState();
+    _authRepository = widget.authRepository ?? AuthRepository();
+    _milestoneStore = widget.milestoneStore ?? SecureLevelMilestoneStore();
+    _milestonePresenter = LevelMilestonePresenter(
+      authRepository: _authRepository,
+      store: _milestoneStore,
+    );
+    WidgetsBinding.instance.addObserver(this);
     final wanted =
         widget.startingLevel ??
         (widget.game.playerProgress.isComplete
@@ -59,6 +168,22 @@ class _GamePlayScreenState extends State<GamePlayScreen> {
             : widget.game.playerProgress.currentLevel);
     final found = _levels.indexWhere((level) => level.number == wanted);
     _levelIndex = found < 0 ? 0 : found;
+    final lifecycle = WidgetsBinding.instance.lifecycleState;
+    _foreground = lifecycle == null || lifecycle == AppLifecycleState.resumed;
+    if (_isMatchingStudio) {
+      unawaited(
+        SystemChrome.setPreferredOrientations(const [
+          DeviceOrientation.portraitUp,
+        ]),
+      );
+    }
+    if (_isFullScreenGame) {
+      _setImmersiveGame(true);
+    }
+    if (_opensDirectly) {
+      // Picture puzzles own their ready stage; full-screen games open directly.
+      _phase = _PlayPhase.playing;
+    }
   }
 
   void _begin() {
@@ -96,6 +221,10 @@ class _GamePlayScreenState extends State<GamePlayScreen> {
         _submission = submission;
         _phase = _PlayPhase.result;
       });
+      _pendingMilestone = submission.levelMilestone;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_presentMilestone());
+      });
     } on AppException catch (error) {
       if (mounted && returnToSignInIfSessionExpired(context, error)) return;
       if (mounted) {
@@ -103,7 +232,7 @@ class _GamePlayScreenState extends State<GamePlayScreen> {
         final isRejectedResult =
             status != null && status >= 400 && status < 500;
         setState(() {
-          _submitError = error.message;
+          _submitError = error.userMessage;
           _canRetrySave = !isRejectedResult;
         });
       }
@@ -117,6 +246,48 @@ class _GamePlayScreenState extends State<GamePlayScreen> {
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  bool get _canPresentMilestone {
+    final lifecycle = WidgetsBinding.instance.lifecycleState;
+    return mounted &&
+        !_allowExit &&
+        !_exitPromptOpen &&
+        ModalRoute.of(context)?.isCurrent == true &&
+        (lifecycle == null || lifecycle == AppLifecycleState.resumed);
+  }
+
+  Future<void> _presentMilestone() async {
+    final milestone = _pendingMilestone;
+    if (milestone == null ||
+        !milestone.isLevelUp ||
+        _presentingMilestone ||
+        !_canPresentMilestone) {
+      return;
+    }
+    _presentingMilestone = true;
+    try {
+      final result = await _milestonePresenter.present(
+        context,
+        profileId: widget.profile.id,
+        milestone: milestone,
+        canPresent: () => _canPresentMilestone,
+        beforePresent: () {
+          if (_isFullScreenGame) _setImmersiveGame(false);
+        },
+        afterPresent: () {
+          if (_isFullScreenGame && _canPresentMilestone) {
+            _setImmersiveGame(true);
+          }
+        },
+      );
+      if (result != LevelMilestonePresentationResult.deferred &&
+          identical(_pendingMilestone, milestone)) {
+        _pendingMilestone = null;
+      }
+    } finally {
+      _presentingMilestone = false;
     }
   }
 
@@ -137,12 +308,13 @@ class _GamePlayScreenState extends State<GamePlayScreen> {
 
   void _tryLevelAgain() {
     setState(() {
-      _phase = _PlayPhase.intro;
+      _phase = _opensDirectly ? _PlayPhase.playing : _PlayPhase.intro;
       _submission = null;
       _pendingResult = null;
       _operationId = null;
       _submitError = null;
       _canRetrySave = false;
+      if (_opensDirectly) _attempt += 1;
     });
   }
 
@@ -160,28 +332,21 @@ class _GamePlayScreenState extends State<GamePlayScreen> {
   }
 
   void _nextLevel() {
+    if (_pendingMilestone != null || _presentingMilestone) {
+      unawaited(_presentMilestone());
+      return;
+    }
     if (_levelIndex >= _levels.length - 1) return;
     setState(() {
       _levelIndex += 1;
-      _phase = _PlayPhase.intro;
+      _phase = _opensDirectly ? _PlayPhase.playing : _PlayPhase.intro;
       _submission = null;
       _pendingResult = null;
       _operationId = null;
       _submitError = null;
       _canRetrySave = false;
     });
-  }
-
-  void _replayQuest() {
-    setState(() {
-      _levelIndex = 0;
-      _phase = _PlayPhase.intro;
-      _submission = null;
-      _pendingResult = null;
-      _operationId = null;
-      _submitError = null;
-      _canRetrySave = false;
-    });
+    _syncImmersiveGame();
   }
 
   void _popWithResult(bool changed) {
@@ -193,6 +358,20 @@ class _GamePlayScreenState extends State<GamePlayScreen> {
   }
 
   Future<void> _requestExit() async {
+    // Keep a finished round here until its server receipt determines whether
+    // the caller must refresh progress. Its save overlay remains visible.
+    if (_exitPromptOpen ||
+        ((_isSailing ||
+                _isCrossing ||
+                _isBlenderActivity ||
+                _isMatchingStudio) &&
+            _submitting)) {
+      return;
+    }
+    if (_pendingMilestone != null || _presentingMilestone) {
+      await _presentMilestone();
+      if (!mounted || _presentingMilestone) return;
+    }
     if (_phase == _PlayPhase.result || _submission != null) {
       _popWithResult(true);
       return;
@@ -201,27 +380,96 @@ class _GamePlayScreenState extends State<GamePlayScreen> {
       _popWithResult(false);
       return;
     }
+    if (_isFullScreenGame) setState(() => _exitPromptOpen = true);
     final leave = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Leave this level?'),
+        key: const Key('game-exit-dialog'),
+        scrollable: true,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        iconPadding: const EdgeInsets.fromLTRB(24, 28, 24, 18),
+        icon: Icon(
+          Icons.sentiment_dissatisfied_rounded,
+          key: const Key('game-exit-sad-face'),
+          size: 76,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+        titlePadding: const EdgeInsets.symmetric(horizontal: 24),
+        title: Text(
+          _isDavid
+              ? 'Leave the battlefield?'
+              : _isSailing
+              ? 'Leave this voyage?'
+              : _isCrossing
+              ? 'Leave this crossing?'
+              : 'Leave this level?',
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w800,
+            height: 1.2,
+          ),
+        ),
+        contentPadding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
         content: const Text(
           'This try has not been saved yet. You can come back and play again.',
+          textAlign: TextAlign.center,
         ),
+        actionsPadding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Keep playing'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Leave'),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              FilledButton(
+                key: const Key('game-exit-keep-playing'),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(54),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 14,
+                  ),
+                  textStyle: const TextStyle(fontWeight: FontWeight.w800),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Keep playing', textAlign: TextAlign.center),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton(
+                key: const Key('game-exit-leave'),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(54),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 14,
+                  ),
+                  foregroundColor: Theme.of(context).colorScheme.error,
+                  backgroundColor: Theme.of(context).colorScheme.surface,
+                  side: BorderSide(
+                    color: Theme.of(context).colorScheme.error,
+                    width: 2,
+                  ),
+                  textStyle: const TextStyle(fontWeight: FontWeight.w800),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Leave', textAlign: TextAlign.center),
+              ),
+            ],
           ),
         ],
       ),
     );
+    if (mounted && _isFullScreenGame && leave != true) {
+      setState(() => _exitPromptOpen = false);
+    }
     if (leave == true && mounted) {
-      _popWithResult(false);
+      _popWithResult(_submission != null);
     }
   }
 
@@ -234,6 +482,8 @@ class _GamePlayScreenState extends State<GamePlayScreen> {
         body: _NoPlayableLevels(onExit: () => Navigator.of(context).pop()),
       );
     }
+    final showCelebration =
+        _phase == _PlayPhase.result && _submission?.completed == true;
 
     return PopScope(
       canPop: _allowExit,
@@ -249,69 +499,169 @@ class _GamePlayScreenState extends State<GamePlayScreen> {
         backgroundColor: _pageBackground(context),
         body: Stack(
           children: [
-            Positioned.fill(
-              child: IgnorePointer(
-                child: CustomPaint(
-                  painter: _PlayBackdropPainter(accent: accent),
+            if (!showCelebration && !_isFullScreenGame)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: CustomPaint(
+                    painter: _PlayBackdropPainter(accent: accent),
+                  ),
                 ),
               ),
-            ),
-            SafeArea(
-              child: Column(
-                children: [
-                  _PlayTopBar(
-                    game: widget.game,
-                    profile: widget.profile,
-                    level: _level,
-                    currentIndex: _levelIndex + 1,
-                    total: _levels.length,
-                    onExit: _requestExit,
-                  ),
-                  Expanded(
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 420),
-                      switchInCurve: Curves.easeOutBack,
-                      switchOutCurve: Curves.easeInCubic,
-                      child: switch (_phase) {
-                        _PlayPhase.intro => _LevelIntro(
-                          key: ValueKey('intro-${_level.number}-$_attempt'),
-                          game: widget.game,
-                          level: _level,
-                          profile: widget.profile,
-                          onStart: _begin,
+            if (showCelebration)
+              Positioned.fill(
+                child: widget.game.gameType == GameType.puzzle
+                    ? PuzzleQuestCompletion(
+                        key: ValueKey(
+                          'puzzle-result-${_submission!.operationId}',
                         ),
-                        _PlayPhase.playing => _PlayingLevel(
-                          key: ValueKey('play-${_level.number}-$_attempt'),
-                          game: widget.game,
-                          level: _level,
-                          submitting: _submitting,
-                          error: _submitError,
-                          onComplete: _submit,
-                          onRetrySubmit:
-                              !_canRetrySave || _pendingResult == null
-                              ? null
-                              : () => _submit(_pendingResult!),
-                          onRedo: _redoAfterSaveFailure,
+                        game: widget.game,
+                        profile: widget.profile,
+                        submission: _submission!,
+                        result: _pendingResult,
+                        onNext: _levelIndex == _levels.length - 1
+                            ? null
+                            : _nextLevel,
+                        onFinish: () => _popWithResult(true),
+                      )
+                    : GameLevelCompletion(
+                        key: ValueKey(
+                          'game-result-${_submission!.operationId}',
                         ),
-                        _PlayPhase.result => _LevelResult(
-                          key: ValueKey(
-                            'result-${_submission?.operationId ?? _level.number}',
+                        game: widget.game,
+                        profile: widget.profile,
+                        submission: _submission!,
+                        onNext: _levelIndex == _levels.length - 1
+                            ? null
+                            : _nextLevel,
+                        onFinish: () => _popWithResult(true),
+                      ),
+              )
+            else if (_isFullScreenGame)
+              Positioned.fill(
+                child: _phase == _PlayPhase.result
+                    ? ColoredBox(
+                        color: const Color(0xFFFFF4DD),
+                        child: SafeArea(
+                          child: _LevelFailureResult(
+                            key: ValueKey(
+                              'battle-result-${_submission?.operationId}',
+                            ),
+                            game: widget.game,
+                            submission: _submission!,
+                            onRetry: _tryLevelAgain,
+                            onExit: () => _popWithResult(true),
                           ),
-                          game: widget.game,
-                          level: _level,
-                          submission: _submission!,
-                          isLastLevel: _levelIndex == _levels.length - 1,
-                          onNext: _nextLevel,
-                          onRetry: _tryLevelAgain,
-                          onReplay: _replayQuest,
-                          onExit: () => Navigator.of(context).pop(true),
                         ),
-                      },
+                      )
+                    : _isBlenderActivity || _isMatchingStudio
+                    ? _BlenderActivityLevel(
+                        key: ValueKey(
+                          'activity-${widget.game.slug}-${_level.number}-$_attempt',
+                        ),
+                        type: widget.game.gameType,
+                        level: _level,
+                        paused:
+                            _exitPromptOpen ||
+                            _allowExit ||
+                            !_foreground ||
+                            ModalRoute.of(context)?.isCurrent != true,
+                        onExit: _requestExit,
+                        submitting: _submitting,
+                        error: _submitError,
+                        onComplete: _submit,
+                        onRetrySubmit: !_canRetrySave || _pendingResult == null
+                            ? null
+                            : () => _submit(_pendingResult!),
+                        onRedo: _redoAfterSaveFailure,
+                      )
+                    : _isSailing || _isCrossing
+                    ? _JourneyLevel(
+                        key: ValueKey(
+                          '${_isCrossing ? 'crossing' : 'sailing'}-${_level.number}-$_attempt',
+                        ),
+                        crossing: _isCrossing,
+                        level: _level,
+                        paused:
+                            _exitPromptOpen ||
+                            _allowExit ||
+                            !_foreground ||
+                            ModalRoute.of(context)?.isCurrent != true,
+                        onExit: _requestExit,
+                        submitting: _submitting,
+                        error: _submitError,
+                        onComplete: _submit,
+                        onRetrySubmit: !_canRetrySave || _pendingResult == null
+                            ? null
+                            : () => _submit(_pendingResult!),
+                        onRedo: _redoAfterSaveFailure,
+                      )
+                    : _DavidBattleLevel(
+                        key: ValueKey('battle-${_level.number}-$_attempt'),
+                        level: _level,
+                        paused: _exitPromptOpen,
+                        onExit: _requestExit,
+                        submitting: _submitting,
+                        error: _submitError,
+                        onComplete: _submit,
+                        onRetrySubmit: !_canRetrySave || _pendingResult == null
+                            ? null
+                            : () => _submit(_pendingResult!),
+                        onRedo: _redoAfterSaveFailure,
+                      ),
+              )
+            else
+              SafeArea(
+                child: Column(
+                  children: [
+                    _PlayTopBar(
+                      game: widget.game,
+                      profile: widget.profile,
+                      level: _level,
+                      currentIndex: _levelIndex + 1,
+                      total: _levels.length,
+                      onExit: _requestExit,
                     ),
-                  ),
-                ],
+                    Expanded(
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 420),
+                        switchInCurve: Curves.easeOutBack,
+                        switchOutCurve: Curves.easeInCubic,
+                        child: switch (_phase) {
+                          _PlayPhase.intro => _LevelIntro(
+                            key: ValueKey('intro-${_level.number}-$_attempt'),
+                            game: widget.game,
+                            level: _level,
+                            profile: widget.profile,
+                            onStart: _begin,
+                          ),
+                          _PlayPhase.playing => _PlayingLevel(
+                            key: ValueKey('play-${_level.number}-$_attempt'),
+                            game: widget.game,
+                            level: _level,
+                            submitting: _submitting,
+                            error: _submitError,
+                            onComplete: _submit,
+                            onRetrySubmit:
+                                !_canRetrySave || _pendingResult == null
+                                ? null
+                                : () => _submit(_pendingResult!),
+                            onRedo: _redoAfterSaveFailure,
+                          ),
+                          _PlayPhase.result => _LevelFailureResult(
+                            key: ValueKey(
+                              'result-${_submission?.operationId ?? _level.number}',
+                            ),
+                            game: widget.game,
+                            submission: _submission!,
+                            onRetry: _tryLevelAgain,
+                            onExit: () => _popWithResult(true),
+                          ),
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
           ],
         ),
       ),
@@ -472,7 +822,7 @@ class _LevelIntro extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Icon(gameTypeIcon(game.gameType), color: accent, size: 58),
+              child: Icon(gameIcon(game), color: accent, size: 58),
             ),
             const SizedBox(height: 25),
             Text(
@@ -509,10 +859,7 @@ class _LevelIntro extends StatelessWidget {
               spacing: 9,
               runSpacing: 9,
               children: [
-                _IntroPill(
-                  icon: gameTypeIcon(game.gameType),
-                  label: game.typeLabel,
-                ),
+                _IntroPill(icon: gameIcon(game), label: game.typeLabel),
                 _IntroPill(icon: Icons.bolt_rounded, label: game.difficulty),
               ],
             ),
@@ -544,6 +891,250 @@ class _LevelIntro extends StatelessWidget {
   }
 }
 
+/// The battlefield uses the complete viewport. Only saving failures add a
+/// temporary overlay; the enemy's landed pose remains visible underneath.
+class _DavidBattleLevel extends StatelessWidget {
+  const _DavidBattleLevel({
+    required this.level,
+    required this.onComplete,
+    required this.onExit,
+    required this.paused,
+    required this.submitting,
+    required this.error,
+    required this.onRetrySubmit,
+    required this.onRedo,
+    super.key,
+  });
+  final GameLevel level;
+  final GameEngineComplete onComplete;
+  final VoidCallback onExit;
+  final bool paused;
+  final bool submitting;
+  final String? error;
+  final VoidCallback? onRetrySubmit;
+  final VoidCallback onRedo;
+
+  @override
+  Widget build(BuildContext context) => Stack(
+    key: const Key('david-fullscreen-battle'),
+    fit: StackFit.expand,
+    children: [
+      DavidSlingEngine(
+        level: level,
+        onComplete: onComplete,
+        onExit: onExit,
+        paused: paused,
+      ),
+      if (error != null)
+        Positioned(
+          left: 16,
+          right: 16,
+          bottom: MediaQuery.paddingOf(context).bottom + 16,
+          child: _SubmitError(
+            message: error!,
+            onRetry: onRetrySubmit,
+            onRedo: onRedo,
+          ),
+        ),
+      if (submitting)
+        Positioned(
+          left: 24,
+          right: 24,
+          top: MediaQuery.paddingOf(context).top + 72,
+          child: const IgnorePointer(
+            child: Card(
+              color: Color(0xDFFFFFF5),
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    SizedBox(width: 12),
+                    Text('Saving this round…'),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+    ],
+  );
+}
+
+/// Journey engines own their viewport and ready stage. Saving keeps the
+/// finished activity behind a retry overlay without restarting it.
+class _JourneyLevel extends StatelessWidget {
+  const _JourneyLevel({
+    required this.crossing,
+    required this.level,
+    required this.onComplete,
+    required this.onExit,
+    required this.paused,
+    required this.submitting,
+    required this.error,
+    required this.onRetrySubmit,
+    required this.onRedo,
+    super.key,
+  });
+
+  final bool crossing;
+  final GameLevel level;
+  final GameEngineComplete onComplete;
+  final VoidCallback onExit;
+  final bool paused;
+  final bool submitting;
+  final String? error;
+  final VoidCallback? onRetrySubmit;
+  final VoidCallback onRedo;
+
+  @override
+  Widget build(BuildContext context) => Stack(
+    key: Key(
+      crossing ? 'red-sea-fullscreen-level' : 'sailing-fullscreen-level',
+    ),
+    fit: StackFit.expand,
+    children: [
+      if (crossing)
+        RedSeaCrossingEngine(
+          level: level,
+          graphicsManifestAsset: 'assets/images/games/red-sea-graphics-v1.json',
+          onComplete: onComplete,
+          onExit: onExit,
+          paused: paused || submitting || error != null,
+        )
+      else
+        StormSailingEngine(
+          level: level,
+          onComplete: onComplete,
+          onExit: onExit,
+          paused: paused || submitting || error != null,
+        ),
+      if (error != null)
+        Positioned(
+          left: 16,
+          right: 16,
+          bottom: MediaQuery.paddingOf(context).bottom + 16,
+          child: _SubmitError(
+            message: error!,
+            onRetry: onRetrySubmit,
+            onRedo: onRedo,
+          ),
+        ),
+      if (submitting)
+        Positioned(
+          left: 24,
+          right: 24,
+          top: MediaQuery.paddingOf(context).top + 72,
+          child: IgnorePointer(
+            child: Card(
+              color: const Color(0xDFFFFFF5),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      crossing
+                          ? 'Saving this crossing…'
+                          : 'Saving this voyage…',
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+    ],
+  );
+}
+
+class _BlenderActivityLevel extends StatelessWidget {
+  const _BlenderActivityLevel({
+    required this.type,
+    required this.level,
+    required this.onComplete,
+    required this.onExit,
+    required this.paused,
+    required this.submitting,
+    required this.error,
+    required this.onRetrySubmit,
+    required this.onRedo,
+    super.key,
+  });
+  final GameType type;
+  final GameLevel level;
+  final GameEngineComplete onComplete;
+  final VoidCallback onExit;
+  final bool paused;
+  final bool submitting;
+  final String? error;
+  final VoidCallback? onRetrySubmit;
+  final VoidCallback onRedo;
+
+  @override
+  Widget build(BuildContext context) => Stack(
+    key: Key('${level.config['mode']}-fullscreen-level'),
+    fit: StackFit.expand,
+    children: [
+      GameLevelEngine(
+        type: type,
+        level: level,
+        onComplete: onComplete,
+        onExit: onExit,
+        paused: paused || submitting || error != null,
+      ),
+      if (error != null)
+        Positioned(
+          left: 16,
+          right: 16,
+          bottom: MediaQuery.paddingOf(context).bottom + 16,
+          child: _SubmitError(
+            message: error!,
+            onRetry: onRetrySubmit,
+            onRedo: onRedo,
+          ),
+        ),
+      if (submitting)
+        Positioned(
+          left: 24,
+          right: 24,
+          top: MediaQuery.paddingOf(context).top + 72,
+          child: const IgnorePointer(
+            child: Card(
+              color: Color(0xDFFFFFF5),
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    SizedBox(width: 12),
+                    Text('Saving this round…'),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+    ],
+  );
+}
+
 class _PlayingLevel extends StatelessWidget {
   const _PlayingLevel({
     required this.game,
@@ -572,28 +1163,12 @@ class _PlayingLevel extends StatelessWidget {
           children: [
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 15, 20, 36),
+                padding: game.gameType == GameType.puzzle
+                    ? const EdgeInsets.fromLTRB(20, 15, 20, 36)
+                    : const EdgeInsets.fromLTRB(14, 12, 14, 30),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      level.title,
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    if (level.instructions.isNotEmpty) ...[
-                      const SizedBox(height: 5),
-                      Text(
-                        level.instructions,
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 20),
                     GameLevelEngine(
                       type: game.gameType,
                       level: level,
@@ -629,142 +1204,95 @@ class _PlayingLevel extends StatelessWidget {
   }
 }
 
-class _LevelResult extends StatelessWidget {
-  const _LevelResult({
+class _LevelFailureResult extends StatelessWidget {
+  const _LevelFailureResult({
     required this.game,
-    required this.level,
     required this.submission,
-    required this.isLastLevel,
-    required this.onNext,
     required this.onRetry,
-    required this.onReplay,
     required this.onExit,
     super.key,
   });
 
   final MiniGame game;
-  final GameLevel level;
   final GameSubmission submission;
-  final bool isLastLevel;
-  final VoidCallback onNext;
   final VoidCallback onRetry;
-  final VoidCallback onReplay;
   final VoidCallback onExit;
 
   @override
   Widget build(BuildContext context) {
-    // Completion is authoritative. A quiz may legitimately pass without a
-    // perfect score, so `correct` must not strand a child on an unlocked level.
-    final success = submission.completed;
     final accent = gameAccent(game);
-    final finishedQuest = success && isLastLevel;
-    return Stack(
-      children: [
-        if (success) const Positioned.fill(child: _CelebrationBurst()),
-        SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-          child: Column(
-            children: [
-              TweenAnimationBuilder<double>(
-                duration: const Duration(milliseconds: 720),
-                curve: Curves.elasticOut,
-                tween: Tween(begin: 0, end: 1),
-                builder: (context, value, child) =>
-                    Transform.scale(scale: value, child: child),
-                child: Container(
-                  width: 126,
-                  height: 126,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: success
-                          ? [const Color(0xFFFFD54F), const Color(0xFFFF8A50)]
-                          : [const Color(0xFFFFE1B6), const Color(0xFFFFB66C)],
-                    ),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: accent.withValues(alpha: 0.25),
-                        blurRadius: 36,
-                        spreadRadius: 4,
-                      ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Text(
-                      success ? (finishedQuest ? '🏆' : '⭐') : '💪',
-                      style: const TextStyle(fontSize: 61),
-                    ),
-                  ),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+      child: Column(
+        children: [
+          TweenAnimationBuilder<double>(
+            duration: const Duration(milliseconds: 720),
+            curve: Curves.elasticOut,
+            tween: Tween(begin: 0, end: 1),
+            builder: (context, value, child) =>
+                Transform.scale(scale: value, child: child),
+            child: Container(
+              width: 126,
+              height: 126,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFFFE1B6), Color(0xFFFFB66C)],
                 ),
-              ),
-              const SizedBox(height: 22),
-              Text(
-                success
-                    ? (finishedQuest ? 'Quest complete!' : 'Level complete!')
-                    : 'So close — try again!',
-                key: const Key('game-result-heading'),
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                submission.feedback.isNotEmpty
-                    ? submission.feedback
-                    : success
-                    ? 'Wonderful work! Your result is saved.'
-                    : 'Every try helps your courage grow.',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: 22),
-              _AuthoritativeResultCard(submission: submission),
-              const SizedBox(height: 25),
-              if (success && !isLastLevel)
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    key: const Key('next-level-button'),
-                    onPressed: onNext,
-                    icon: const Icon(Icons.arrow_forward_rounded),
-                    label: const Text('Next level'),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: accent.withValues(alpha: 0.25),
+                    blurRadius: 36,
+                    spreadRadius: 4,
                   ),
-                )
-              else if (!success)
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    key: const Key('retry-level-button'),
-                    onPressed: onRetry,
-                    icon: const Icon(Icons.replay_rounded),
-                    label: const Text('Try this level again'),
-                  ),
-                )
-              else
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    key: const Key('replay-quest-button'),
-                    onPressed: onReplay,
-                    icon: const Icon(Icons.replay_rounded),
-                    label: const Text('Replay the quest'),
-                  ),
-                ),
-              const SizedBox(height: 8),
-              TextButton.icon(
-                key: const Key('finish-game-button'),
-                onPressed: onExit,
-                icon: const Icon(Icons.grid_view_rounded),
-                label: const Text('Back to the game library'),
+                ],
               ),
-            ],
+              child: const Center(
+                child: Text('💪', style: TextStyle(fontSize: 61)),
+              ),
+            ),
           ),
-        ),
-      ],
+          const SizedBox(height: 22),
+          Text(
+            'So close — try again!',
+            key: const Key('game-result-heading'),
+            textAlign: TextAlign.center,
+            style: Theme.of(
+              context,
+            ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            submission.feedback.isNotEmpty
+                ? submission.feedback
+                : 'Every try helps your courage grow.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 22),
+          _AuthoritativeResultCard(submission: submission),
+          const SizedBox(height: 25),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              key: const Key('retry-level-button'),
+              onPressed: onRetry,
+              icon: const Icon(Icons.replay_rounded),
+              label: const Text('Try this level again'),
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextButton.icon(
+            key: const Key('finish-game-button'),
+            onPressed: onExit,
+            icon: const Icon(Icons.grid_view_rounded),
+            label: const Text('Back to the game library'),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1040,89 +1568,6 @@ class _NoPlayableLevels extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-class _CelebrationBurst extends StatefulWidget {
-  const _CelebrationBurst();
-
-  @override
-  State<_CelebrationBurst> createState() => _CelebrationBurstState();
-}
-
-class _CelebrationBurstState extends State<_CelebrationBurst>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2200),
-    )..forward();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: AnimatedBuilder(
-        animation: _controller,
-        builder: (_, _) =>
-            CustomPaint(painter: _ConfettiPainter(progress: _controller.value)),
-      ),
-    );
-  }
-}
-
-class _ConfettiPainter extends CustomPainter {
-  const _ConfettiPainter({required this.progress});
-
-  final double progress;
-
-  static const _colors = [
-    Color(0xFFFF7043),
-    Color(0xFFFFD54F),
-    Color(0xFF6C5CE7),
-    Color(0xFF36C98F),
-    Color(0xFF48A9FF),
-  ];
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final random = math.Random(17);
-    for (var index = 0; index < 48; index++) {
-      final startX = random.nextDouble() * size.width;
-      final speed = 0.72 + random.nextDouble() * 0.65;
-      final y = -20 + (size.height + 60) * progress * speed;
-      final x = startX + math.sin(progress * math.pi * 4 + index) * 18;
-      final paint = Paint()
-        ..color = _colors[index % _colors.length].withValues(
-          alpha: (1 - progress * 0.55).clamp(0, 1),
-        );
-      canvas.save();
-      canvas.translate(x, y);
-      canvas.rotate(progress * math.pi * (index.isEven ? 3 : -3));
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          const Rect.fromLTWH(-4, -7, 8, 14),
-          const Radius.circular(2),
-        ),
-        paint,
-      );
-      canvas.restore();
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _ConfettiPainter oldDelegate) {
-    return oldDelegate.progress != progress;
   }
 }
 

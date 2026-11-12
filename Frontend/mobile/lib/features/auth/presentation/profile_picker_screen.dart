@@ -4,7 +4,9 @@ import '../../../app/router.dart';
 import '../../../core/errors/app_exception.dart';
 import '../data/auth_repository.dart';
 import '../domain/kid_profile.dart';
+import 'adult_gate.dart';
 import 'kid_profile_avatar.dart';
+import 'profile_picker_carousel.dart';
 import 'session_expiry_navigation.dart';
 
 /// Lets a parent choose which child profile is using the app and add more
@@ -27,6 +29,7 @@ class _ProfilePickerScreenState extends State<ProfilePickerScreen> {
   late final AuthRepository _repository;
   late List<KidProfile> _profiles;
   bool _isLoading = false;
+  bool _isAddingProfile = false;
   String? _selectingProfileId;
   String? _errorMessage;
 
@@ -55,7 +58,7 @@ class _ProfilePickerScreenState extends State<ProfilePickerScreen> {
         return;
       }
       if (mounted) {
-        setState(() => _errorMessage = error.message);
+        setState(() => _errorMessage = error.userMessage);
       }
     } catch (_) {
       if (mounted) {
@@ -71,6 +74,7 @@ class _ProfilePickerScreenState extends State<ProfilePickerScreen> {
   }
 
   Future<void> _selectProfile(KidProfile profile) async {
+    if (_selectingProfileId != null || _isAddingProfile) return;
     setState(() {
       _selectingProfileId = profile.id;
       _errorMessage = null;
@@ -84,13 +88,10 @@ class _ProfilePickerScreenState extends State<ProfilePickerScreen> {
         context,
       ).pushNamedAndRemoveUntil(AppRoutes.home, (_) => false);
     } on AppException catch (error) {
-      if (mounted) {
-        setState(() => _errorMessage = error.message);
-      }
+      if (mounted && returnToSignInIfSessionExpired(context, error)) return;
+      if (mounted) _showSelectionError(error.userMessage);
     } catch (_) {
-      if (mounted) {
-        setState(() => _errorMessage = 'We could not open that profile.');
-      }
+      if (mounted) _showSelectionError('We could not open that profile.');
     } finally {
       if (mounted) {
         setState(() => _selectingProfileId = null);
@@ -98,16 +99,52 @@ class _ProfilePickerScreenState extends State<ProfilePickerScreen> {
     }
   }
 
-  void _addProfile() {
-    Navigator.of(
-      context,
-    ).pushNamed(AppRoutes.kidProfileSetup, arguments: _profiles);
+  Future<void> _addProfile() async {
+    if (_isAddingProfile || _selectingProfileId != null) return;
+    setState(() => _isAddingProfile = true);
+    try {
+      if (_profiles.isNotEmpty) {
+        final authorized = await showAdultGate(
+          context: context,
+          repository: _repository,
+          title: 'Add another child',
+          reason: 'Enter the parent password before creating another profile.',
+        );
+        if (!mounted || !authorized) return;
+      }
+      await Navigator.of(
+        context,
+      ).pushNamed(AppRoutes.kidProfileSetup, arguments: _profiles);
+    } finally {
+      if (mounted) setState(() => _isAddingProfile = false);
+    }
+  }
+
+  void _showSelectionError(String message) {
+    setState(() => _errorMessage = message);
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_profiles.isNotEmpty && !_isLoading) {
+      return ProfilePickerCarousel(
+        profiles: _profiles,
+        selectingProfileId: _selectingProfileId,
+        isAddingProfile: _isAddingProfile,
+        onSelectProfile: _selectProfile,
+        onAddProfile: _addProfile,
+        onBack: Navigator.of(context).canPop()
+            ? () => Navigator.of(context).maybePop()
+            : null,
+      );
+    }
+
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final hasBlockingLoadError = !_isLoading && _errorMessage != null;
     return Scaffold(
       backgroundColor: isDark
           ? const Color(0xFF101414)
@@ -122,14 +159,15 @@ class _ProfilePickerScreenState extends State<ProfilePickerScreen> {
                   padding: const EdgeInsets.fromLTRB(24, 26, 24, 34),
                   sliver: SliverList.list(
                     children: [
-                      const _PickerBrand(),
                       const SizedBox(height: 36),
                       const _PickerHero(),
                       const SizedBox(height: 24),
                       Text(
-                        _profiles.isEmpty && !_isLoading
-                            ? 'Let\'s make a profile'
-                            : 'Who\'s ready to explore?',
+                        hasBlockingLoadError
+                            ? 'Let\'s try that again'
+                            : _isLoading
+                            ? 'Who\'s ready to explore?'
+                            : 'Let\'s make a profile',
                         textAlign: TextAlign.center,
                         style: theme.textTheme.headlineSmall?.copyWith(
                           color: _primaryText(context),
@@ -141,9 +179,11 @@ class _ProfilePickerScreenState extends State<ProfilePickerScreen> {
                       ),
                       const SizedBox(height: 9),
                       Text(
-                        _profiles.isEmpty && !_isLoading
-                            ? 'A parent can make the first child profile in just a moment.'
-                            : 'Choose a profile to keep stories, badges, and progress just for them.',
+                        hasBlockingLoadError
+                            ? 'We could not gather your family profiles just now.'
+                            : _isLoading
+                            ? 'Choose a profile to keep stories, badges, and progress just for them.'
+                            : 'A parent can make the first child profile in just a moment.',
                         textAlign: TextAlign.center,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: _secondaryText(context),
@@ -161,48 +201,13 @@ class _ProfilePickerScreenState extends State<ProfilePickerScreen> {
                             ),
                           ),
                         )
-                      else if (_profiles.isEmpty)
-                        _EmptyProfilesCard(onAddProfile: _addProfile)
-                      else ...[
-                        for (final profile in _profiles) ...[
-                          _ProfileChoiceCard(
-                            profile: profile,
-                            isSelecting: _selectingProfileId == profile.id,
-                            onTap: () => _selectProfile(profile),
-                          ),
-                          const SizedBox(height: 12),
-                        ],
-                        const SizedBox(height: 4),
-                        OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: const Size.fromHeight(54),
-                            foregroundColor: const Color(0xFF2D7D6F),
-                            side: const BorderSide(
-                              color: Color(0xFF2D7D6F),
-                              width: 1.25,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(17),
-                            ),
-                            textStyle: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          onPressed: _addProfile,
-                          icon: const Icon(Icons.add_circle_outline_rounded),
-                          label: const Text('Add another child'),
-                        ),
-                      ],
-                      if (_errorMessage != null) ...[
-                        const SizedBox(height: 16),
-                        _PickerError(
+                      else if (hasBlockingLoadError)
+                        _ProfilesLoadError(
                           message: _errorMessage!,
-                          onRetry: _profiles.isEmpty && !_isLoading
-                              ? _loadProfiles
-                              : null,
-                        ),
-                      ],
+                          onRetry: _loadProfiles,
+                        )
+                      else
+                        _EmptyProfilesCard(onAddProfile: _addProfile),
                       const SizedBox(height: 19),
                       _PickerSafetyNote(isDark: isDark),
                     ],
@@ -257,29 +262,6 @@ class _PickerBackdrop extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _PickerBrand extends StatelessWidget {
-  const _PickerBrand();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const Icon(Icons.auto_stories_rounded, color: Color(0xFF2D7D6F)),
-        const SizedBox(width: 8),
-        Text(
-          'Kingdom Kids',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: _primaryText(context),
-            fontWeight: FontWeight.w800,
-            fontSize: 18,
-          ),
-        ),
-      ],
     );
   }
 }
@@ -355,6 +337,7 @@ class _EmptyProfilesCard extends StatelessWidget {
           ),
           const SizedBox(height: 17),
           FilledButton.icon(
+            key: const Key('profile-picker-create-first-child'),
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFF2D7D6F),
               foregroundColor: Colors.white,
@@ -373,119 +356,69 @@ class _EmptyProfilesCard extends StatelessWidget {
   }
 }
 
-class _ProfileChoiceCard extends StatelessWidget {
-  const _ProfileChoiceCard({
-    required this.profile,
-    required this.isSelecting,
-    required this.onTap,
-  });
+class _ProfilesLoadError extends StatelessWidget {
+  const _ProfilesLoadError({required this.message, required this.onRetry});
 
-  final KidProfile profile;
-  final bool isSelecting;
-  final VoidCallback onTap;
+  final String message;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Semantics(
-      button: true,
-      label: 'Open ${profile.displayName}\'s profile',
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(22),
-          onTap: isSelecting ? null : onTap,
-          child: Ink(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.065)
-                  : Colors.white.withValues(alpha: 0.82),
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.11)
-                    : const Color(0xFF2D7D6F).withValues(alpha: 0.13),
-              ),
-            ),
-            child: Row(
-              children: [
-                KidProfileAvatar(profile: profile, size: 64),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        profile.displayName,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(
-                              color: _primaryText(context),
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                            ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Tap to start an adventure',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: _secondaryText(context),
-                          fontSize: 12.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                isSelecting
-                    ? const SizedBox.square(
-                        dimension: 22,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.4,
-                          color: Color(0xFF2D7D6F),
-                        ),
-                      )
-                    : const Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        color: Color(0xFF2D7D6F),
-                        size: 18,
-                      ),
-              ],
-            ),
-          ),
+    return Container(
+      key: const Key('profile-picker-load-error'),
+      padding: const EdgeInsets.fromLTRB(22, 24, 22, 22),
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.06)
+            : Colors.white.withValues(alpha: 0.79),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.1)
+              : const Color(0xFF2D7D6F).withValues(alpha: 0.12),
         ),
       ),
-    );
-  }
-}
-
-class _PickerError extends StatelessWidget {
-  const _PickerError({required this.message, this.onRetry});
-
-  final String message;
-  final VoidCallback? onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.errorContainer,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
+      child: Column(
         children: [
-          Expanded(
-            child: Text(
-              message,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onErrorContainer,
-              ),
+          const Icon(
+            Icons.cloud_off_rounded,
+            color: Color(0xFF2D7D6F),
+            size: 36,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Profiles couldn\'t load',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: _primaryText(context),
+              fontWeight: FontWeight.w800,
             ),
           ),
-          if (onRetry != null) ...[
-            const SizedBox(width: 10),
-            TextButton(onPressed: onRetry, child: const Text('Retry')),
-          ],
+          const SizedBox(height: 8),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: _secondaryText(context),
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 17),
+          FilledButton.icon(
+            key: const Key('profile-picker-retry-button'),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF2D7D6F),
+              foregroundColor: Colors.white,
+              minimumSize: const Size.fromHeight(50),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('Try again'),
+          ),
         ],
       ),
     );

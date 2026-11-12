@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -5,12 +7,34 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+val releaseSigningProperties = Properties()
+val releaseSigningPropertiesFile = rootProject.file("key.properties")
+if (releaseSigningPropertiesFile.exists()) {
+    releaseSigningPropertiesFile.inputStream().use(releaseSigningProperties::load)
+}
+
+fun releaseSigningValue(property: String, environment: String): String? =
+    System.getenv(environment)?.trim()?.takeIf { it.isNotEmpty() }
+        ?: releaseSigningProperties.getProperty(property)?.trim()?.takeIf { it.isNotEmpty() }
+
+val releaseStoreFilePath = releaseSigningValue("storeFile", "ANDROID_KEYSTORE_PATH")
+val releaseStorePassword = releaseSigningValue("storePassword", "ANDROID_KEYSTORE_PASSWORD")
+val releaseKeyAlias = releaseSigningValue("keyAlias", "ANDROID_KEY_ALIAS")
+val releaseKeyPassword = releaseSigningValue("keyPassword", "ANDROID_KEY_PASSWORD")
+val hasReleaseSigning = listOf(
+    releaseStoreFilePath,
+    releaseStorePassword,
+    releaseKeyAlias,
+    releaseKeyPassword,
+).all { !it.isNullOrBlank() }
+
 android {
-    namespace = "com.example.mobile"
+    namespace = "com.andreovien.kingdomkids"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
@@ -20,8 +44,8 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.mobile"
+        applicationId = "com.andreovien.kingdomkids"
+        multiDexEnabled = true
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -30,13 +54,50 @@ android {
         versionName = flutter.versionName
     }
 
-    buildTypes {
-        release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+    signingConfigs {
+        create("release") {
+            if (hasReleaseSigning) {
+                storeFile = rootProject.file(requireNotNull(releaseStoreFilePath))
+                storePassword = requireNotNull(releaseStorePassword)
+                keyAlias = requireNotNull(releaseKeyAlias)
+                keyPassword = requireNotNull(releaseKeyPassword)
+            }
         }
     }
+
+    buildTypes {
+        release {
+            signingConfig = signingConfigs.getByName("release")
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
+        }
+    }
+}
+
+gradle.taskGraph.whenReady {
+    val buildsRelease = allTasks.any { task ->
+        task.name.contains("release", ignoreCase = true)
+    }
+    if (buildsRelease && !hasReleaseSigning) {
+        throw GradleException(
+            "Release signing is required. Configure android/key.properties " +
+                "or ANDROID_KEYSTORE_PATH, ANDROID_KEYSTORE_PASSWORD, " +
+                "ANDROID_KEY_ALIAS, and ANDROID_KEY_PASSWORD.",
+        )
+    }
+    if (buildsRelease && releaseStoreFilePath != null &&
+        !rootProject.file(releaseStoreFilePath).isFile
+    ) {
+        throw GradleException("The configured Android release keystore does not exist.")
+    }
+}
+
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
 
 flutter {

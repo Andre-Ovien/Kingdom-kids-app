@@ -1,0 +1,797 @@
+{
+  "scope": "actual renderer in isolated software-WebGL test; no Safari/phone activation",
+  "screenshots": "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/Frontend/mobile/tool/ark_elephant_preview/review",
+  "animals": 10,
+  "staticModelsPreserved": true,
+  "complete": true,
+  "tapEvidence": [
+    {
+      "id": "elephant",
+      "x": 362.31115213531496,
+      "y": 260.9484224353928
+    },
+    {
+      "id": "sheep",
+      "x": 323.91979537809783,
+      "y": 361.37073277335014
+    },
+    {
+      "id": "zebra",
+      "x": 475.0076380909685,
+      "y": 294.93204072487384
+    },
+    {
+      "id": "donkey",
+      "x": 420.74788784267446,
+      "y": 333.3201291680879
+    },
+    {
+      "id": "deer",
+      "x": 231.79473072724625,
+      "y": 338.3546008774057
+    },
+    {
+      "id": "rabbit",
+      "x": 105.92708593880727,
+      "y": 269.7795965424388
+    },
+    {
+      "id": "dove",
+      "x": 439.5700886415023,
+      "y": 357.7925270290179
+    },
+    {
+      "id": "lion",
+      "x": 555.2085938649591,
+      "y": 300.07595653114976
+    },
+    {
+      "id": "camel",
+      "x": 676.5618247448896,
+      "y": 346.12203952853724
+    },
+    {
+      "id": "giraffe",
+      "x": 268.3611027954883,
+      "y": 271.3321875030736
+    }
+  ],
+  "enteredEvents": [
+    {
+      "type": "animalEntered",
+      "id": "elephant",
+      "visualOnly": true
+    },
+    {
+      "type": "animalEntered",
+      "id": "sheep",
+      "visualOnly": true
+    },
+    {
+      "type": "animalEntered",
+      "id": "zebra",
+      "visualOnly": true
+    },
+    {
+      "type": "animalEntered",
+      "id": "donkey",
+      "visualOnly": true
+    },
+    {
+      "type": "animalEntered",
+      "id": "deer",
+      "visualOnly": true
+    },
+    {
+      "type": "animalEntered",
+      "id": "rabbit",
+      "visualOnly": true
+    },
+    {
+      "type": "animalEntered",
+      "id": "dove",
+      "visualOnly": true
+    },
+    {
+      "type": "animalEntered",
+      "id": "lion",
+      "visualOnly": true
+    },
+    {
+      "type": "animalEntered",
+      "id": "camel",
+      "visualOnly": true
+    },
+    {
+      "type": "animalEntered",
+      "id": "giraffe",
+      "visualOnly": true
+    }
+  ],
+  "gaitEvidence": [],
+  "localBoneEvidence": [
+    {
+      "id": "elephant",
+      "clipDuration": 2,
+      "sampleTimes": [
+        0,
+        0.7
+      ],
+      "changedBoneNames": [
+        "Bone",
+        "Bone003",
+        "Bone012",
+        "Bone004",
+        "Bone005",
+        "UpperLegFrontL",
+        "UpperLegFrontL001",
+        "UpperLegBackL",
+        "UpperLegBackL001",
+        "LowerLegBackL001",
+        "Bone016",
+        "Bone017",
+        "Bone018",
+        "Bone019",
+        "Bone020"
+      ]
+    },
+    {
+      "id": "sheep",
+      "clipDuration": 2,
+      "sampleTimes": [
+        0,
+        0.7
+      ],
+      "changedBoneNames": [
+        "FrontFootR",
+        "FrontLegR",
+        "FrontUpLegR",
+        "FrontLowLegR",
+        "BackLegR",
+        "BackUpLegR",
+        "BackLowLegR",
+        "FrontLegL",
+        "FrontUpLegL",
+        "FrontLowLegL",
+        "BackLegL",
+        "BackUpLegL",
+        "BackLowLegL",
+        "Back",
+        "Shoulders",
+        "Head",
+        "Torso",
+        "BackFootR",
+        "FrontFootL",
+        "BackFootL"
+      ]
+    },
+    {
+      "id": "zebra",
+      "clipDuration": 2,
+      "sampleTimes": [
+        0,
+        0.7
+      ],
+      "changedBoneNames": [
+        "FrontFootR",
+        "FrontLegR",
+        "FrontUpLegR",
+        "FrontLowLegR",
+        "BackLegR",
+        "BackUpLegR",
+        "BackLowLegR",
+        "FrontLegL",
+        "FrontUpLegL",
+        "FrontLowLegL",
+        "BackLegL",
+        "BackUpLegL",
+        "BackLowLegL",
+        "Back",
+        "Tail2",
+        "Tail4",
+        "Shoulders",
+        "Head",
+        "Torso",
+        "BackFootR",
+        "FrontFootL",
+        "BackFootL"
+      ]
+    },
+    {
+      "id": "donkey",
+      "clipDuration": 1.1666666269302368,
+      "sampleTimes": [
+        0,
+        0.4083333194255829
+      ],
+      "changedBoneNames": [
+        "Body",
+        "Back",
+        "Torso2",
+        "Neck1",
+        "Neck3",
+        "Head",
+        "Ear4L",
+        "Ear4R",
+        "FrontShoulderL",
+        "FrontUpperLegL",
+        "FrontLowerLegL",
+        "FrontShoulderR",
+        "FrontUpperLegR",
+        "FrontLowerLegR",
+        "BackShoulderL",
+        "BackLegL",
+        "BackUpperLegL",
+        "BackLowerLegL",
+        "BackShoulderR",
+        "BackLegR",
+        "BackUpperLegR",
+        "BackLowerLegR",
+        "Tail3",
+        "Tail4",
+        "Tail5",
+        "Tail6",
+        "Tail7",
+        "IKBackLegL",
+        "IKFrontLegL",
+        "IKBackLegR",
+        "IKFrontLegR"
+      ]
+    },
+    {
+      "id": "deer",
+      "clipDuration": 1.1666666269302368,
+      "sampleTimes": [
+        0,
+        0.4083333194255829
+      ],
+      "changedBoneNames": [
+        "Body",
+        "Back",
+        "Torso2",
+        "Neck1",
+        "Neck3",
+        "Head",
+        "Ear4L",
+        "Ear4R",
+        "FrontShoulderL",
+        "FrontUpperLegL",
+        "FrontLowerLegL",
+        "FrontShoulderR",
+        "FrontUpperLegR",
+        "FrontLowerLegR",
+        "BackShoulderL",
+        "BackLegL",
+        "BackUpperLegL",
+        "BackLowerLegL",
+        "BackShoulderR",
+        "BackLegR",
+        "BackUpperLegR",
+        "BackLowerLegR",
+        "Tail3",
+        "IKBackLegL",
+        "IKFrontLegL",
+        "IKBackLegR",
+        "IKFrontLegR"
+      ]
+    },
+    {
+      "id": "rabbit",
+      "clipDuration": 0.6666666865348816,
+      "sampleTimes": [
+        0,
+        0.23333334028720853
+      ],
+      "changedBoneNames": [
+        "IK_FrontPaw_L",
+        "IK_FrontPaw_R",
+        "IK_BackPaw_L",
+        "IK_BackPaw_R",
+        "IK_Spine001",
+        "IK_Head",
+        "Hips",
+        "Spine",
+        "Spine001",
+        "Neck",
+        "Head",
+        "IK_Ear_L",
+        "Ear_L",
+        "Ear_L001",
+        "Ear_R",
+        "Ear_R001",
+        "IK_Ear_R",
+        "FrontUpLeg_L",
+        "FrontLeg_L",
+        "FrontPaw_L",
+        "FrontUpLeg_R",
+        "FrontLeg_R",
+        "FrontPaw_R",
+        "BackUpLeg_L",
+        "BackLeg_L",
+        "BackLeg_L001",
+        "BackPaw_L",
+        "BackUpLeg_R",
+        "BackLeg_R",
+        "BackLeg_R001",
+        "BackPaw_R",
+        "Tail"
+      ]
+    },
+    {
+      "id": "dove",
+      "clipDuration": 1,
+      "sampleTimes": [
+        0,
+        0.5
+      ],
+      "changedBoneNames": [
+        "thorax-bone",
+        "right-wing-1",
+        "left-wing-1",
+        "tail-bone-1"
+      ]
+    },
+    {
+      "id": "lion",
+      "clipDuration": 3.3333332538604736,
+      "sampleTimes": [
+        0,
+        1.1666666388511655
+      ],
+      "changedBoneNames": [
+        "Horse_Pelvis",
+        "Horse_Spine",
+        "Horse_Spine1",
+        "Horse_L_Clavicle",
+        "Horse_L_Forearm",
+        "Horse_L_Hand",
+        "Horse_L_Finger0",
+        "Horse_Neck1",
+        "Horse_Head",
+        "Horse_R_Clavicle",
+        "Horse_R_Forearm",
+        "Horse_R_Hand",
+        "Horse_R_Finger0",
+        "Horse_L_Thigh",
+        "Horse_L_Calf",
+        "Horse_L_Foot",
+        "Horse_L_Toe0",
+        "Horse_R_Thigh",
+        "Horse_R_Calf",
+        "Horse_R_Foot",
+        "Horse_R_Toe0",
+        "Horse_Tail1"
+      ]
+    },
+    {
+      "id": "camel",
+      "clipDuration": 1.3333333730697632,
+      "sampleTimes": [
+        0,
+        0.46666668057441707
+      ],
+      "changedBoneNames": [
+        "Knee_F_R",
+        "Knee_B_R",
+        "Camelus_Pelvis",
+        "Camelus_Spine",
+        "CamelTurnControl",
+        "Camelus_Spine1",
+        "Camelus_Spine2",
+        "Camelus_Neck_01",
+        "Camelus_Neck_02",
+        "Camelus_Neck_03",
+        "Camelus_Neck_04",
+        "Camelus_Head",
+        "Head_Stretch_IK",
+        "Camelus_shoulder_R",
+        "Camelus_upperarm_R",
+        "Camelus_Arm_R",
+        "Camelus_Forearm_R",
+        "Camelus_Hand_R",
+        "Camelus_Hoof_R",
+        "Knee_Stretch_R",
+        "Camelus_shoulder_L",
+        "Camelus_Arm_L",
+        "Camelus_Forearm_L",
+        "Camelus_Hand_L",
+        "Camelus_Hoof_L",
+        "Knee_Stretch_L",
+        "Shoulder_Target_R",
+        "Shoulder_Target_L",
+        "Camelus_Tail",
+        "Camelus_Tail_01",
+        "Camelus_Tail_02",
+        "Camelus_Tail_03",
+        "Camelus_Thigh_R",
+        "Camelus_Foreleg_R",
+        "Camelus_Shin_R",
+        "Camelus_Foot_R",
+        "Camelus_Hoof_back_R",
+        "Knee_Stretch_B_R",
+        "Camelus_Thigh_L",
+        "Camelus_Leg_L",
+        "Camelus_Foreleg_L",
+        "Camelus_Shin_L",
+        "Camelus_Foot_L",
+        "Camelus_Hoof_back_L",
+        "Knee_Stretch_B_L",
+        "Leg_target_R",
+        "Leg_target_L",
+        "Camelus_HeadNub",
+        "Camelus_Spine_02_IK",
+        "Camelus_Hand_IK_R",
+        "Hand_R",
+        "Hoof_F_R",
+        "Camelus_leg_IK_R",
+        "Foot_R",
+        "Hoof_B_R",
+        "Camelus_Hand_IK_L",
+        "Hand_L",
+        "Hoof_F_L",
+        "Camelus_leg_IK_L",
+        "Foot_L",
+        "Hoof_B_L",
+        "Camelus_Spine_01_IK",
+        "Camelus_Spine_03_IK",
+        "Knee_F_L",
+        "Knee_B_L",
+        "Camelus_Rein",
+        "Head_Rotation_IK"
+      ]
+    },
+    {
+      "id": "giraffe",
+      "clipDuration": 3.3333332538604736,
+      "sampleTimes": [
+        0,
+        1.1666666388511657
+      ],
+      "changedBoneNames": [
+        "main_pelvis",
+        "spine_01",
+        "spine_02",
+        "neck_01",
+        "neck_02",
+        "neck_03",
+        "right_f_pelvis_upper",
+        "right_f_leg_top",
+        "right_f_leg_mid",
+        "right_f_leg_bottom",
+        "right_f_foot",
+        "left_f_pelvis_upper",
+        "left_f_leg_top",
+        "left_f_leg_mid",
+        "left_f_leg_bottom",
+        "left_f_foot",
+        "left_r_pelvis_upper",
+        "left_r_leg_top",
+        "left_r_leg_mid",
+        "left_r_leg_bottom",
+        "left_r_foot",
+        "right_r_pelvis_upper",
+        "right_r_leg_top",
+        "right_r_leg_mid",
+        "right_r_leg_bottom",
+        "right_r_foot",
+        "tail_02",
+        "tail_03"
+      ]
+    }
+  ],
+  "finalFrames": [
+    {
+      "callbackTime": -2.7999999996245606,
+      "startTime": 0.30000000074505806,
+      "renderCost": 4,
+      "alpha": 0,
+      "actors": [
+        {
+          "id": "elephant",
+          "visible": true,
+          "travelled": 15.563694066095001,
+          "pathLength": 17.761946473465958,
+          "arrived": false
+        },
+        {
+          "id": "sheep",
+          "visible": true,
+          "travelled": 0,
+          "pathLength": 28.404349449444076,
+          "arrived": false
+        },
+        {
+          "id": "zebra",
+          "visible": true,
+          "travelled": 0,
+          "pathLength": 33.698270054569825,
+          "arrived": false
+        },
+        {
+          "id": "donkey",
+          "visible": true,
+          "travelled": 0,
+          "pathLength": 31.557152876063668,
+          "arrived": false
+        },
+        {
+          "id": "deer",
+          "visible": true,
+          "travelled": 0,
+          "pathLength": 28.389247181933406,
+          "arrived": false
+        },
+        {
+          "id": "rabbit",
+          "visible": true,
+          "travelled": 0,
+          "pathLength": 35.7578817086773,
+          "arrived": false
+        },
+        {
+          "id": "dove",
+          "visible": true,
+          "travelled": 0,
+          "pathLength": 27.786242097639978,
+          "arrived": false
+        },
+        {
+          "id": "lion",
+          "visible": true,
+          "travelled": 0,
+          "pathLength": 17.659463225883492,
+          "arrived": false
+        },
+        {
+          "id": "camel",
+          "visible": true,
+          "travelled": 0,
+          "pathLength": 29.460437389703316,
+          "arrived": false
+        },
+        {
+          "id": "giraffe",
+          "visible": true,
+          "travelled": 0,
+          "pathLength": 22.268745862807904,
+          "arrived": false
+        }
+      ]
+    },
+    {
+      "callbackTime": 11.800000000373984,
+      "startTime": 12,
+      "renderCost": 3.600000001490116,
+      "alpha": 0.11800000000373984,
+      "actors": [
+        {
+          "id": "elephant",
+          "visible": true,
+          "travelled": 15.820889597732869,
+          "pathLength": 17.761946473465958,
+          "arrived": false
+        },
+        {
+          "id": "sheep",
+          "visible": true,
+          "travelled": 3.323308885267927,
+          "pathLength": 28.404349449444076,
+          "arrived": false
+        },
+        {
+          "id": "zebra",
+          "visible": true,
+          "travelled": 3.9426975960085526,
+          "pathLength": 33.698270054569825,
+          "arrived": false
+        },
+        {
+          "id": "donkey",
+          "visible": true,
+          "travelled": 3.69218688614723,
+          "pathLength": 31.557152876063668,
+          "arrived": false
+        },
+        {
+          "id": "deer",
+          "visible": true,
+          "travelled": 3.3215419199693472,
+          "pathLength": 28.389247181933406,
+          "arrived": false
+        },
+        {
+          "id": "rabbit",
+          "visible": true,
+          "travelled": 4.1836721595161395,
+          "pathLength": 35.7578817086773,
+          "arrived": false
+        },
+        {
+          "id": "dove",
+          "visible": true,
+          "travelled": 3.2509903251137464,
+          "pathLength": 27.786242097639978,
+          "arrived": false
+        },
+        {
+          "id": "lion",
+          "visible": true,
+          "travelled": 2.0661571972312656,
+          "pathLength": 17.659463225883492,
+          "arrived": false
+        },
+        {
+          "id": "camel",
+          "visible": true,
+          "travelled": 3.446871174266471,
+          "pathLength": 29.460437389703316,
+          "arrived": false
+        },
+        {
+          "id": "giraffe",
+          "visible": true,
+          "travelled": 2.6054432656999764,
+          "pathLength": 22.268745862807904,
+          "arrived": false
+        }
+      ]
+    },
+    {
+      "callbackTime": 30.500000000371074,
+      "startTime": 30.700000001117587,
+      "renderCost": 3.799999998882413,
+      "alpha": 0.30500000000371075,
+      "actors": [
+        {
+          "id": "elephant",
+          "visible": true,
+          "travelled": 16.231962797911173,
+          "pathLength": 17.761946473465958,
+          "arrived": false
+        },
+        {
+          "id": "sheep",
+          "visible": true,
+          "travelled": 8.634922232313142,
+          "pathLength": 28.404349449444076,
+          "arrived": false
+        },
+        {
+          "id": "zebra",
+          "visible": true,
+          "travelled": 10.244274096212129,
+          "pathLength": 33.698270054569825,
+          "arrived": false
+        },
+        {
+          "id": "donkey",
+          "visible": true,
+          "travelled": 9.593374473970217,
+          "pathLength": 31.557152876063668,
+          "arrived": false
+        },
+        {
+          "id": "deer",
+          "visible": true,
+          "travelled": 8.630331142990068,
+          "pathLength": 28.389247181933406,
+          "arrived": false
+        },
+        {
+          "id": "rabbit",
+          "visible": true,
+          "travelled": 10.870396039037754,
+          "pathLength": 35.7578817086773,
+          "arrived": false
+        },
+        {
+          "id": "dove",
+          "visible": true,
+          "travelled": 8.447017597371612,
+          "pathLength": 27.786242097639978,
+          "arrived": false
+        },
+        {
+          "id": "lion",
+          "visible": true,
+          "travelled": 5.368476820470964,
+          "pathLength": 17.659463225883492,
+          "arrived": false
+        },
+        {
+          "id": "camel",
+          "visible": true,
+          "travelled": 8.955972966140132,
+          "pathLength": 29.460437389703316,
+          "arrived": false
+        },
+        {
+          "id": "giraffe",
+          "visible": true,
+          "travelled": 6.7696987420444055,
+          "pathLength": 22.268745862807904,
+          "arrived": false
+        }
+      ]
+    },
+    {
+      "callbackTime": 580.4000000003725,
+      "startTime": 595.8000000007451,
+      "renderCost": 4.599999999627471,
+      "alpha": 1,
+      "actors": [
+        {
+          "id": "elephant",
+          "visible": false,
+          "travelled": 17.761946473465958,
+          "pathLength": 17.761946473465958,
+          "arrived": true
+        },
+        {
+          "id": "sheep",
+          "visible": false,
+          "travelled": 28.404349449444076,
+          "pathLength": 28.404349449444076,
+          "arrived": true
+        },
+        {
+          "id": "zebra",
+          "visible": false,
+          "travelled": 33.698270054569825,
+          "pathLength": 33.698270054569825,
+          "arrived": true
+        },
+        {
+          "id": "donkey",
+          "visible": false,
+          "travelled": 31.557152876063668,
+          "pathLength": 31.557152876063668,
+          "arrived": true
+        },
+        {
+          "id": "deer",
+          "visible": false,
+          "travelled": 28.389247181933406,
+          "pathLength": 28.389247181933406,
+          "arrived": true
+        },
+        {
+          "id": "rabbit",
+          "visible": false,
+          "travelled": 35.7578817086773,
+          "pathLength": 35.7578817086773,
+          "arrived": true
+        },
+        {
+          "id": "dove",
+          "visible": false,
+          "travelled": 27.786242097639978,
+          "pathLength": 27.786242097639978,
+          "arrived": true
+        },
+        {
+          "id": "lion",
+          "visible": false,
+          "travelled": 17.659463225883492,
+          "pathLength": 17.659463225883492,
+          "arrived": true
+        },
+        {
+          "id": "camel",
+          "visible": false,
+          "travelled": 29.460437389703316,
+          "pathLength": 29.460437389703316,
+          "arrived": true
+        },
+        {
+          "id": "giraffe",
+          "visible": false,
+          "travelled": 22.268745862807904,
+          "pathLength": 22.268745862807904,
+          "arrived": true
+        }
+      ]
+    }
+  ],
+  "errors": []
+}

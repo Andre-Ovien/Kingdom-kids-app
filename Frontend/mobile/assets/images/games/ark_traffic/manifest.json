@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "animals": {
+    "tortoise": {
+      "asset": "assets/images/games/ark_traffic/tortoise-walk.webp",
+      "cell": 160,
+      "directions": 8,
+      "frames": 9,
+      "foot_anchor": [
+        80.0,
+        106.029
+      ]
+    },
+    "elephant": {
+      "asset": "assets/images/games/ark_traffic/elephant-walk.webp",
+      "cell": 160,
+      "directions": 8,
+      "frames": 9,
+      "foot_anchor": [
+        80.0,
+        102.73
+      ]
+    },
+    "goat": {
+      "asset": "assets/images/games/ark_traffic/goat-walk.webp",
+      "cell": 160,
+      "directions": 8,
+      "frames": 9,
+      "foot_anchor": [
+        80.0,
+        106.029
+      ]
+    },
+    "rabbit": {
+      "asset": "assets/images/games/ark_traffic/rabbit-walk.webp",
+      "cell": 160,
+      "directions": 8,
+      "frames": 9,
+      "foot_anchor": [
+        80.0,
+        106.029
+      ]
+    }
+  },
+  "backgrounds": {
+    "1": "assets/images/games/ark_traffic/level-1-background.webp",
+    "2": "assets/images/games/ark_traffic/level-2-background.webp",
+    "3": "assets/images/games/ark_traffic/level-3-background.webp"
+  },
+  "gate": {
+    "asset": "assets/images/games/ark_traffic/gate.webp",
+    "cell": 160,
+    "directions": 1,
+    "frames": 2,
+    "foot_anchor": [
+      80.0,
+      96.82
+    ]
+  }
+}

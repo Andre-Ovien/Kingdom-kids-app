@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:mobile/core/config/app_config.dart';
 import 'package:mobile/core/errors/app_exception.dart';
 import 'package:mobile/features/auth/data/auth_api.dart';
 import 'package:mobile/features/auth/data/auth_repository.dart';
@@ -13,6 +14,7 @@ import 'package:mobile/features/auth/domain/auth_session.dart';
 import 'package:mobile/features/auth/domain/email_verification.dart';
 import 'package:mobile/features/auth/domain/kid_profile.dart';
 import 'package:mobile/features/auth/domain/parent_account.dart';
+import 'package:mobile/features/auth/domain/password_reset.dart';
 import 'package:mobile/features/games/data/game_api.dart';
 import 'package:mobile/features/games/data/game_repository.dart';
 import 'package:mobile/features/games/domain/mini_game.dart';
@@ -24,6 +26,49 @@ void main() {
         expect(GameTypeValue.parse(type.name), type);
         expect(type.wireName, type.name);
         expect(type.label, isNotEmpty);
+      }
+    });
+
+    test(
+      'garden catalogue summary is a Game while retaining its wire engine',
+      () {
+        final garden = MiniGame.fromJson({
+          'id': 'garden',
+          'slug': 'noahs-ark-garden',
+          'title': 'Noah’s Ark Garden',
+          'game_type': 'matching',
+          'cover_asset_key': 'story:noah',
+          'total_levels': 1,
+        });
+        expect(garden.levels, isEmpty);
+        expect(garden.gameType, GameType.matching);
+        expect(garden.type, MiniGameType.matching);
+        expect(garden.category, GameCategory.game);
+        expect(garden.typeLabel, 'Game');
+        expect(
+          garden.coverAssetKey,
+          'assets/images/stories/noah-builds-the-ark-v2.webp',
+        );
+      },
+    );
+
+    test('catalogue groups engines into the four activity sections', () {
+      for (final (type, category) in [
+        (GameType.puzzle, GameCategory.puzzle),
+        (GameType.quiz, GameCategory.quiz),
+        (GameType.matching, GameCategory.matching),
+        (GameType.aim, GameCategory.game),
+        (GameType.maze, GameCategory.game),
+        (GameType.path, GameCategory.game),
+        (GameType.ordering, GameCategory.game),
+      ]) {
+        final game = MiniGame.fromJson({
+          'slug': 'custom-${type.name}',
+          'game_type': type.wireName,
+        });
+        expect(game.category, category);
+        expect(game.gameType, type);
+        expect(game.typeLabel, type.label);
       }
     });
 
@@ -107,6 +152,39 @@ void main() {
       expect(game.coverAssetKey, 'assets/images/custom-game.webp');
     });
 
+    test(
+      'accepts only trusted remote covers and preserves bundled fallback',
+      () {
+        const mediaPolicy = ContentMediaPolicy(
+          apiBaseUrl: 'https://api.test/api',
+          configuredHosts: 'cdn.test',
+        );
+        final trusted = MiniGame.fromJson({
+          'id': 'trusted-cover',
+          'slug': 'trusted-cover',
+          'title': 'Trusted Cover',
+          'game_type': 'quiz',
+          'cover_asset_key': 'assets/images/custom-game.webp',
+          'cover_image_url': 'https://cdn.test/game.webp?signature=abc123',
+        }, mediaPolicy: mediaPolicy);
+        final rejected = MiniGame.fromJson({
+          'id': 'rejected-cover',
+          'slug': 'rejected-cover',
+          'title': 'Rejected Cover',
+          'game_type': 'quiz',
+          'cover_asset_key': 'assets/images/custom-game.webp',
+          'cover_image_url': 'https://tracking.example/game.webp',
+        }, mediaPolicy: mediaPolicy);
+
+        expect(
+          trusted.coverImageUrl,
+          'https://cdn.test/game.webp?signature=abc123',
+        );
+        expect(rejected.coverImageUrl, isNull);
+        expect(rejected.coverAssetKey, 'assets/images/custom-game.webp');
+      },
+    );
+
     test('parses authoritative score, reward, and replay metadata', () {
       final submission = GameSubmission.fromJson({
         'attempt_id': 'attempt-1',
@@ -166,6 +244,64 @@ void main() {
       expect(requests.last.url.path, '/api/games/esther-quiz/');
       expect(requests.last.url.queryParameters, {'profile_id': 'kid-1'});
       expect(requests.first.headers['authorization'], 'Bearer access-token');
+    });
+
+    test(
+      'rejects catalogue progress without the requested profile ID',
+      () async {
+        for (final returnedProfileId in <String?>[null, 'kid-2']) {
+          final api = HttpGameApi(
+            baseUrl: 'https://kingdom-kids.test/api',
+            client: MockClient(
+              (_) async => http.Response(
+                jsonEncode([_gameJson(progressProfileId: returnedProfileId)]),
+                200,
+              ),
+            ),
+          );
+
+          await expectLater(
+            api.fetchGames('access-token', profileId: 'kid-1'),
+            throwsA(
+              isA<AppException>().having(
+                (error) => error.code,
+                'code',
+                'game_response_mismatch',
+              ),
+            ),
+          );
+        }
+      },
+    );
+
+    test('rejects game detail progress for another profile', () async {
+      for (final returnedProfileId in <String?>[null, 'kid-2']) {
+        final api = HttpGameApi(
+          baseUrl: 'https://kingdom-kids.test/api',
+          client: MockClient(
+            (_) async => http.Response(
+              jsonEncode(
+                _gameJson(
+                  withLevels: true,
+                  progressProfileId: returnedProfileId,
+                ),
+              ),
+              200,
+            ),
+          ),
+        );
+
+        await expectLater(
+          api.fetchGame('esther-quiz', 'access-token', profileId: 'kid-1'),
+          throwsA(
+            isA<AppException>().having(
+              (error) => error.code,
+              'code',
+              'game_response_mismatch',
+            ),
+          ),
+        );
+      }
     });
 
     test('posts exact idempotent result contract and parses reward', () async {
@@ -439,7 +575,10 @@ void main() {
   });
 }
 
-Map<String, dynamic> _gameJson({bool withLevels = false}) => {
+Map<String, dynamic> _gameJson({
+  bool withLevels = false,
+  String? progressProfileId = 'kid-1',
+}) => {
   'id': 'game-1',
   'slug': 'esther-quiz',
   'title': 'Esther Brave Quiz',
@@ -451,6 +590,7 @@ Map<String, dynamic> _gameJson({bool withLevels = false}) => {
   'icon_key': 'crown',
   'total_levels': 1,
   'progress': {
+    'profile_id': ?progressProfileId,
     'highest_completed_level': 0,
     'total_stars': 0,
     'max_stars': 3,
@@ -533,6 +673,23 @@ final class _RefreshingAuthApi implements AuthApi {
   }
 
   @override
+  Future<PendingPasswordReset> requestPasswordReset(
+    PasswordResetRequest request,
+  ) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> verifyPasswordResetCode(PasswordResetVerifyRequest request) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> confirmPasswordReset(PasswordResetConfirmRequest request) {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<KidProfile> createKidProfile(
     CreateKidProfileRequest request,
     String accessToken,
@@ -546,7 +703,18 @@ final class _RefreshingAuthApi implements AuthApi {
   }
 
   @override
-  Future<List<KidProfile>> fetchKidProfiles(String accessToken) {
+  Future<void> deleteAccount({
+    required String password,
+    required String accessToken,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<KidProfile>> fetchKidProfiles(
+    String accessToken, {
+    required String expectedParentId,
+  }) {
     throw UnimplementedError();
   }
 

@@ -8,6 +8,7 @@ import '../../../shared/widgets/floating_liquid_nav.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../auth/domain/kid_profile.dart';
 import '../../auth/presentation/session_expiry_navigation.dart';
+import '../../home/presentation/home_story_card.dart';
 import '../data/story_repository.dart';
 import '../domain/story_detail.dart';
 import 'story_cover_image.dart';
@@ -81,7 +82,7 @@ class _StoriesScreenState extends State<StoriesScreen> {
         return;
       }
       if (mounted) {
-        setState(() => _errorMessage = error.message);
+        setState(() => _errorMessage = error.userMessage);
       }
     } catch (_) {
       if (mounted) {
@@ -210,6 +211,27 @@ class _StoriesScreenState extends State<StoriesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    const ink = Color(0xFF121217);
+    return Theme(
+      data: theme.copyWith(
+        brightness: Brightness.light,
+        scaffoldBackgroundColor: Colors.white,
+        colorScheme: theme.colorScheme.copyWith(
+          brightness: Brightness.light,
+          surface: Colors.white,
+          onSurface: ink,
+          primary: ink,
+          onPrimary: Colors.white,
+        ),
+        textTheme: theme.textTheme.apply(bodyColor: ink, displayColor: ink),
+        iconTheme: theme.iconTheme.copyWith(color: ink),
+      ),
+      child: Builder(builder: _buildLibrary),
+    );
+  }
+
+  Widget _buildLibrary(BuildContext context) {
     final visibleStories = _visibleStories;
     final featuredIndex = visibleStories.isEmpty
         ? -1
@@ -251,14 +273,6 @@ class _StoriesScreenState extends State<StoriesScreen> {
                           onClear: _clearSearch,
                           onFilter: _stories.isEmpty ? null : _chooseCategory,
                         ),
-                        if (_categories.length > 1) ...[
-                          const SizedBox(height: 14),
-                          _CategoryRail(
-                            categories: _categories,
-                            selected: _category,
-                            onSelected: _setCategory,
-                          ),
-                        ],
                         const SizedBox(height: 20),
                         if (_errorMessage != null && _stories.isNotEmpty) ...[
                           _StaleLibraryNotice(
@@ -283,11 +297,15 @@ class _StoriesScreenState extends State<StoriesScreen> {
                         onRetry: _loadLibrary,
                       ),
                     )
+                  else if (_stories.isEmpty)
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: _EmptyStoryLibrary(onRefresh: _loadLibrary),
+                    )
                   else if (visibleStories.isEmpty)
                     SliverFillRemaining(
                       hasScrollBody: false,
                       child: _EmptyLibrarySearch(
-                        hasFilters: _query.isNotEmpty || _category != 'All',
                         onReset: () {
                           _searchController.clear();
                           setState(() {
@@ -384,12 +402,11 @@ class _StoryPalette {
   final Color mutedInk;
 
   factory _StoryPalette.of(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return _StoryPalette(
-      canvas: isDark ? const Color(0xFF8773E0) : const Color(0xFF9B87F5),
-      paper: const Color(0xFFFFFCF5),
-      ink: const Color(0xFF121217),
-      mutedInk: const Color(0xFF352F45),
+    return const _StoryPalette(
+      canvas: Colors.white,
+      paper: Color(0xFFFFFCF5),
+      ink: Color(0xFF121217),
+      mutedInk: Color(0xFF352F45),
     );
   }
 }
@@ -407,55 +424,20 @@ class _LibraryTitle extends StatelessWidget {
       container: true,
       header: true,
       label: name == null || name.isEmpty
-          ? 'Story time. Pick a tale and let your imagination fly.'
-          : 'Story time for $name. Pick a tale and let your imagination fly.',
+          ? 'Story time'
+          : 'Story time for $name',
       child: ExcludeSemantics(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'STORY TIME!',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      color: palette.ink,
-                      fontSize: 32,
-                      height: 0.94,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 7),
-                  Text(
-                    'Pick a tale. Let your imagination fly.',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: palette.mutedInk,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 10),
-            Container(
-              width: 54,
-              height: 54,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFD743),
-                border: Border.all(color: palette.ink, width: 2),
-                borderRadius: BorderRadius.circular(17),
-              ),
-              child: const Icon(
-                Icons.auto_stories_rounded,
-                color: Color(0xFF121217),
-                size: 28,
-              ),
-            ),
-          ],
+        child: Text(
+          'STORY TIME!',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+            color: palette.ink,
+            fontSize: 24,
+            height: 1.1,
+            fontWeight: FontWeight.w500,
+            letterSpacing: -0.4,
+          ),
         ),
       ),
     );
@@ -483,7 +465,7 @@ class _LibrarySearchRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = _StoryPalette.of(context);
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Expanded(
           child: TextField(
@@ -491,8 +473,13 @@ class _LibrarySearchRow extends StatelessWidget {
             controller: controller,
             onChanged: onChanged,
             textInputAction: TextInputAction.search,
-            style: TextStyle(color: palette.ink, fontWeight: FontWeight.w700),
+            style: TextStyle(
+              color: palette.ink,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
             decoration: InputDecoration(
+              constraints: const BoxConstraints(minHeight: 48),
               hintText: 'Find an adventure…',
               hintStyle: TextStyle(
                 color: palette.mutedInk,
@@ -501,7 +488,11 @@ class _LibrarySearchRow extends StatelessWidget {
               prefixIcon: Icon(
                 Icons.search_rounded,
                 color: palette.ink,
-                size: 22,
+                size: 20,
+              ),
+              prefixIconConstraints: const BoxConstraints(
+                minWidth: 44,
+                minHeight: 48,
               ),
               suffixIcon: hasQuery
                   ? IconButton(
@@ -514,14 +505,17 @@ class _LibrarySearchRow extends StatelessWidget {
               filled: true,
               fillColor: palette.paper,
               isDense: true,
-              contentPadding: const EdgeInsets.symmetric(vertical: 15),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
               enabledBorder: OutlineInputBorder(
                 borderSide: BorderSide(color: palette.ink, width: 2),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(99),
               ),
               focusedBorder: OutlineInputBorder(
                 borderSide: BorderSide(color: palette.ink, width: 2),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(99),
               ),
             ),
           ),
@@ -540,72 +534,17 @@ class _LibrarySearchRow extends StatelessWidget {
               tooltip: 'Filter story worlds',
               onPressed: onFilter,
               style: IconButton.styleFrom(
-                fixedSize: const Size(54, 54),
+                fixedSize: const Size.square(48),
                 backgroundColor: palette.paper,
                 foregroundColor: const Color(0xFF121217),
                 side: BorderSide(color: palette.ink, width: 2),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
+                shape: const CircleBorder(),
               ),
-              icon: const Icon(Icons.tune_rounded, size: 23),
+              icon: const Icon(Icons.filter_list_rounded, size: 21),
             ),
           ),
         ),
       ],
-    );
-  }
-}
-
-class _CategoryRail extends StatelessWidget {
-  const _CategoryRail({
-    required this.categories,
-    required this.selected,
-    required this.onSelected,
-  });
-
-  final List<String> categories;
-  final String selected;
-  final ValueChanged<String> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = _StoryPalette.of(context);
-    final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
-    return SizedBox(
-      key: const Key('story-category-rail'),
-      height: 43 + ((textScale - 1).clamp(0.0, 1.0) * 16),
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: categories.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 9),
-        itemBuilder: (context, index) {
-          final category = categories[index];
-          final isSelected = category == selected;
-          return Semantics(
-            button: true,
-            selected: isSelected,
-            label: '$category stories',
-            child: FilterChip(
-              key: Key('story-category-$category'),
-              selected: isSelected,
-              showCheckmark: false,
-              onSelected: (_) => onSelected(category),
-              label: Text(category),
-              labelStyle: TextStyle(
-                color: palette.ink,
-                fontWeight: FontWeight.w900,
-              ),
-              backgroundColor: palette.paper,
-              selectedColor: const Color(0xFFFFD743),
-              side: BorderSide(color: palette.ink, width: isSelected ? 2 : 1.5),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          );
-        },
-      ),
     );
   }
 }
@@ -618,183 +557,19 @@ class _FeaturedStoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = _StoryPalette.of(context);
-    final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
     return Semantics(
       button: true,
       label:
           'Featured story: ${story.title}. ${story.category}. ${_readTime(story)}. Open story.',
+      onTap: onTap,
       child: ExcludeSemantics(
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            key: Key('story-card-${story.slug}'),
-            borderRadius: BorderRadius.circular(24),
-            onTap: onTap,
-            child: Ink(
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFD743),
-                border: Border.all(color: palette.ink, width: 2),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final stack = constraints.maxWidth < 355 || textScale > 1.35;
-                  if (stack) {
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        _FeaturedCopy(story: story),
-                        _FeaturedImage(story: story, height: 200),
-                      ],
-                    );
-                  }
-                  return SizedBox(
-                    height: 260,
-                    child: Row(
-                      children: [
-                        Expanded(flex: 11, child: _FeaturedCopy(story: story)),
-                        Expanded(flex: 10, child: _FeaturedImage(story: story)),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _FeaturedCopy extends StatelessWidget {
-  const _FeaturedCopy({required this.story});
-
-  final StoryDetail story;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 12, 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFD743),
-              border: Border.all(color: const Color(0xFF121217), width: 1.8),
-              borderRadius: BorderRadius.circular(99),
-            ),
-            child: Text(
-              story.isFeatured ? 'FEATURED TALE' : 'START HERE',
-              style: const TextStyle(
-                color: Color(0xFF121217),
-                fontSize: 9.5,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0.9,
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            story.title,
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              color: const Color(0xFF121217),
-              fontSize: 25,
-              height: 0.98,
-              fontWeight: FontWeight.w900,
-              letterSpacing: -0.9,
-            ),
-          ),
-          const SizedBox(height: 9),
-          Text(
-            story.summary.isEmpty
-                ? 'A new adventure is waiting!'
-                : story.summary,
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: const Color(0xFF29242E),
-              height: 1.25,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              const Icon(
-                Icons.auto_stories_rounded,
-                color: Color(0xFF121217),
-                size: 16,
-              ),
-              const SizedBox(width: 5),
-              Flexible(
-                child: Text(
-                  '${story.category}  •  ${_readTime(story)}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFF302B32),
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 13),
-          const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'READ NOW',
-                style: TextStyle(
-                  color: Color(0xFF121217),
-                  fontSize: 11,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.4,
-                ),
-              ),
-              SizedBox(width: 5),
-              Icon(
-                Icons.arrow_forward_rounded,
-                color: Color(0xFF121217),
-                size: 18,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FeaturedImage extends StatelessWidget {
-  const _FeaturedImage({required this.story, this.height});
-
-  final StoryDetail story;
-  final double? height;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: height,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(4, 14, 14, 14),
-        child: Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: const Color(0xFF121217), width: 2),
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: StoryCoverImage(
-            story: story,
-            borderRadius: BorderRadius.circular(15),
-          ),
+        child: HomeStoryCard(
+          story: story,
+          paletteIndex: 0,
+          panelColor: const Color(0xFFFFE4D5),
+          onTap: onTap,
+          metadata: '${story.category}  •  ${_readTime(story)}',
+          tapKey: Key('story-card-${story.slug}'),
         ),
       ),
     );
@@ -1020,10 +795,34 @@ class _LibraryError extends StatelessWidget {
   }
 }
 
-class _EmptyLibrarySearch extends StatelessWidget {
-  const _EmptyLibrarySearch({required this.hasFilters, required this.onReset});
+class _EmptyStoryLibrary extends StatelessWidget {
+  const _EmptyStoryLibrary({required this.onRefresh});
 
-  final bool hasFilters;
+  final VoidCallback onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 14, 24, 130),
+      child: Center(
+        child: _OutlinedMessageCard(
+          color: const Color(0xFFFFD743),
+          icon: Icons.auto_stories_rounded,
+          title: 'NEW STORIES ARE ON THE WAY!',
+          message:
+              'Fresh story adventures are being prepared. Check back soon or refresh now.',
+          actionLabel: 'REFRESH STORIES',
+          actionKey: const Key('story-library-refresh-button'),
+          onAction: onRefresh,
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyLibrarySearch extends StatelessWidget {
+  const _EmptyLibrarySearch({required this.onReset});
+
   final VoidCallback onReset;
 
   @override
@@ -1036,9 +835,9 @@ class _EmptyLibrarySearch extends StatelessWidget {
           icon: Icons.travel_explore_rounded,
           title: 'NO TALE HIDING HERE!',
           message: 'No stories match that search yet.',
-          actionLabel: hasFilters ? 'SHOW ALL STORIES' : null,
+          actionLabel: 'SHOW ALL STORIES',
           actionKey: const Key('story-library-reset-button'),
-          onAction: hasFilters ? onReset : null,
+          onAction: onReset,
         ),
       ),
     );

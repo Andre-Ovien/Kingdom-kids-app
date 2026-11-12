@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Noah’s Ark · Garden</title>
+  <link rel="stylesheet" href="preview.css">
+  <link rel="stylesheet" href="garden.css">
+  <script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
+</head>
+<body>
+  <main id="scene" aria-label="Noah’s Ark animal garden">
+    <canvas id="view" aria-label="Swipe the garden and tap each animal to help it aboard"></canvas>
+    <header>
+      <span class="badge">Noah’s Ark · ten animals</span>
+      <span id="status" role="status">Loading the saved garden…</span>
+    </header>
+    <div id="garden-progress" aria-live="polite"><span id="count">0 / 10 aboard</span><span id="clock">—</span></div>
+    <div id="garden-message" hidden role="status"></div>
+    <nav aria-label="Garden controls">
+      <button id="start" disabled>Start garden</button>
+      <button id="pause" disabled>Pause</button>
+      <button id="replay" disabled>Play again</button>
+      <button id="center" aria-label="Return to the Ark">Find the Ark</button>
+    </nav>
+    <div id="animal-accessibility" aria-label="Animals in the garden"></div>
+  </main>
+  <script type="module" src="garden_preview.mjs"></script>
+</body>
+</html>

@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
 import '../../../app/router.dart';
-import '../../auth/data/auth_repository.dart';
+import 'family_onboarding_page.dart';
+import 'photographic_onboarding_pages.dart';
 
 /// A playful, image-first introduction that hands users to the parent account
 /// flow instead of dropping them into the child experience unauthenticated.
@@ -18,10 +20,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     with SingleTickerProviderStateMixin {
   late final PageController _pageController;
   late final AnimationController _motionController;
-  late final AuthRepository _authRepository;
   bool _reduceMotion = false;
-  bool? _lastReduceMotionPreference;
   int _currentIndex = 0;
+  bool _photosPrecached = false;
 
   static const _pages = [
     _OnboardingPageData(
@@ -31,7 +32,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       actionBackground: Colors.white,
       actionForeground: Color(0xFF27315F),
       eyebrow: 'WELCOME TO KINGDOM KIDS',
-      title: 'Big Bible adventures begin here',
+      title: 'Bible adventures await!',
       body:
           'Discover brave stories, joyful songs, and faith-filled fun made for little hearts.',
       imageAsset: 'assets/images/onboarding/story-explorer-v2.png',
@@ -69,30 +70,41 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   void initState() {
     super.initState();
     _pageController = PageController();
-    _authRepository = AuthRepository();
     _motionController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 4200),
     );
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _resumeExistingFamilySession();
-    });
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final reduceMotion = MediaQuery.of(context).disableAnimations;
-    if (_lastReduceMotionPreference == reduceMotion) {
-      return;
-    }
-
-    _lastReduceMotionPreference = reduceMotion;
     _reduceMotion = reduceMotion;
-    if (reduceMotion) {
-      _motionController.stop();
-    } else {
-      _motionController.repeat(reverse: true);
+    // The preserved legacy illustration is inactive in this photographic flow.
+    _motionController
+      ..stop()
+      ..value = 0.5;
+    if (!_photosPrecached) {
+      _photosPrecached = true;
+      for (final asset in [
+        ...FamilyOnboardingPage.portraitAssets,
+        'assets/images/onboarding/photos/second-screen-expanded-scene-v7.png',
+        'assets/images/onboarding/photos/boy-twists.png',
+        'assets/images/onboarding/photos/girl-puffs.png',
+        'assets/images/onboarding/photos/boy-curls.png',
+        'assets/images/onboarding/photos/girl-braids.png',
+      ]) {
+        unawaited(
+          precacheImage(
+            asset.contains('family-20261111')
+                ? ResizeImage(AssetImage(asset), width: 384)
+                : AssetImage(asset),
+            context,
+            onError: (Object error, StackTrace? stack) {},
+          ),
+        );
+      }
     }
   }
 
@@ -109,6 +121,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       return;
     }
 
+    if (_reduceMotion) {
+      _pageController.jumpToPage(_currentIndex + 1);
+      return;
+    }
     _pageController.nextPage(
       duration: const Duration(milliseconds: 520),
       curve: Curves.easeOutCubic,
@@ -119,55 +135,75 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.auth, (_) => false);
   }
 
-  Future<void> _resumeExistingFamilySession() async {
-    try {
-      final storedSession = await _authRepository.restoreSession();
-      if (!mounted || storedSession == null) {
-        return;
-      }
-
-      final session = await _authRepository.refreshSession();
-      if (!mounted) {
-        return;
-      }
-
-      final activeKid = await _authRepository.currentKid();
-      if (!mounted) {
-        return;
-      }
-
-      final destination = activeKid != null
-          ? AppRoutes.home
-          : session.hasProfiles
-          ? AppRoutes.profilePicker
-          : AppRoutes.kidProfileSetup;
-      Navigator.of(context).pushNamedAndRemoveUntil(
-        destination,
-        (_) => false,
-        arguments: session.profiles,
-      );
-    } catch (_) {
-      // If secure storage is unavailable or a previous session is malformed,
-      // let the family begin from the friendly onboarding flow instead.
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: PageView.builder(
-        controller: _pageController,
-        itemCount: _pages.length,
-        onPageChanged: (index) => setState(() => _currentIndex = index),
-        itemBuilder: (context, index) => _OnboardingPage(
-          data: _pages[index],
-          index: index,
-          pageCount: _pages.length,
-          isLast: index == _pages.length - 1,
-          motion: _motionController,
-          reduceMotion: _reduceMotion,
-          onAdvance: _advance,
-          onOpenAccountFlow: _openAccountFlow,
+      backgroundColor: Colors.white,
+      body: LayoutBuilder(
+        builder: (context, constraints) => ClipRect(
+          child: PageView.builder(
+            controller: _pageController,
+            clipBehavior: Clip.none,
+            itemCount: _pages.length,
+            onPageChanged: (index) => setState(() => _currentIndex = index),
+            itemBuilder: (context, index) => AnimatedBuilder(
+              animation: _pageController,
+              child: switch (index) {
+                0 => FamilyOnboardingPage(
+                  onAdvance: _advance,
+                  activeIndex: _currentIndex,
+                ),
+                1 => PhotographicDiscoveryPage(
+                  onAdvance: _advance,
+                  activeIndex: _currentIndex,
+                ),
+                2 => PhotographicWelcomePage(onAdvance: _openAccountFlow),
+                // Retain the previous illustration implementation and assets
+                // for future use without exposing it in the three-page flow.
+                _ => _OnboardingPage(
+                  data: _pages.last,
+                  index: index,
+                  pageCount: _pages.length,
+                  isLast: true,
+                  motion: _motionController,
+                  reduceMotion: _reduceMotion,
+                  onAdvance: _openAccountFlow,
+                  onOpenAccountFlow: _openAccountFlow,
+                ),
+              },
+              builder: (context, child) {
+                final page = _pageController.hasClients
+                    ? _pageController.page ?? _currentIndex.toDouble()
+                    : _currentIndex.toDouble();
+                final delta = index - page;
+                final lowerPage = page.floor();
+                // Paint the lower-index scene fully, then dissolve the next
+                // scene over it. Two half-transparent scenes would expose the
+                // scaffold and create a pale flash halfway through a swipe.
+                final fade = index == lowerPage
+                    ? 1.0
+                    : index == lowerPage + 1
+                    ? (page - lowerPage).clamp(0.0, 1.0)
+                    : 0.0;
+                return ExcludeSemantics(
+                  excluding: index != _currentIndex,
+                  child: IgnorePointer(
+                    ignoring: delta.abs() > 0.01,
+                    child: _reduceMotion
+                        ? child!
+                        : Transform.translate(
+                            key: ValueKey('onboarding-page-layer-$index'),
+                            // Align both full-screen scenes in the viewport
+                            // while they dissolve; moving their backgrounds
+                            // would expose contrasting strips at the edges.
+                            offset: Offset(-delta * constraints.maxWidth, 0),
+                            child: Opacity(opacity: fade, child: child),
+                          ),
+                  ),
+                );
+              },
+            ),
+          ),
         ),
       ),
     );
@@ -282,8 +318,6 @@ class _OnboardingPage extends StatelessWidget {
                           const SizedBox(height: 10),
                           Text(
                             data.title,
-                            maxLines: requiresVerticalScroll ? 3 : 2,
-                            overflow: TextOverflow.ellipsis,
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: data.foreground,
@@ -419,34 +453,42 @@ class _Footer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        _PageDots(count: pageCount, index: index, color: foreground),
-        const Spacer(),
-        if (isLast)
-          FilledButton(
-            onPressed: onAdvance,
-            style: FilledButton.styleFrom(
-              backgroundColor: actionBackground,
-              foregroundColor: actionForeground,
-              minimumSize: const Size(132, 48),
-              padding: const EdgeInsets.symmetric(horizontal: 18),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(15),
+        Row(
+          children: [
+            _PageDots(count: pageCount, index: index, color: foreground),
+            const Spacer(),
+            if (isLast)
+              FilledButton(
+                onPressed: onAdvance,
+                style: FilledButton.styleFrom(
+                  backgroundColor: actionBackground,
+                  foregroundColor: actionForeground,
+                  minimumSize: const Size(132, 48),
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                ),
+                child: const Text('Let\'s go'),
+              )
+            else
+              TextButton(
+                onPressed: onSkip,
+                style: TextButton.styleFrom(
+                  foregroundColor: foreground,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  textStyle: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                child: const Text('Skip'),
               ),
-            ),
-            child: const Text('Let\'s go'),
-          )
-        else
-          TextButton(
-            onPressed: onSkip,
-            style: TextButton.styleFrom(
-              foregroundColor: foreground,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              textStyle: const TextStyle(fontWeight: FontWeight.w700),
-            ),
-            child: const Text('Skip'),
-          ),
+          ],
+        ),
       ],
     );
   }

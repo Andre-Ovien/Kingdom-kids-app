@@ -16,7 +16,22 @@ npm run verify:security
 npm audit --omit=dev
 ```
 
-The local Vite server proxies `/api/*` to `http://127.0.0.1:8000`. That proxy exists only during `npm run dev`.
+The local Vite server proxies `/api/*` to `http://127.0.0.1:8100`, matching the
+phone-review API. To use a backend on a different port, pass a server-only
+environment variable, for example
+`KINGDOM_KIDS_API_ORIGIN=http://127.0.0.1:8000 npm run dev`.
+That proxy exists only during `npm run dev`; it is not embedded in `dist/`.
+
+The production artifact is the static `dist/` directory. Do not deploy the
+development/preview server or `node_modules` as the public website. The October
+3, 2026 dependency audit upgraded Astro and vulnerable transitive packages.
+One unpatched advisory remains in `http-cache-semantics` (CVE-2026-93748), also
+reported against its Astro parent. In this project that package is used only by
+Astro's build-time remote-image cache; the pages use local images, and neither
+the static browser artifact nor the Django API uses that cache. Keep `/api/*`
+uncached at the reverse proxy and recheck the advisory before adding server
+rendering or authenticated remote images. See the
+[upstream advisory](https://github.com/advisories/GHSA-ch52-4w7c-c8xp).
 
 ## Production routing requirement
 
@@ -33,6 +48,13 @@ to the HTTPS Django API while preserving the path, HTTP method, JSON body, `Auth
 - `POST /api/accounts/account-deletion/confirm/`
 
 Do not cache `/api/*` responses. Do not log email-verification codes or deletion request bodies. Keep backend throttling enabled. A direct cross-origin API hostname requires an explicit, narrow CORS allowlist and should not replace the same-origin route without a reviewed deployment change.
+
+Resend is configured on the Django server, not in this static site. See the
+backend's Resend setup instructions. A working sender/API key does not repair a
+missing production reverse proxy: a GET to either POST-only public API route
+should reach Django and return method-not-allowed, not a static-host 404.
+Choose the actual deployed HTTPS backend before adding the production host's
+rewrite; do not send visitors to the developer Mac or commit a guessed origin.
 
 ## HTTPS and security headers
 

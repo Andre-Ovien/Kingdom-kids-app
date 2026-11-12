@@ -1,0 +1,22 @@
+Kingdom Kids Ark garden artwork credits
+
+Lion, camel, and giraffe:
+Original animal mesh, skin textures, and walk animation by Wildfire Games /
+0 A.D. art contributors. https://www.wildfiregames.com/ https://play0ad.com/
+These native animal exports and their Kingdom Kids Blender modifications
+are distributed under Creative Commons Attribution-ShareAlike 3.0:
+https://creativecommons.org/licenses/by-sa/3.0/
+See Wildfire-Games.txt accompanying these files for the retained source notice.
+The license applies to this animal artwork, not to Kingdom Kids application code.
+
+Elephant: syncopika, CC0 source model.
+Sheep and zebra: Quaternius, CC0 source models.
+Donkey: Quaternius, CC0 source model, retained through the downloaded mirror.
+Deer: cdmir mirror of the retained CC0 source model.
+Rabbit: retained cdmir / Dammer / kelgar CC0 source model and textures.
+Dove: Mujtaba, CC0 source pigeon model and wing animation.
+
+The Ark, Noah, and garden backdrop are Kingdom Kids project artwork.
+Animal models have been edited and animated in the visible Blender interface.
+The editable Blender checkpoints and retained source provenance are in the
+project's Motion directory; bundled GLBs carry the reviewed native animation.

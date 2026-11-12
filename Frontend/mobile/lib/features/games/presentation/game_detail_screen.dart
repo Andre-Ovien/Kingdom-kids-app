@@ -4,7 +4,6 @@ import '../../../app/router.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../auth/domain/kid_profile.dart';
-import '../../auth/presentation/kid_profile_avatar.dart';
 import '../../auth/presentation/session_expiry_navigation.dart';
 import '../data/game_repository.dart';
 import '../domain/mini_game.dart';
@@ -72,7 +71,7 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
       }
     } on AppException catch (error) {
       if (mounted && returnToSignInIfSessionExpired(context, error)) return;
-      if (mounted) setState(() => _error = error.message);
+      if (mounted) setState(() => _error = error.userMessage);
     } catch (_) {
       if (mounted) {
         setState(
@@ -87,9 +86,12 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
 
   Future<void> _play() async {
     final profile = _profile;
-    if (profile == null || _game.levels.isEmpty || _loading) return;
+    if (profile == null || _game.levels.isEmpty || _loading || _error != null) {
+      return;
+    }
     final changed = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
+        settings: const RouteSettings(name: '/games/play'),
         builder: (_) => GamePlayScreen(
           game: _game,
           profile: profile,
@@ -148,7 +150,7 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
                   ),
                   sliver: SliverList.list(
                     children: [
-                      _DetailTopBar(onBack: _close, profile: _profile),
+                      _DetailTopBar(onBack: _close),
                       const SizedBox(height: 16),
                       _QuestHero(game: _game),
                       const SizedBox(height: 22),
@@ -175,7 +177,48 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
                               ),
                         ),
                       ],
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 18),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          key: const Key('play-game-button'),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: gameAccent(_game),
+                            foregroundColor: _buttonForeground(
+                              gameAccent(_game),
+                            ),
+                            minimumSize: const Size.fromHeight(56),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                          ),
+                          onPressed:
+                              _profile != null &&
+                                  hasPlayableDetail &&
+                                  !_loading &&
+                                  _error == null
+                              ? _play
+                              : null,
+                          icon: Icon(
+                            progress.isComplete
+                                ? Icons.replay_rounded
+                                : Icons.play_arrow_rounded,
+                            size: 27,
+                          ),
+                          label: Text(
+                            progress.isComplete
+                                ? 'Replay quest'
+                                : progress.hasStarted
+                                ? 'Continue level ${progress.currentLevel}'
+                                : 'Start the adventure',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
                       _QuestFacts(game: _game),
                       const SizedBox(height: 18),
                       Text(
@@ -215,57 +258,12 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
                         const SizedBox(height: 22),
                         _ProgressCard(game: _game),
                       ],
-                      const SizedBox(height: 24),
-                      if (hasPlayableDetail) ...[
-                        Text(
-                          'Your adventure map',
-                          style: Theme.of(context).textTheme.titleLarge
-                              ?.copyWith(fontWeight: FontWeight.w900),
-                        ),
-                        const SizedBox(height: 12),
-                        _LevelMap(game: _game),
-                        const SizedBox(height: 24),
-                      ] else if (!_loading && _error == null) ...[
+                      if (!hasPlayableDetail &&
+                          !_loading &&
+                          _error == null) ...[
+                        const SizedBox(height: 22),
                         const _NoLevelsNotice(),
-                        const SizedBox(height: 20),
                       ],
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton.icon(
-                          key: const Key('play-game-button'),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: gameAccent(_game),
-                            foregroundColor: _buttonForeground(
-                              gameAccent(_game),
-                            ),
-                            minimumSize: const Size.fromHeight(56),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(18),
-                            ),
-                          ),
-                          onPressed:
-                              _profile != null && hasPlayableDetail && !_loading
-                              ? _play
-                              : null,
-                          icon: Icon(
-                            progress.isComplete
-                                ? Icons.replay_rounded
-                                : Icons.play_arrow_rounded,
-                            size: 27,
-                          ),
-                          label: Text(
-                            progress.isComplete
-                                ? 'Replay quest'
-                                : progress.hasStarted
-                                ? 'Continue level ${progress.currentLevel}'
-                                : 'Start the adventure',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -279,10 +277,9 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
 }
 
 class _DetailTopBar extends StatelessWidget {
-  const _DetailTopBar({required this.onBack, required this.profile});
+  const _DetailTopBar({required this.onBack});
 
   final VoidCallback onBack;
-  final KidProfile? profile;
 
   @override
   Widget build(BuildContext context) {
@@ -311,10 +308,7 @@ class _DetailTopBar extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            if (profile == null)
-              const SizedBox(width: 48)
-            else
-              KidProfileAvatar(profile: profile!, size: largeText ? 40 : 46),
+            const SizedBox(width: 48),
           ],
         );
       },
@@ -359,7 +353,7 @@ class _QuestHero extends StatelessWidget {
                   ],
                 ),
                 child: Icon(
-                  gameTypeIcon(game.gameType),
+                  gameIcon(game),
                   color: _buttonForeground(accent),
                   size: 39,
                 ),
@@ -556,135 +550,6 @@ class _ProgressCard extends StatelessWidget {
                 ],
               );
             },
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _LevelMap extends StatelessWidget {
-  const _LevelMap({required this.game});
-
-  final MiniGame game;
-
-  @override
-  Widget build(BuildContext context) {
-    final progress = game.playerProgress;
-    final accent = gameAccent(game);
-    return Column(
-      children: [
-        for (var index = 0; index < game.levels.length; index++)
-          _LevelMapRow(
-            level: game.levels[index],
-            isLast: index == game.levels.length - 1,
-            completed:
-                game.levels[index].number <= progress.highestCompletedLevel,
-            current:
-                !progress.isComplete &&
-                game.levels[index].number == progress.currentLevel,
-            accent: accent,
-          ),
-      ],
-    );
-  }
-}
-
-class _LevelMapRow extends StatelessWidget {
-  const _LevelMapRow({
-    required this.level,
-    required this.isLast,
-    required this.completed,
-    required this.current,
-    required this.accent,
-  });
-
-  final GameLevel level;
-  final bool isLast;
-  final bool completed;
-  final bool current;
-  final Color accent;
-
-  @override
-  Widget build(BuildContext context) {
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SizedBox(
-            width: 42,
-            child: Column(
-              children: [
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 220),
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: completed || current
-                        ? accent
-                        : Theme.of(context).colorScheme.surfaceContainerHighest,
-                    shape: BoxShape.circle,
-                  ),
-                  alignment: Alignment.center,
-                  child: Icon(
-                    completed ? Icons.check_rounded : Icons.flag_rounded,
-                    size: 19,
-                    color: completed || current
-                        ? _buttonForeground(accent)
-                        : Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                if (!isLast)
-                  Expanded(
-                    child: Container(
-                      width: 3,
-                      color: completed
-                          ? accent.withValues(alpha: 0.6)
-                          : Theme.of(context).colorScheme.outlineVariant,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(bottom: isLast ? 0 : 17),
-              child: Container(
-                padding: const EdgeInsets.all(13),
-                decoration: BoxDecoration(
-                  color: current
-                      ? accent.withValues(alpha: 0.1)
-                      : Theme.of(context).colorScheme.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(16),
-                  border: current
-                      ? Border.all(color: accent.withValues(alpha: 0.35))
-                      : null,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Level ${level.number} • ${level.title}',
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    if (level.instructions.isNotEmpty) ...[
-                      const SizedBox(height: 3),
-                      Text(
-                        level.instructions,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
           ),
         ],
       ),

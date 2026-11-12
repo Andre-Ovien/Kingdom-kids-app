@@ -15,12 +15,16 @@ class PendingEmailVerification {
   final int resendAfterSeconds;
   final bool deliveryDelayed;
 
-  factory PendingEmailVerification.fromJson(Map<String, dynamic> json) {
+  factory PendingEmailVerification.fromJson(
+    Map<String, dynamic> json, {
+    String fallbackEmail = '',
+  }) {
     final verification = _mapFrom(json['verification'] ?? json);
     return PendingEmailVerification(
       challengeId: (verification['challenge_id'] ?? verification['id'] ?? '')
           .toString(),
-      email: (verification['email'] ?? json['email'] ?? '').toString(),
+      email: (verification['email'] ?? json['email'] ?? fallbackEmail)
+          .toString(),
       destinationHint:
           (verification['destination_hint'] ??
                   verification['masked_email'] ??

@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Mobile</string>
+	<string>Kingdom Kids</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -15,7 +15,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>mobile</string>
+	<string>Kingdom Kids</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -26,14 +26,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-	<key>NSBonjourServices</key>
-	<array>
-		<string>_dartobservatory._tcp</string>
-	</array>
-	<key>NSLocalNetworkUsageDescription</key>
-	<string>Kingdom Kids needs local network access while developing so Flutter can connect to the app on this device.</string>
-	<!-- Local HTTP is used only by debug builds pointed at a LAN Django server.
-	     Production voice sample URLs must use HTTPS. -->
+	<key>NSMotionUsageDescription</key>
+	<string>Tilt your device to steer the boat in sailing quests.</string>
+	<!-- The Ark's bundled models use a phone-local loopback HTTP origin.
+	     LAN Django connections remain debug-only; remote production media is HTTPS. -->
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>

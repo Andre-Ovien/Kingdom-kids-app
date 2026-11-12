@@ -16,6 +16,63 @@ import 'package:mobile/features/progress/domain/story_activity_event.dart';
 void main() {
   group('HttpProgressApi', () {
     test(
+      'saved and replayed story receipts retain authoritative XP and milestone',
+      () async {
+        for (final replay in [false, true]) {
+          final api = HttpProgressApi(
+            client: MockClient(
+              (_) async => http.Response(
+                jsonEncode({
+                  ..._eventJson(idempotentReplay: replay),
+                  'event_type': 'story_completed',
+                  'xp_awarded': 100,
+                  'level_milestone': {
+                    'previous_level': 7,
+                    'level': {
+                      'number': 8,
+                      'title': 'Faithful Adventurer',
+                      'xp': 2100,
+                      'next_level_xp': 2400,
+                    },
+                  },
+                }),
+                replay ? 200 : 201,
+              ),
+            ),
+          );
+          final receipt = await api.recordStoryActivity(
+            accessToken: 'token',
+            profileId: 'kid-1',
+            storyId: 'story-1',
+            eventType: StoryActivityType.storyCompleted,
+            operationId: '00000000-0000-4000-8000-000000000001',
+          );
+          expect(receipt.xpAwarded, 100);
+          expect(receipt.levelMilestone?.level.number, 8);
+          expect(receipt.isIdempotentReplay, replay);
+        }
+      },
+    );
+
+    test(
+      'old receipts have no reward and malformed XP cannot promise a reward',
+      () {
+        final original = StoryActivityEvent.fromJson(_eventJson());
+        expect(original.xpAwarded, 0);
+        expect(original.levelMilestone, isNull);
+        for (final xp in [-100, '100', 100.5]) {
+          expect(
+            () => StoryActivityEvent.fromJson({
+              ..._eventJson(),
+              'xp_awarded': xp,
+            }),
+            throwsFormatException,
+          );
+        }
+      },
+    );
+
+    test(
       'posts the exact profile event contract and parses a new event',
       () async {
         late http.Request sentRequest;

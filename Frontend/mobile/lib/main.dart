@@ -1,10 +1,18 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 
 import 'app/app.dart';
-import 'app/theme_controller.dart';
+import 'core/config/app_config.dart';
+import 'shared/widgets/app_error_fallback.dart';
 
-Future<void> main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  await AppThemeController.initialize();
-  runApp(const KingdomKidsApp());
+  ErrorWidget.builder = (_) => const AppErrorFallback();
+  try {
+    AppConfig.validateApiBaseUri();
+    runApp(const KingdomKidsApp());
+  } on AppConfigurationException {
+    // A release build with a missing/cleartext API endpoint must fail closed
+    // without showing technical details or attempting an insecure request.
+    runApp(const MaterialApp(home: AppErrorFallback()));
+  }
 }

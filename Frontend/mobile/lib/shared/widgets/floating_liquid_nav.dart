@@ -1,9 +1,17 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../app/router.dart';
 import '../../features/auth/domain/kid_profile.dart';
 import '../../features/auth/presentation/kid_profile_avatar.dart';
+import 'liquid_glass.dart';
+import 'liquid_navigation_controller.dart';
+import 'native_liquid_navigation.dart';
 
+/// Existing screens publish their loaded child to the persistent app host.
+/// Standalone screens retain a working navigation surface for isolated use.
 class FloatingLiquidNav extends StatelessWidget {
   const FloatingLiquidNav({
     required this.selectedRoute,
@@ -16,75 +24,208 @@ class FloatingLiquidNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bottomPadding = MediaQuery.paddingOf(context).bottom;
-    return _PlaygroundDiscoveryNav(
+    final controller = LiquidNavigationScope.maybeOf(context);
+    if (controller != null) {
+      controller.publishProfile(selectedRoute, activeProfile);
+      return const SizedBox.shrink();
+    }
+    return LiquidNavigationSurface(
       selectedRoute: selectedRoute,
       activeProfile: activeProfile,
-      bottomPadding: bottomPadding,
+      onSelect: (route) => _openRoute(context, route, selectedRoute),
     );
   }
 }
 
-class _PlaygroundDiscoveryNav extends StatelessWidget {
-  const _PlaygroundDiscoveryNav({
+class LiquidNavigationSurface extends StatelessWidget {
+  const LiquidNavigationSurface({
     required this.selectedRoute,
     required this.activeProfile,
-    required this.bottomPadding,
+    required this.onSelect,
+    this.currentRoute,
+    super.key,
   });
-
-  static const _ink = Color(0xFF14131B);
 
   final String selectedRoute;
   final KidProfile? activeProfile;
-  final double bottomPadding;
+  final bool Function(String route) onSelect;
+  final String Function()? currentRoute;
 
   @override
   Widget build(BuildContext context) {
-    final profileSelected = selectedRoute == AppRoutes.profile;
+    final media = MediaQuery.of(context);
+    final reducedMotion = media.disableAnimations || media.accessibleNavigation;
+    final nativeIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
     return Padding(
-      padding: EdgeInsets.fromLTRB(16, 0, 16, bottomPadding + 9),
+      padding: EdgeInsets.fromLTRB(16, 0, 16, media.padding.bottom + 9),
+      child: SizedBox(
+        // Leave room for the system tab bar's intrinsic height and shadow.
+        height: nativeIOS ? 83 : 69,
+        child: nativeIOS
+            ? NativeLiquidNavigation(
+                selectedRoute: selectedRoute,
+                activeProfile: activeProfile,
+                reduceMotion: reducedMotion,
+                onSelect: onSelect,
+                currentRoute: currentRoute,
+              )
+            : _SlidingCapsuleNavigation(
+                selectedRoute: selectedRoute,
+                activeProfile: activeProfile,
+                reduceMotion: reducedMotion,
+                onSelect: onSelect,
+              ),
+      ),
+    );
+  }
+}
+
+/// Cross-platform approximation. Apple's system material is supplied by the
+/// native iOS view above, not by this Flutter BackdropFilter implementation.
+class _SlidingCapsuleNavigation extends StatefulWidget {
+  const _SlidingCapsuleNavigation({
+    required this.selectedRoute,
+    required this.activeProfile,
+    required this.reduceMotion,
+    required this.onSelect,
+  });
+
+  final String selectedRoute;
+  final KidProfile? activeProfile;
+  final bool reduceMotion;
+  final bool Function(String route) onSelect;
+
+  @override
+  State<_SlidingCapsuleNavigation> createState() =>
+      _SlidingCapsuleNavigationState();
+}
+
+class _SlidingCapsuleNavigationState extends State<_SlidingCapsuleNavigation>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _position;
+  double _target = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = LiquidNavigationController.mainRoutes.indexOf(
+      widget.selectedRoute,
+    );
+    _target = initial < 0 ? 0 : initial.toDouble();
+    _position = AnimationController(
+      vsync: this,
+      lowerBound: 0,
+      upperBound: 2,
+      value: _target,
+      duration: const Duration(milliseconds: 300),
+    );
+  }
+
+  @override
+  void didUpdateWidget(_SlidingCapsuleNavigation oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final index = LiquidNavigationController.mainRoutes.indexOf(
+      widget.selectedRoute,
+    );
+    if (index >= 0) _target = index.toDouble();
+    if (widget.reduceMotion) {
+      _position.stop();
+      _position.value = _target;
+    } else if (_position.value != _target) {
+      unawaited(
+        _position.animateTo(
+          _target,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+        ),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _position.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profileSelected = widget.selectedRoute == AppRoutes.profile;
+    return Material(
+      type: MaterialType.transparency,
       child: Row(
         children: [
           Expanded(
-            child: Container(
+            child: SizedBox(
               key: const Key('bottom-nav-main-dock'),
               height: 69,
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: _ink,
-                borderRadius: BorderRadius.circular(22),
-              ),
-              child: Row(
-                children: [
-                  _PlaygroundNavItem(
-                    icon: Icons.home_rounded,
-                    label: 'Home',
-                    route: AppRoutes.home,
-                    selectedRoute: selectedRoute,
-                    color: const Color(0xFFF5C84C),
-                  ),
-                  _PlaygroundNavItem(
-                    icon: Icons.auto_stories_rounded,
-                    label: 'Stories',
-                    route: AppRoutes.stories,
-                    selectedRoute: selectedRoute,
-                    color: const Color(0xFF9B87F5),
-                  ),
-                  _PlaygroundNavItem(
-                    icon: Icons.play_circle_rounded,
-                    label: 'Watch',
-                    route: AppRoutes.videos,
-                    selectedRoute: selectedRoute,
-                    color: const Color(0xFF62C7F2),
-                  ),
-                  _PlaygroundNavItem(
-                    icon: Icons.extension_rounded,
-                    label: 'Games',
-                    route: AppRoutes.games,
-                    selectedRoute: selectedRoute,
-                    color: const Color(0xFFFF7A59),
-                  ),
-                ],
+              child: _CapsuleGlass(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final slot = (constraints.maxWidth - 12) / 3;
+                    return Stack(
+                      children: [
+                        AnimatedBuilder(
+                          animation: _position,
+                          builder: (_, _) => Positioned(
+                            left: 6 + slot * _position.value,
+                            top: 6,
+                            width: slot,
+                            height: 57,
+                            child: Opacity(
+                              opacity: profileSelected ? 0 : 1,
+                              child: DecoratedBox(
+                                key: const Key('bottom-nav-sliding-capsule'),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(28.5),
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      Colors.white.withValues(alpha: 0.65),
+                                      Colors.white.withValues(alpha: 0.20),
+                                    ],
+                                  ),
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.88),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(6),
+                          child: Row(
+                            children: [
+                              _CapsuleNavItem(
+                                icon: Icons.home_rounded,
+                                label: 'Home',
+                                route: AppRoutes.home,
+                                selectedRoute: widget.selectedRoute,
+                                onSelect: widget.onSelect,
+                              ),
+                              _CapsuleNavItem(
+                                icon: Icons.auto_stories_rounded,
+                                label: 'Stories',
+                                route: AppRoutes.stories,
+                                selectedRoute: widget.selectedRoute,
+                                onSelect: widget.onSelect,
+                              ),
+                              _CapsuleNavItem(
+                                icon: Icons.extension_rounded,
+                                label: 'Games',
+                                route: AppRoutes.games,
+                                selectedRoute: widget.selectedRoute,
+                                onSelect: widget.onSelect,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
               ),
             ),
           ),
@@ -96,32 +237,23 @@ class _PlaygroundDiscoveryNav extends StatelessWidget {
             child: GestureDetector(
               key: const Key('bottom-nav-profile'),
               behavior: HitTestBehavior.opaque,
-              onTap: profileSelected
-                  ? null
-                  : () => _openRoute(context, AppRoutes.profile, selectedRoute),
-              child: AnimatedContainer(
-                duration: MediaQuery.disableAnimationsOf(context)
-                    ? Duration.zero
-                    : const Duration(milliseconds: 180),
-                width: 69,
-                height: 69,
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: profileSelected
-                      ? const Color(0xFFB7A5FF)
-                      : Colors.white,
-                  border: Border.all(color: _ink, width: 2),
-                  borderRadius: BorderRadius.circular(22),
+              onTap: () => widget.onSelect(AppRoutes.profile),
+              child: SizedBox.square(
+                dimension: 69,
+                child: _CapsuleGlass(
+                  child: Center(
+                    child: widget.activeProfile == null
+                        ? const Icon(
+                            Icons.person_rounded,
+                            color: Color(0xFF263047),
+                            size: 31,
+                          )
+                        : KidProfileAvatar(
+                            profile: widget.activeProfile!,
+                            size: 54,
+                          ),
+                  ),
                 ),
-                child: activeProfile == null
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(15),
-                        child: Image.asset(
-                          'assets/images/characters/kai-avatar.png',
-                          fit: BoxFit.cover,
-                        ),
-                      )
-                    : KidProfileAvatar(profile: activeProfile!, size: 54),
               ),
             ),
           ),
@@ -131,50 +263,41 @@ class _PlaygroundDiscoveryNav extends StatelessWidget {
   }
 }
 
-class _PlaygroundNavItem extends StatelessWidget {
-  const _PlaygroundNavItem({
+class _CapsuleNavItem extends StatelessWidget {
+  const _CapsuleNavItem({
     required this.icon,
     required this.label,
     required this.route,
     required this.selectedRoute,
-    required this.color,
+    required this.onSelect,
   });
 
   final IconData icon;
   final String label;
   final String route;
   final String selectedRoute;
-  final Color color;
+  final bool Function(String route) onSelect;
 
   @override
   Widget build(BuildContext context) {
-    const ink = Color(0xFF14131B);
     final selected = route == selectedRoute;
+    final color = selected ? const Color(0xFF1556CF) : const Color(0xFF263047);
     return Expanded(
       child: Semantics(
         button: true,
         selected: selected,
         label: label,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(17),
-          onTap: selected
-              ? null
-              : () => _openRoute(context, route, selectedRoute),
-          child: AnimatedContainer(
-            duration: MediaQuery.disableAnimationsOf(context)
-                ? Duration.zero
-                : const Duration(milliseconds: 180),
-            curve: Curves.easeOutCubic,
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 5),
-            decoration: BoxDecoration(
-              color: selected ? color : Colors.transparent,
-              borderRadius: BorderRadius.circular(17),
-            ),
-            child: ExcludeSemantics(
+        child: GestureDetector(
+          key: ValueKey('bottom-nav-item-$route'),
+          behavior: HitTestBehavior.opaque,
+          onTap: () => onSelect(route),
+          child: ExcludeSemantics(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 5),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(icon, color: selected ? ink : Colors.white, size: 23),
+                  Icon(icon, color: color, size: 23),
                   const SizedBox(height: 2),
                   Expanded(
                     child: FittedBox(
@@ -183,7 +306,7 @@ class _PlaygroundNavItem extends StatelessWidget {
                         label,
                         maxLines: 1,
                         style: TextStyle(
-                          color: selected ? ink : Colors.white,
+                          color: color,
                           fontSize: 9.5,
                           height: 1,
                           fontWeight: FontWeight.w900,
@@ -202,9 +325,43 @@ class _PlaygroundNavItem extends StatelessWidget {
   }
 }
 
-void _openRoute(BuildContext context, String route, String selectedRoute) {
-  Navigator.of(context).pushReplacementNamed(
-    route,
-    arguments: TabRouteTransition(fromRoute: selectedRoute),
+class _CapsuleGlass extends StatelessWidget {
+  const _CapsuleGlass({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(34.5),
+      boxShadow: [
+        BoxShadow(
+          color: const Color(0xFF263047).withValues(alpha: 0.1),
+          blurRadius: 20,
+          offset: const Offset(0, 7),
+        ),
+      ],
+    ),
+    child: LiquidGlass(
+      borderRadius: 34.5,
+      blur: 20,
+      opacity: 0.16,
+      borderOpacity: 0.72,
+      child: child,
+    ),
   );
+}
+
+bool _openRoute(BuildContext context, String route, String selectedRoute) {
+  if (route == selectedRoute ||
+      !LiquidNavigationController.visibleRoutes.contains(route)) {
+    return false;
+  }
+  unawaited(
+    Navigator.of(context).pushReplacementNamed<void, void>(
+      route,
+      arguments: TabRouteTransition(fromRoute: selectedRoute),
+    ),
+  );
+  return true;
 }

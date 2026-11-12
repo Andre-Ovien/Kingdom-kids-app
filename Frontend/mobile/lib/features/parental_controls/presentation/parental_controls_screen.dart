@@ -1,14 +1,20 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/router.dart';
-import '../../../app/theme_controller.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/errors/app_exception.dart';
+import '../../../shared/audio/app_audio_scope.dart';
 import '../../../shared/widgets/liquid_glass.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../auth/domain/kid_profile.dart';
 import '../../auth/domain/parent_account.dart';
 import '../../auth/presentation/kid_profile_avatar.dart';
 import '../../auth/presentation/session_expiry_navigation.dart';
+import '../../streak/data/streak_reminder_service.dart';
+import '../data/parent_settings_store.dart';
 import '../data/parental_controls_repository.dart';
 import '../domain/parent_settings.dart';
 
@@ -17,10 +23,16 @@ class ParentalControlsScreen extends StatefulWidget {
     super.key,
     this.authRepository,
     this.settingsRepository,
+    this.parentSettingsStore,
+    this.streakReminderService,
+    this.externalUrlLauncher,
   });
 
   final AuthRepository? authRepository;
   final ParentalControlsRepository? settingsRepository;
+  final ParentSettingsStore? parentSettingsStore;
+  final StreakReminderService? streakReminderService;
+  final Future<bool> Function(Uri uri)? externalUrlLauncher;
 
   @override
   State<ParentalControlsScreen> createState() => _ParentalControlsScreenState();
@@ -29,6 +41,8 @@ class ParentalControlsScreen extends StatefulWidget {
 class _ParentalControlsScreenState extends State<ParentalControlsScreen> {
   late final AuthRepository _authRepository;
   late final ParentalControlsRepository _settingsRepository;
+  late final ParentSettingsStore _parentSettingsStore;
+  late final StreakReminderService _streakReminderService;
 
   ParentAccount? _parent;
   KidProfile? _activeProfile;
@@ -39,9 +53,11 @@ class _ParentalControlsScreenState extends State<ParentalControlsScreen> {
   bool _isLoading = true;
   bool _isLoadingPreferences = false;
   bool _isSaving = false;
-  bool _isSavingTheme = false;
+  bool _streakReminderEnabled = false;
+  bool _isUpdatingStreakReminder = false;
   bool _isOpeningProfiles = false;
   bool _isSigningOut = false;
+  bool _isDeletingAccount = false;
   bool _requiresSignIn = false;
   int _preferencesRequestId = 0;
 
@@ -52,7 +68,56 @@ class _ParentalControlsScreenState extends State<ParentalControlsScreen> {
     _settingsRepository =
         widget.settingsRepository ??
         RemoteParentalControlsRepository(authRepository: _authRepository);
+    _parentSettingsStore =
+        widget.parentSettingsStore ?? SecureParentSettingsStore();
+    _streakReminderService =
+        widget.streakReminderService ?? DeviceStreakReminderService();
+    unawaited(_loadStreakReminderPreference());
     _loadSettings();
+  }
+
+  Future<void> _loadStreakReminderPreference() async {
+    try {
+      final enabled = await _streakReminderService.isEnabled();
+      if (mounted) setState(() => _streakReminderEnabled = enabled);
+    } catch (_) {
+      // A device-only preference should not block the parent settings page.
+    }
+  }
+
+  Future<void> _setStreakReminder(bool enabled) async {
+    if (_isUpdatingStreakReminder ||
+        _isDeletingAccount ||
+        _isSigningOut ||
+        (enabled && _activeProfile == null)) {
+      return;
+    }
+    setState(() => _isUpdatingStreakReminder = true);
+    try {
+      if (enabled) {
+        final granted = await _streakReminderService.enable(
+          profile: _activeProfile!,
+        );
+        if (!mounted) return;
+        setState(() => _streakReminderEnabled = granted);
+        _showMessage(
+          granted
+              ? 'A streak reminder will arrive at 5:00 PM only when today’s app visit is still missing.'
+              : 'Notifications are off for Kingdom Kids on this device.',
+        );
+      } else {
+        await _streakReminderService.disable();
+        if (!mounted) return;
+        setState(() => _streakReminderEnabled = false);
+        _showMessage('Streak reminders are off on this device.');
+      }
+    } catch (_) {
+      if (mounted) {
+        _showMessage('We could not update streak reminders on this device.');
+      }
+    } finally {
+      if (mounted) setState(() => _isUpdatingStreakReminder = false);
+    }
   }
 
   Future<void> _loadSettings({bool refresh = false}) async {
@@ -119,13 +184,13 @@ class _ParentalControlsScreenState extends State<ParentalControlsScreen> {
       if (mounted && returnToSignInIfSessionExpired(context, error)) return;
       if (!mounted) return;
       setState(() {
-        _pageError = error.message;
+        _pageError = error.userMessage;
         if (_activeProfile != null && _settings == null) {
           _preferencesError =
               'Connect to sync this child’s reading preferences.';
         }
       });
-      if (refresh || _parent != null) _showMessage(error.message);
+      if (refresh || _parent != null) _showMessage(error.userMessage);
     } catch (_) {
       if (!mounted) return;
       const message = 'We could not load parent settings. Please try again.';
@@ -169,8 +234,8 @@ class _ParentalControlsScreenState extends State<ParentalControlsScreen> {
     } on AppException catch (error) {
       if (mounted && returnToSignInIfSessionExpired(context, error)) return;
       if (!mounted || requestId != _preferencesRequestId) return;
-      setState(() => _preferencesError = error.message);
-      if (announceFailure) _showMessage(error.message);
+      setState(() => _preferencesError = error.userMessage);
+      if (announceFailure) _showMessage(error.userMessage);
     } catch (_) {
       if (!mounted || requestId != _preferencesRequestId) return;
       const message = 'Reading preferences could not load yet.';
@@ -188,7 +253,9 @@ class _ParentalControlsScreenState extends State<ParentalControlsScreen> {
     bool? narrationEnabled,
   }) async {
     final profile = _activeProfile;
-    if (profile == null || _isSaving) return;
+    if (profile == null || _isSaving || _isDeletingAccount || _isSigningOut) {
+      return;
+    }
     _preferencesRequestId += 1;
     setState(() {
       _isSaving = true;
@@ -207,8 +274,8 @@ class _ParentalControlsScreenState extends State<ParentalControlsScreen> {
     } on AppException catch (error) {
       if (mounted && returnToSignInIfSessionExpired(context, error)) return;
       if (mounted) {
-        setState(() => _preferencesError = error.message);
-        _showMessage(error.message);
+        setState(() => _preferencesError = error.userMessage);
+        _showMessage(error.userMessage);
       }
     } catch (_) {
       if (mounted) {
@@ -248,45 +315,8 @@ class _ParentalControlsScreenState extends State<ParentalControlsScreen> {
     }
   }
 
-  Future<void> _chooseThemeMode() async {
-    if (_isSavingTheme) return;
-    final current = AppThemeController.mode.value;
-    final selected = await showModalBottomSheet<ThemeMode>(
-      context: context,
-      useSafeArea: true,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _ChoiceSheet<ThemeMode>(
-        title: 'App appearance',
-        subtitle: 'Saved on this device.',
-        selected: current,
-        options: ThemeMode.values,
-        labelFor: _themeModeLabel,
-        descriptionFor: (value) => switch (value) {
-          ThemeMode.system => 'Match this device automatically',
-          ThemeMode.light => 'Use the bright daytime palette',
-          ThemeMode.dark => 'Use the softer nighttime palette',
-        },
-      ),
-    );
-    if (selected == null || selected == current) return;
-    setState(() => _isSavingTheme = true);
-    try {
-      await AppThemeController.setMode(selected);
-      if (mounted) {
-        _showMessage('${_themeModeLabel(selected)} appearance saved.');
-      }
-    } catch (_) {
-      if (mounted) {
-        _showMessage('We could not save the appearance on this device.');
-      }
-    } finally {
-      if (mounted) setState(() => _isSavingTheme = false);
-    }
-  }
-
   Future<void> _openProfiles() async {
-    if (_isOpeningProfiles) return;
+    if (_isOpeningProfiles || _isDeletingAccount || _isSigningOut) return;
     setState(() => _isOpeningProfiles = true);
     try {
       final profiles = await _authRepository.fetchKidProfiles();
@@ -298,7 +328,7 @@ class _ParentalControlsScreenState extends State<ParentalControlsScreen> {
       await Navigator.of(context).pushNamed(route, arguments: profiles);
     } on AppException catch (error) {
       if (mounted && returnToSignInIfSessionExpired(context, error)) return;
-      if (mounted) _showMessage(error.message);
+      if (mounted) _showMessage(error.userMessage);
     } catch (_) {
       if (mounted) _showMessage('We could not open the family profiles.');
     } finally {
@@ -307,23 +337,75 @@ class _ParentalControlsScreenState extends State<ParentalControlsScreen> {
   }
 
   Future<void> _signOut() async {
-    if (_isSigningOut) return;
+    if (_isSigningOut || _isDeletingAccount) return;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Sign out?'),
-        content: Text(
-          'This removes the parent session from this device. Progress already saved online stays safe${_parent?.email.isNotEmpty == true ? ' for ${_parent!.email}' : ''}.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Stay signed in'),
+        key: const Key('settings-sign-out-dialog'),
+        scrollable: true,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        icon: Center(
+          child: Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: const Color(0xFF8B68C7).withValues(alpha: .14),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: const Icon(
+              Icons.logout_rounded,
+              color: Color(0xFF8B68C7),
+              size: 28,
+            ),
           ),
-          FilledButton(
-            key: const Key('settings-confirm-sign-out'),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Sign out'),
+        ),
+        title: const Text('Sign out?'),
+        titleTextStyle: Theme.of(
+          context,
+        ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+        content: Text(
+          'You can sign back in anytime. Your family’s progress saved online will stay safe.',
+          textAlign: TextAlign.center,
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(24, 4, 24, 24),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                FilledButton(
+                  key: const Key('settings-cancel-sign-out'),
+                  onPressed: () => Navigator.of(context).pop(false),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(50),
+                    backgroundColor: const Color(0xFF8B68C7),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: const Text('Stay signed in'),
+                ),
+                const SizedBox(height: 10),
+                OutlinedButton(
+                  key: const Key('settings-confirm-sign-out'),
+                  onPressed: () => Navigator.of(context).pop(true),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(50),
+                    foregroundColor: Theme.of(context).colorScheme.error,
+                    side: BorderSide(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: const Text('Sign out'),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -331,6 +413,11 @@ class _ParentalControlsScreenState extends State<ParentalControlsScreen> {
     if (confirmed != true || !mounted) return;
 
     setState(() => _isSigningOut = true);
+    try {
+      await _streakReminderService.disable();
+    } catch (_) {
+      // Signing out must still succeed if notification cleanup is unavailable.
+    }
     try {
       await _authRepository.logout();
     } catch (_) {
@@ -341,6 +428,70 @@ class _ParentalControlsScreenState extends State<ParentalControlsScreen> {
     Navigator.of(
       context,
     ).pushNamedAndRemoveUntil(AppRoutes.login, (_) => false);
+  }
+
+  Future<void> _deleteAccount() async {
+    if (_isDeletingAccount || _isSigningOut) return;
+    final password = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const _DeleteAccountDialog(),
+    );
+    if (password == null || !mounted) return;
+
+    var accountDeleted = false;
+    setState(() => _isDeletingAccount = true);
+    try {
+      await _authRepository.deleteAccount(password: password);
+      accountDeleted = true;
+    } on AppException catch (error) {
+      if (mounted && returnToSignInIfSessionExpired(context, error)) return;
+      if (mounted) _showMessage(error.userMessage);
+    } catch (_) {
+      if (mounted) {
+        _showMessage('We could not delete this account. Please try again.');
+      }
+    } finally {
+      if (mounted && !accountDeleted) {
+        setState(() => _isDeletingAccount = false);
+      }
+    }
+    if (!accountDeleted) return;
+
+    // The server-side deletion is authoritative. Attempt every scoped local
+    // cleanup even if one platform service is temporarily unavailable, then
+    // leave the authenticated navigation stack unconditionally.
+    try {
+      await _streakReminderService.disable();
+    } catch (_) {
+      // Continue so secure parent data still gets its own cleanup attempt.
+    }
+    try {
+      await _parentSettingsStore.purgeAll();
+    } catch (_) {
+      // The account no longer exists; never retain an authenticated screen.
+    }
+
+    if (!mounted) return;
+    Navigator.of(
+      context,
+    ).pushNamedAndRemoveUntil(AppRoutes.login, (_) => false);
+  }
+
+  Future<void> _openPrivacyPolicy() async {
+    final uri = Uri.parse(AppConstants.privacyPolicyUrl);
+    try {
+      final opened =
+          await (widget.externalUrlLauncher?.call(uri) ??
+              launchUrl(uri, mode: LaunchMode.externalApplication));
+      if (!opened && mounted) {
+        _showMessage('We could not open the privacy policy on this device.');
+      }
+    } catch (_) {
+      if (mounted) {
+        _showMessage('We could not open the privacy policy on this device.');
+      }
+    }
   }
 
   void _showMessage(String message) {
@@ -395,10 +546,12 @@ class _ParentalControlsScreenState extends State<ParentalControlsScreen> {
                             preferencesError: _preferencesError,
                             isLoadingPreferences: _isLoadingPreferences,
                             isSaving: _isSaving,
-                            isSavingTheme: _isSavingTheme,
+                            streakReminderEnabled: _streakReminderEnabled,
+                            isUpdatingStreakReminder: _isUpdatingStreakReminder,
                             isOpeningProfiles: _isOpeningProfiles,
                             isSigningOut: _isSigningOut,
-                            onChooseTheme: _chooseThemeMode,
+                            isDeletingAccount: _isDeletingAccount,
+                            onStreakReminderChanged: _setStreakReminder,
                             onChooseTextScale: _chooseTextScale,
                             onNarrationChanged: (enabled) =>
                                 _updatePreferences(narrationEnabled: enabled),
@@ -408,6 +561,8 @@ class _ParentalControlsScreenState extends State<ParentalControlsScreen> {
                             onRetryAccount: () => _loadSettings(refresh: true),
                             onOpenProfiles: _openProfiles,
                             onSignOut: _signOut,
+                            onOpenPrivacyPolicy: _openPrivacyPolicy,
+                            onDeleteAccount: _deleteAccount,
                           ),
                       ],
                     ),
@@ -432,16 +587,20 @@ class _SettingsContent extends StatelessWidget {
     required this.preferencesError,
     required this.isLoadingPreferences,
     required this.isSaving,
-    required this.isSavingTheme,
+    required this.streakReminderEnabled,
+    required this.isUpdatingStreakReminder,
     required this.isOpeningProfiles,
     required this.isSigningOut,
-    required this.onChooseTheme,
+    required this.isDeletingAccount,
+    required this.onStreakReminderChanged,
     required this.onChooseTextScale,
     required this.onNarrationChanged,
     required this.onRetryPreferences,
     required this.onRetryAccount,
     required this.onOpenProfiles,
     required this.onSignOut,
+    required this.onOpenPrivacyPolicy,
+    required this.onDeleteAccount,
   });
 
   final ParentAccount? parent;
@@ -452,19 +611,24 @@ class _SettingsContent extends StatelessWidget {
   final String? preferencesError;
   final bool isLoadingPreferences;
   final bool isSaving;
-  final bool isSavingTheme;
+  final bool streakReminderEnabled;
+  final bool isUpdatingStreakReminder;
   final bool isOpeningProfiles;
   final bool isSigningOut;
-  final VoidCallback onChooseTheme;
+  final bool isDeletingAccount;
+  final ValueChanged<bool> onStreakReminderChanged;
   final VoidCallback onChooseTextScale;
   final ValueChanged<bool> onNarrationChanged;
   final VoidCallback? onRetryPreferences;
   final VoidCallback onRetryAccount;
   final VoidCallback onOpenProfiles;
   final VoidCallback onSignOut;
+  final VoidCallback onOpenPrivacyPolicy;
+  final VoidCallback onDeleteAccount;
 
   @override
   Widget build(BuildContext context) {
+    final appAudio = AppAudioScope.maybeOf(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -481,20 +645,55 @@ class _SettingsContent extends StatelessWidget {
         const SizedBox(height: 24),
         const _SettingsSectionTitle(
           title: 'On this device',
-          subtitle: 'Appearance stays with this phone or tablet.',
+          subtitle:
+              'Sound and reminder choices stay with this phone or tablet.',
         ),
         const SizedBox(height: 11),
         _SettingsGroup(
           children: [
-            ValueListenableBuilder<ThemeMode>(
-              valueListenable: AppThemeController.mode,
-              builder: (context, mode, _) => _SettingsActionTile(
-                key: const Key('settings-theme'),
-                icon: _themeModeIcon(mode),
-                title: 'App appearance',
-                subtitle: _themeModeLabel(mode),
-                onTap: isSavingTheme ? null : onChooseTheme,
+            if (appAudio != null) ...[
+              _SettingsSwitchTile(
+                key: const Key('settings-background-music'),
+                icon: Icons.music_note_rounded,
+                title: 'Background music',
+                subtitle: appAudio.musicEnabled
+                    ? 'Gentle music while exploring the app'
+                    : 'Off on this device',
+                value: appAudio.musicEnabled,
+                onChanged: isDeletingAccount || isSigningOut
+                    ? null
+                    : (enabled) => unawaited(appAudio.setMusicEnabled(enabled)),
               ),
+              const _SettingsDivider(),
+              _SettingsSwitchTile(
+                key: const Key('settings-sound-effects'),
+                icon: Icons.volume_up_rounded,
+                title: 'Sound effects',
+                subtitle: appAudio.effectsEnabled
+                    ? 'Sounds for taps, selections and celebrations'
+                    : 'Off on this device',
+                value: appAudio.effectsEnabled,
+                onChanged: isDeletingAccount || isSigningOut
+                    ? null
+                    : (enabled) =>
+                          unawaited(appAudio.setEffectsEnabled(enabled)),
+              ),
+              const _SettingsDivider(),
+            ],
+            _SettingsSwitchTile(
+              key: const Key('settings-streak-reminders'),
+              icon: Icons.notifications_active_rounded,
+              title: 'Streak reminders',
+              subtitle: streakReminderEnabled
+                  ? 'At 5:00 PM only when today’s app visit is still missing'
+                  : 'Off — no daily streak reminders',
+              value: streakReminderEnabled,
+              onChanged:
+                  isUpdatingStreakReminder ||
+                      isDeletingAccount ||
+                      activeProfile == null
+                  ? null
+                  : onStreakReminderChanged,
             ),
           ],
         ),
@@ -514,7 +713,7 @@ class _SettingsContent extends StatelessWidget {
         const SizedBox(height: 11),
         if (activeProfile == null)
           _ChooseProfileCard(
-            isOpening: isOpeningProfiles,
+            isOpening: isOpeningProfiles || isDeletingAccount,
             onOpen: onOpenProfiles,
           )
         else if (settings == null && isLoadingPreferences)
@@ -533,7 +732,7 @@ class _SettingsContent extends StatelessWidget {
                 icon: Icons.text_fields_rounded,
                 title: 'Story text size',
                 subtitle: settings!.storyTextScale.label,
-                onTap: isSaving ? null : onChooseTextScale,
+                onTap: isSaving || isDeletingAccount ? null : onChooseTextScale,
               ),
               const _SettingsDivider(),
               _SettingsSwitchTile(
@@ -544,7 +743,9 @@ class _SettingsContent extends StatelessWidget {
                     ? 'Read-aloud voices are available'
                     : 'Read-aloud voices are turned off',
                 value: settings!.narrationEnabled,
-                onChanged: isSaving ? null : onNarrationChanged,
+                onChanged: isSaving || isDeletingAccount
+                    ? null
+                    : onNarrationChanged,
               ),
             ],
           ),
@@ -567,13 +768,28 @@ class _SettingsContent extends StatelessWidget {
         _AccountCard(
           parent: parent,
           profileCount: profileCount,
-          isOpeningProfiles: isOpeningProfiles,
+          isOpeningProfiles: isOpeningProfiles || isDeletingAccount,
           onOpenProfiles: onOpenProfiles,
+        ),
+        const SizedBox(height: 11),
+        _SettingsGroup(
+          children: [
+            _SettingsActionTile(
+              key: const Key('settings-subscription'),
+              icon: Icons.verified_rounded,
+              title: 'Subscription',
+              subtitle: 'View monthly and yearly plans',
+              onTap: isDeletingAccount || isSigningOut
+                  ? null
+                  : () =>
+                        Navigator.of(context).pushNamed(AppRoutes.subscription),
+            ),
+          ],
         ),
         const SizedBox(height: 16),
         OutlinedButton.icon(
           key: const Key('settings-sign-out'),
-          onPressed: isSigningOut ? null : onSignOut,
+          onPressed: isSigningOut || isDeletingAccount ? null : onSignOut,
           style: OutlinedButton.styleFrom(
             minimumSize: const Size.fromHeight(54),
             foregroundColor: const Color(0xFFD9534F),
@@ -594,14 +810,145 @@ class _SettingsContent extends StatelessWidget {
             isSigningOut ? 'Signing out…' : 'Sign out on this device',
           ),
         ),
+        const SizedBox(height: 25),
+        const _SettingsSectionTitle(
+          title: 'Privacy and support',
+          subtitle: 'Read how Kingdom Kids handles family information.',
+        ),
+        const SizedBox(height: 11),
+        _SettingsGroup(
+          children: [
+            _SettingsActionTile(
+              key: const Key('settings-privacy-policy'),
+              icon: Icons.privacy_tip_rounded,
+              title: 'Privacy policy',
+              subtitle: 'Opens kingdom-kids.app in your browser',
+              onTap: isDeletingAccount ? null : onOpenPrivacyPolicy,
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+        const _SettingsSectionTitle(
+          title: 'Danger zone',
+          subtitle:
+              'Permanent deletion removes the entire family account, not just this device.',
+        ),
+        const SizedBox(height: 11),
+        OutlinedButton.icon(
+          key: const Key('settings-delete-account'),
+          onPressed: isDeletingAccount || isSigningOut ? null : onDeleteAccount,
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size.fromHeight(54),
+            foregroundColor: const Color(0xFFB3261E),
+            side: BorderSide(
+              color: const Color(0xFFB3261E).withValues(alpha: 0.6),
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(17),
+            ),
+          ),
+          icon: isDeletingAccount
+              ? const SizedBox.square(
+                  dimension: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.delete_forever_rounded),
+          label: Text(
+            isDeletingAccount
+                ? 'Deleting family account…'
+                : 'Permanently delete family account',
+          ),
+        ),
         const SizedBox(height: 14),
         Text(
-          'Notifications, offline downloads, time limits, and video controls will appear here only when their full systems are ready.',
+          'Offline downloads and time limits will appear here only when their full systems are ready.',
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
             color: _mutedText(context),
             height: 1.4,
           ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DeleteAccountDialog extends StatefulWidget {
+  const _DeleteAccountDialog();
+
+  @override
+  State<_DeleteAccountDialog> createState() => _DeleteAccountDialogState();
+}
+
+class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  void _confirm() {
+    if (_formKey.currentState?.validate() != true) return;
+    Navigator.of(context).pop(_passwordController.text);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      scrollable: true,
+      icon: const Icon(Icons.warning_amber_rounded, color: Color(0xFFB3261E)),
+      title: const Text('Permanently delete family account?'),
+      content: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'This permanently deletes the parent account, every child profile, and their saved progress. This cannot be undone.',
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Enter your current parent password to confirm.',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            TextFormField(
+              key: const Key('settings-delete-password'),
+              controller: _passwordController,
+              obscureText: true,
+              enableSuggestions: false,
+              autocorrect: false,
+              autofillHints: const [AutofillHints.password],
+              textInputAction: TextInputAction.done,
+              decoration: const InputDecoration(
+                labelText: 'Current password',
+                border: OutlineInputBorder(),
+              ),
+              validator: (value) => value == null || value.isEmpty
+                  ? 'Enter your current password.'
+                  : null,
+              onFieldSubmitted: (_) => _confirm(),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Keep account'),
+        ),
+        FilledButton(
+          key: const Key('settings-confirm-delete-account'),
+          onPressed: _confirm,
+          style: FilledButton.styleFrom(
+            backgroundColor: const Color(0xFFB3261E),
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('Delete account permanently'),
         ),
       ],
     );
@@ -1453,18 +1800,6 @@ class _SettingsBackdrop extends StatelessWidget {
     );
   }
 }
-
-String _themeModeLabel(ThemeMode mode) => switch (mode) {
-  ThemeMode.system => 'Follow device',
-  ThemeMode.light => 'Light',
-  ThemeMode.dark => 'Dark',
-};
-
-IconData _themeModeIcon(ThemeMode mode) => switch (mode) {
-  ThemeMode.system => Icons.brightness_auto_rounded,
-  ThemeMode.light => Icons.light_mode_rounded,
-  ThemeMode.dark => Icons.dark_mode_rounded,
-};
 
 bool _isDark(BuildContext context) =>
     Theme.of(context).brightness == Brightness.dark;

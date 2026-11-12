@@ -1,0 +1,6 @@
+# Copy to key.properties (which is ignored) or use the equivalent
+# ANDROID_KEYSTORE_* environment variables in CI.
+storeFile=/absolute/path/to/kingdom-kids-upload.jks
+storePassword=replace-with-a-secret
+keyAlias=upload
+keyPassword=replace-with-a-secret

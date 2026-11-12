@@ -1,0 +1,954 @@
+{
+  "version": 1,
+  "scenarios": [
+    {
+      "name": "idle600",
+      "result": {
+        "taps": [],
+        "elapsed_ticks": 600
+      },
+      "expected": {
+        "completed": false,
+        "score": 0,
+        "animals_boarded": 0,
+        "animal_count": 10,
+        "elapsed_ticks": 600,
+        "remaining_ticks": 0,
+        "first_tap_ticks": {},
+        "arrival_ticks": {},
+        "positions": {
+          "elephant": [
+            3,
+            3,
+            0
+          ],
+          "lion": [
+            6,
+            9,
+            0
+          ],
+          "giraffe": [
+            10,
+            4,
+            0
+          ],
+          "zebra": [
+            12,
+            11,
+            0
+          ],
+          "dove": [
+            15,
+            3,
+            0
+          ],
+          "sheep": [
+            17,
+            10,
+            0
+          ],
+          "camel": [
+            20,
+            4,
+            0
+          ],
+          "donkey": [
+            22,
+            11,
+            0
+          ],
+          "deer": [
+            24,
+            2,
+            0
+          ],
+          "rabbit": [
+            25,
+            6,
+            0
+          ]
+        },
+        "phases": {
+          "elephant": "idle",
+          "lion": "idle",
+          "giraffe": "idle",
+          "zebra": "idle",
+          "dove": "idle",
+          "sheep": "idle",
+          "camel": "idle",
+          "donkey": "idle",
+          "deer": "idle",
+          "rabbit": "idle"
+        }
+      }
+    },
+    {
+      "name": "start0",
+      "result": {
+        "taps": [
+          {
+            "tick": 0,
+            "animal_id": "elephant"
+          },
+          {
+            "tick": 0,
+            "animal_id": "lion"
+          },
+          {
+            "tick": 0,
+            "animal_id": "giraffe"
+          },
+          {
+            "tick": 0,
+            "animal_id": "zebra"
+          },
+          {
+            "tick": 0,
+            "animal_id": "dove"
+          },
+          {
+            "tick": 0,
+            "animal_id": "sheep"
+          },
+          {
+            "tick": 0,
+            "animal_id": "camel"
+          },
+          {
+            "tick": 0,
+            "animal_id": "donkey"
+          },
+          {
+            "tick": 0,
+            "animal_id": "deer"
+          },
+          {
+            "tick": 0,
+            "animal_id": "rabbit"
+          }
+        ],
+        "elapsed_ticks": 0
+      },
+      "expected": {
+        "completed": false,
+        "score": 0,
+        "animals_boarded": 0,
+        "animal_count": 10,
+        "elapsed_ticks": 0,
+        "remaining_ticks": 600,
+        "first_tap_ticks": {
+          "elephant": 0,
+          "lion": 0,
+          "giraffe": 0,
+          "zebra": 0,
+          "dove": 0,
+          "sheep": 0,
+          "camel": 0,
+          "donkey": 0,
+          "deer": 0,
+          "rabbit": 0
+        },
+        "arrival_ticks": {},
+        "positions": {
+          "elephant": [
+            3,
+            3.0,
+            0
+          ],
+          "lion": [
+            6,
+            9.0,
+            0
+          ],
+          "giraffe": [
+            10,
+            4.0,
+            0
+          ],
+          "zebra": [
+            12,
+            11.0,
+            0
+          ],
+          "dove": [
+            15,
+            3.0,
+            0
+          ],
+          "sheep": [
+            17,
+            10.0,
+            0
+          ],
+          "camel": [
+            20,
+            4.0,
+            0
+          ],
+          "donkey": [
+            22,
+            11.0,
+            0
+          ],
+          "deer": [
+            24,
+            2.0,
+            0
+          ],
+          "rabbit": [
+            25,
+            6.0,
+            0
+          ]
+        },
+        "phases": {
+          "elephant": "garden",
+          "lion": "garden",
+          "giraffe": "garden",
+          "zebra": "garden",
+          "dove": "garden",
+          "sheep": "garden",
+          "camel": "garden",
+          "donkey": "garden",
+          "deer": "garden",
+          "rabbit": "garden"
+        }
+      }
+    },
+    {
+      "name": "travel199",
+      "result": {
+        "taps": [
+          {
+            "tick": 0,
+            "animal_id": "elephant"
+          },
+          {
+            "tick": 0,
+            "animal_id": "lion"
+          },
+          {
+            "tick": 0,
+            "animal_id": "giraffe"
+          },
+          {
+            "tick": 0,
+            "animal_id": "zebra"
+          },
+          {
+            "tick": 0,
+            "animal_id": "dove"
+          },
+          {
+            "tick": 0,
+            "animal_id": "sheep"
+          },
+          {
+            "tick": 0,
+            "animal_id": "camel"
+          },
+          {
+            "tick": 0,
+            "animal_id": "donkey"
+          },
+          {
+            "tick": 0,
+            "animal_id": "deer"
+          },
+          {
+            "tick": 0,
+            "animal_id": "rabbit"
+          }
+        ],
+        "elapsed_ticks": 199
+      },
+      "expected": {
+        "completed": false,
+        "score": 90,
+        "animals_boarded": 9,
+        "animal_count": 10,
+        "elapsed_ticks": 199,
+        "remaining_ticks": 401,
+        "first_tap_ticks": {
+          "elephant": 0,
+          "lion": 0,
+          "giraffe": 0,
+          "zebra": 0,
+          "dove": 0,
+          "sheep": 0,
+          "camel": 0,
+          "donkey": 0,
+          "deer": 0,
+          "rabbit": 0
+        },
+        "arrival_ticks": {
+          "lion": 177,
+          "giraffe": 169,
+          "zebra": 139,
+          "dove": 98,
+          "sheep": 161,
+          "camel": 137,
+          "donkey": 135,
+          "deer": 78,
+          "rabbit": 72
+        },
+        "positions": {
+          "elephant": [
+            28.0,
+            4.6302512648609095,
+            1.402016087780382
+          ],
+          "lion": [
+            28,
+            13,
+            4.3
+          ],
+          "giraffe": [
+            28,
+            13,
+            4.3
+          ],
+          "zebra": [
+            28,
+            13,
+            4.3
+          ],
+          "dove": [
+            28,
+            13,
+            4.3
+          ],
+          "sheep": [
+            28,
+            13,
+            4.3
+          ],
+          "camel": [
+            28,
+            13,
+            4.3
+          ],
+          "donkey": [
+            28,
+            13,
+            4.3
+          ],
+          "deer": [
+            28,
+            13,
+            4.3
+          ],
+          "rabbit": [
+            28,
+            13,
+            4.3
+          ]
+        },
+        "phases": {
+          "elephant": "stairs",
+          "lion": "boarded",
+          "giraffe": "boarded",
+          "zebra": "boarded",
+          "dove": "boarded",
+          "sheep": "boarded",
+          "camel": "boarded",
+          "donkey": "boarded",
+          "deer": "boarded",
+          "rabbit": "boarded"
+        }
+      }
+    },
+    {
+      "name": "travel260",
+      "result": {
+        "taps": [
+          {
+            "tick": 0,
+            "animal_id": "elephant"
+          },
+          {
+            "tick": 0,
+            "animal_id": "lion"
+          },
+          {
+            "tick": 0,
+            "animal_id": "giraffe"
+          },
+          {
+            "tick": 0,
+            "animal_id": "zebra"
+          },
+          {
+            "tick": 0,
+            "animal_id": "dove"
+          },
+          {
+            "tick": 0,
+            "animal_id": "sheep"
+          },
+          {
+            "tick": 0,
+            "animal_id": "camel"
+          },
+          {
+            "tick": 0,
+            "animal_id": "donkey"
+          },
+          {
+            "tick": 0,
+            "animal_id": "deer"
+          },
+          {
+            "tick": 0,
+            "animal_id": "rabbit"
+          }
+        ],
+        "elapsed_ticks": 260
+      },
+      "expected": {
+        "completed": false,
+        "score": 90,
+        "animals_boarded": 9,
+        "animal_count": 10,
+        "elapsed_ticks": 260,
+        "remaining_ticks": 340,
+        "first_tap_ticks": {
+          "elephant": 0,
+          "lion": 0,
+          "giraffe": 0,
+          "zebra": 0,
+          "dove": 0,
+          "sheep": 0,
+          "camel": 0,
+          "donkey": 0,
+          "deer": 0,
+          "rabbit": 0
+        },
+        "arrival_ticks": {
+          "lion": 177,
+          "giraffe": 169,
+          "zebra": 139,
+          "dove": 98,
+          "sheep": 161,
+          "camel": 137,
+          "donkey": 135,
+          "deer": 78,
+          "rabbit": 72
+        },
+        "positions": {
+          "elephant": [
+            28.0,
+            12.095507082528403,
+            4.3
+          ],
+          "lion": [
+            28,
+            13,
+            4.3
+          ],
+          "giraffe": [
+            28,
+            13,
+            4.3
+          ],
+          "zebra": [
+            28,
+            13,
+            4.3
+          ],
+          "dove": [
+            28,
+            13,
+            4.3
+          ],
+          "sheep": [
+            28,
+            13,
+            4.3
+          ],
+          "camel": [
+            28,
+            13,
+            4.3
+          ],
+          "donkey": [
+            28,
+            13,
+            4.3
+          ],
+          "deer": [
+            28,
+            13,
+            4.3
+          ],
+          "rabbit": [
+            28,
+            13,
+            4.3
+          ]
+        },
+        "phases": {
+          "elephant": "interior",
+          "lion": "boarded",
+          "giraffe": "boarded",
+          "zebra": "boarded",
+          "dove": "boarded",
+          "sheep": "boarded",
+          "camel": "boarded",
+          "donkey": "boarded",
+          "deer": "boarded",
+          "rabbit": "boarded"
+        }
+      }
+    },
+    {
+      "name": "all500",
+      "result": {
+        "taps": [
+          {
+            "tick": 0,
+            "animal_id": "elephant"
+          },
+          {
+            "tick": 0,
+            "animal_id": "lion"
+          },
+          {
+            "tick": 0,
+            "animal_id": "giraffe"
+          },
+          {
+            "tick": 0,
+            "animal_id": "zebra"
+          },
+          {
+            "tick": 0,
+            "animal_id": "dove"
+          },
+          {
+            "tick": 0,
+            "animal_id": "sheep"
+          },
+          {
+            "tick": 0,
+            "animal_id": "camel"
+          },
+          {
+            "tick": 0,
+            "animal_id": "donkey"
+          },
+          {
+            "tick": 0,
+            "animal_id": "deer"
+          },
+          {
+            "tick": 0,
+            "animal_id": "rabbit"
+          }
+        ],
+        "elapsed_ticks": 500
+      },
+      "expected": {
+        "completed": true,
+        "score": 100,
+        "animals_boarded": 10,
+        "animal_count": 10,
+        "elapsed_ticks": 500,
+        "remaining_ticks": 100,
+        "first_tap_ticks": {
+          "elephant": 0,
+          "lion": 0,
+          "giraffe": 0,
+          "zebra": 0,
+          "dove": 0,
+          "sheep": 0,
+          "camel": 0,
+          "donkey": 0,
+          "deer": 0,
+          "rabbit": 0
+        },
+        "arrival_ticks": {
+          "elephant": 267,
+          "lion": 177,
+          "giraffe": 169,
+          "zebra": 139,
+          "dove": 98,
+          "sheep": 161,
+          "camel": 137,
+          "donkey": 135,
+          "deer": 78,
+          "rabbit": 72
+        },
+        "positions": {
+          "elephant": [
+            28,
+            13,
+            4.3
+          ],
+          "lion": [
+            28,
+            13,
+            4.3
+          ],
+          "giraffe": [
+            28,
+            13,
+            4.3
+          ],
+          "zebra": [
+            28,
+            13,
+            4.3
+          ],
+          "dove": [
+            28,
+            13,
+            4.3
+          ],
+          "sheep": [
+            28,
+            13,
+            4.3
+          ],
+          "camel": [
+            28,
+            13,
+            4.3
+          ],
+          "donkey": [
+            28,
+            13,
+            4.3
+          ],
+          "deer": [
+            28,
+            13,
+            4.3
+          ],
+          "rabbit": [
+            28,
+            13,
+            4.3
+          ]
+        },
+        "phases": {
+          "elephant": "boarded",
+          "lion": "boarded",
+          "giraffe": "boarded",
+          "zebra": "boarded",
+          "dove": "boarded",
+          "sheep": "boarded",
+          "camel": "boarded",
+          "donkey": "boarded",
+          "deer": "boarded",
+          "rabbit": "boarded"
+        }
+      }
+    },
+    {
+      "name": "late600",
+      "result": {
+        "taps": [
+          {
+            "tick": 0,
+            "animal_id": "elephant"
+          },
+          {
+            "tick": 0,
+            "animal_id": "lion"
+          },
+          {
+            "tick": 0,
+            "animal_id": "giraffe"
+          },
+          {
+            "tick": 0,
+            "animal_id": "zebra"
+          },
+          {
+            "tick": 0,
+            "animal_id": "dove"
+          },
+          {
+            "tick": 0,
+            "animal_id": "sheep"
+          },
+          {
+            "tick": 0,
+            "animal_id": "camel"
+          },
+          {
+            "tick": 0,
+            "animal_id": "donkey"
+          },
+          {
+            "tick": 0,
+            "animal_id": "deer"
+          },
+          {
+            "tick": 599,
+            "animal_id": "rabbit"
+          }
+        ],
+        "elapsed_ticks": 600
+      },
+      "expected": {
+        "completed": false,
+        "score": 90,
+        "animals_boarded": 9,
+        "animal_count": 10,
+        "elapsed_ticks": 600,
+        "remaining_ticks": 0,
+        "first_tap_ticks": {
+          "elephant": 0,
+          "lion": 0,
+          "giraffe": 0,
+          "zebra": 0,
+          "dove": 0,
+          "sheep": 0,
+          "camel": 0,
+          "donkey": 0,
+          "deer": 0,
+          "rabbit": 599
+        },
+        "arrival_ticks": {
+          "elephant": 267,
+          "lion": 177,
+          "giraffe": 169,
+          "zebra": 139,
+          "dove": 98,
+          "sheep": 161,
+          "camel": 137,
+          "donkey": 135,
+          "deer": 78
+        },
+        "positions": {
+          "elephant": [
+            28,
+            13,
+            4.3
+          ],
+          "lion": [
+            28,
+            13,
+            4.3
+          ],
+          "giraffe": [
+            28,
+            13,
+            4.3
+          ],
+          "zebra": [
+            28,
+            13,
+            4.3
+          ],
+          "dove": [
+            28,
+            13,
+            4.3
+          ],
+          "sheep": [
+            28,
+            13,
+            4.3
+          ],
+          "camel": [
+            28,
+            13,
+            4.3
+          ],
+          "donkey": [
+            28,
+            13,
+            4.3
+          ],
+          "deer": [
+            28,
+            13,
+            4.3
+          ],
+          "rabbit": [
+            25.151152470021092,
+            5.813578620307319,
+            0.0
+          ]
+        },
+        "phases": {
+          "elephant": "boarded",
+          "lion": "boarded",
+          "giraffe": "boarded",
+          "zebra": "boarded",
+          "dove": "boarded",
+          "sheep": "boarded",
+          "camel": "boarded",
+          "donkey": "boarded",
+          "deer": "boarded",
+          "rabbit": "garden"
+        }
+      }
+    },
+    {
+      "name": "repeat500",
+      "result": {
+        "taps": [
+          {
+            "tick": 0,
+            "animal_id": "elephant"
+          },
+          {
+            "tick": 0,
+            "animal_id": "lion"
+          },
+          {
+            "tick": 0,
+            "animal_id": "giraffe"
+          },
+          {
+            "tick": 0,
+            "animal_id": "zebra"
+          },
+          {
+            "tick": 0,
+            "animal_id": "dove"
+          },
+          {
+            "tick": 0,
+            "animal_id": "sheep"
+          },
+          {
+            "tick": 0,
+            "animal_id": "camel"
+          },
+          {
+            "tick": 0,
+            "animal_id": "donkey"
+          },
+          {
+            "tick": 0,
+            "animal_id": "deer"
+          },
+          {
+            "tick": 0,
+            "animal_id": "rabbit"
+          },
+          {
+            "tick": 300,
+            "animal_id": "elephant"
+          }
+        ],
+        "elapsed_ticks": 500
+      },
+      "expected": {
+        "completed": true,
+        "score": 100,
+        "animals_boarded": 10,
+        "animal_count": 10,
+        "elapsed_ticks": 500,
+        "remaining_ticks": 100,
+        "first_tap_ticks": {
+          "elephant": 0,
+          "lion": 0,
+          "giraffe": 0,
+          "zebra": 0,
+          "dove": 0,
+          "sheep": 0,
+          "camel": 0,
+          "donkey": 0,
+          "deer": 0,
+          "rabbit": 0
+        },
+        "arrival_ticks": {
+          "elephant": 267,
+          "lion": 177,
+          "giraffe": 169,
+          "zebra": 139,
+          "dove": 98,
+          "sheep": 161,
+          "camel": 137,
+          "donkey": 135,
+          "deer": 78,
+          "rabbit": 72
+        },
+        "positions": {
+          "elephant": [
+            28,
+            13,
+            4.3
+          ],
+          "lion": [
+            28,
+            13,
+            4.3
+          ],
+          "giraffe": [
+            28,
+            13,
+            4.3
+          ],
+          "zebra": [
+            28,
+            13,
+            4.3
+          ],
+          "dove": [
+            28,
+            13,
+            4.3
+          ],
+          "sheep": [
+            28,
+            13,
+            4.3
+          ],
+          "camel": [
+            28,
+            13,
+            4.3
+          ],
+          "donkey": [
+            28,
+            13,
+            4.3
+          ],
+          "deer": [
+            28,
+            13,
+            4.3
+          ],
+          "rabbit": [
+            28,
+            13,
+            4.3
+          ]
+        },
+        "phases": {
+          "elephant": "boarded",
+          "lion": "boarded",
+          "giraffe": "boarded",
+          "zebra": "boarded",
+          "dove": "boarded",
+          "sheep": "boarded",
+          "camel": "boarded",
+          "donkey": "boarded",
+          "deer": "boarded",
+          "rabbit": "boarded"
+        }
+      }
+    }
+  ],
+  "rejections": [
+    {
+      "name": "tapDeadline600",
+      "result": {
+        "taps": [
+          {
+            "tick": 600,
+            "animal_id": "elephant"
+          }
+        ],
+        "elapsed_ticks": 600
+      }
+    }
+  ]
+}

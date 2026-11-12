@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 
 import '../../../app/router.dart';
 import '../../../core/errors/app_exception.dart';
+import '../../privacy/presentation/privacy_policy_screen.dart';
 import '../data/auth_repository.dart';
 import '../domain/auth_requests.dart';
 import '../domain/auth_session.dart';
 import '../domain/email_verification.dart';
+import 'auth_wave_header.dart';
 
 enum AuthScreenMode { register, login }
 
@@ -18,10 +20,14 @@ class AuthScreen extends StatefulWidget {
     super.key,
     this.initialMode = AuthScreenMode.register,
     this.repository,
+    this.externalUrlLauncher,
   });
 
   final AuthScreenMode initialMode;
   final AuthRepository? repository;
+
+  /// Kept for caller compatibility; policy access now always stays in the app.
+  final Future<bool> Function(Uri uri)? externalUrlLauncher;
 
   @override
   State<AuthScreen> createState() => _AuthScreenState();
@@ -29,86 +35,85 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen>
     with SingleTickerProviderStateMixin {
-  final _formKey = GlobalKey<FormState>();
+  var _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  final _passwordFocusNode = FocusNode();
-  final _confirmPasswordFocusNode = FocusNode();
+  final _emailFocusNode = FocusNode(debugLabel: 'auth-email');
+  final _passwordFocusNode = FocusNode(debugLabel: 'auth-password');
+  final _confirmPasswordFocusNode = FocusNode(
+    debugLabel: 'auth-confirm-password',
+  );
+  final _formScrollController = ScrollController();
 
   late final AuthRepository _repository;
-  late final AnimationController _faceController;
-  late final Listenable _secureFieldFocus;
+  late final AnimationController _modeController;
   late AuthScreenMode _mode;
   bool _isSubmitting = false;
   bool _showPassword = false;
   bool _showConfirmPassword = false;
   bool _reduceMotion = false;
-  String? _errorMessage;
+  int _submissionGeneration = 0;
 
   @override
   void initState() {
     super.initState();
     _repository = widget.repository ?? AuthRepository();
     _mode = widget.initialMode;
-    _faceController = AnimationController(
+    _modeController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2200),
+      duration: const Duration(milliseconds: 680),
+      value: _mode == AuthScreenMode.register ? 1 : 0,
     );
-    _secureFieldFocus = Listenable.merge([
-      _passwordFocusNode,
-      _confirmPasswordFocusNode,
-    ]);
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final reduceMotion = MediaQuery.of(context).disableAnimations;
-    if (reduceMotion == _reduceMotion && _faceController.isAnimating) {
-      return;
-    }
-
-    _reduceMotion = reduceMotion;
+    _reduceMotion = MediaQuery.of(context).disableAnimations;
     if (_reduceMotion) {
-      _faceController
-        ..stop()
-        ..value = 0.5;
-    } else if (!_faceController.isAnimating) {
-      _faceController.repeat(reverse: true);
+      _modeController.value = _mode == AuthScreenMode.register ? 1 : 0;
     }
   }
 
   @override
   void dispose() {
+    _submissionGeneration++;
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _emailFocusNode.dispose();
     _passwordFocusNode.dispose();
     _confirmPasswordFocusNode.dispose();
-    _faceController.dispose();
+    _formScrollController.dispose();
+    _modeController.dispose();
     super.dispose();
   }
 
-  bool get _isEnteringPassword =>
-      _passwordFocusNode.hasFocus ||
-      (_mode == AuthScreenMode.register && _confirmPasswordFocusNode.hasFocus);
-
   void _changeMode(AuthScreenMode mode) {
-    if (mode == _mode) {
-      return;
-    }
-    if (mode == AuthScreenMode.login) {
-      _confirmPasswordFocusNode.unfocus();
-    }
+    if (mode == _mode || _isSubmitting) return;
+    FocusManager.instance.primaryFocus?.unfocus();
+    ScaffoldMessenger.maybeOf(context)?.hideCurrentSnackBar();
     setState(() {
       _mode = mode;
-      _errorMessage = null;
+      _formKey = GlobalKey<FormState>();
     });
+    final target = mode == AuthScreenMode.register ? 1.0 : 0.0;
+    if (_reduceMotion) {
+      _modeController.value = target;
+    } else {
+      _modeController.animateTo(
+        target,
+        duration: Duration(
+          milliseconds: (680 * (target - _modeController.value).abs()).round(),
+        ),
+        curve: Curves.easeInOutCubic,
+      );
+    }
   }
 
   Future<void> _submit() async {
-    if (_isSubmitting) {
+    if (_isSubmitting || _modeController.isAnimating) {
       return;
     }
 
@@ -117,56 +122,98 @@ class _AuthScreenState extends State<AuthScreen>
       return;
     }
 
-    setState(() {
-      _isSubmitting = true;
-      _errorMessage = null;
-    });
+    final generation = ++_submissionGeneration;
+    final submittedMode = _mode;
+    ScaffoldMessenger.maybeOf(context)?.hideCurrentSnackBar();
+    setState(() => _isSubmitting = true);
 
     try {
       if (_mode == AuthScreenMode.register) {
-        final pending = await _repository.register(
-          RegisterParentRequest(
-            email: _emailController.text,
-            password: _passwordController.text,
+        final pending = await _withVisibleBusyInterval(
+          _repository.register(
+            RegisterParentRequest(
+              email: _emailController.text,
+              password: _passwordController.text,
+            ),
           ),
         );
-        if (mounted) {
+        if (_canPresentSubmission(generation, submittedMode)) {
           _openVerification(pending);
         }
         return;
       }
 
-      final session = await _repository.login(
-        LoginRequest(
-          email: _emailController.text,
-          password: _passwordController.text,
+      final session = await _withVisibleBusyInterval(
+        _repository.login(
+          LoginRequest(
+            email: _emailController.text,
+            password: _passwordController.text,
+          ),
         ),
       );
 
-      if (!mounted) {
+      if (!_canPresentSubmission(generation, submittedMode)) {
         return;
       }
       _continueToProfiles(session);
     } on AppException catch (error) {
-      if (mounted &&
+      if (_canPresentSubmission(generation, submittedMode) &&
           error.code == 'email_verification_required' &&
           _openVerificationFromError(error)) {
         return;
       }
-      if (mounted) {
-        setState(() => _errorMessage = error.message);
+      if (_canPresentSubmission(generation, submittedMode)) {
+        _showSubmissionError(error.userMessage);
       }
     } catch (_) {
-      if (mounted) {
-        setState(
-          () => _errorMessage = 'Something went wrong. Please try again.',
-        );
+      if (_canPresentSubmission(generation, submittedMode)) {
+        _showSubmissionError('Something went wrong. Please try again.');
       }
     } finally {
-      if (mounted) {
+      if (mounted && generation == _submissionGeneration) {
         setState(() => _isSubmitting = false);
       }
     }
+  }
+
+  Future<T> _withVisibleBusyInterval<T>(Future<T> request) async {
+    late T result;
+    // Run the minimum interval concurrently: slow requests get no extra delay.
+    // Future.wait also waits for it when a fast request fails.
+    await Future.wait<void>([
+      request.then<void>((value) => result = value),
+      Future<void>.delayed(const Duration(milliseconds: 600)),
+    ]);
+    return result;
+  }
+
+  bool _canPresentSubmission(int generation, AuthScreenMode mode) =>
+      mounted &&
+      generation == _submissionGeneration &&
+      mode == _mode &&
+      (ModalRoute.of(context)?.isCurrent ?? true);
+
+  void _showSubmissionError(String message) {
+    final palette = _AuthPalette.forMode(
+      _mode,
+      isDark: Theme.of(context).brightness == Brightness.dark,
+    );
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          backgroundColor: palette.errorBackground,
+          content: Text(
+            message,
+            style: TextStyle(
+              fontFamily: 'OnboardingPoppins',
+              color: palette.errorText,
+              fontSize: 13,
+              height: 1.4,
+            ),
+          ),
+        ),
+      );
   }
 
   void _openVerification(PendingEmailVerification pending) {
@@ -176,8 +223,12 @@ class _AuthScreenState extends State<AuthScreen>
   }
 
   bool _openVerificationFromError(AppException error) {
-    final pending = PendingEmailVerification.fromJson(error.details);
-    if (pending.challengeId.isEmpty || pending.email.isEmpty) {
+    final pending = PendingEmailVerification.fromJson(
+      error.details,
+      fallbackEmail: _emailController.text.trim().toLowerCase(),
+    );
+    if (pending.challengeId.isEmpty ||
+        (pending.destinationHint.isEmpty && pending.email.isEmpty)) {
       return false;
     }
     _openVerification(pending);
@@ -192,241 +243,345 @@ class _AuthScreenState extends State<AuthScreen>
     );
   }
 
+  Future<void> _openPrivacyPolicy() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        settings: const RouteSettings(name: '/privacy'),
+        builder: (_) => const PrivacyPolicyScreen(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final palette = _AuthPalette.forMode(_mode, isDark: isDark);
-
+    final media = MediaQuery.of(context);
+    final keyboardOpen = media.viewInsets.bottom > 0;
+    final textScale = media.textScaler.scale(14) / 14;
+    // The keyboard reduces Scaffold's body constraints, not the physical page.
+    // Keep the approved header and text density tied to the full viewport.
+    final fullHeight = media.size.height;
+    final compact =
+        fullHeight - media.viewPadding.vertical < 650 || textScale > 1.3;
+    final bottomInset = keyboardOpen ? 0.0 : media.viewPadding.bottom;
     return Scaffold(
       backgroundColor: palette.background,
-      body: GestureDetector(
-        behavior: HitTestBehavior.translucent,
-        onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-        child: Stack(
-          children: [
-            _AuthBackdrop(palette: palette),
-            SafeArea(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  const padding = EdgeInsets.fromLTRB(24, 18, 24, 28);
-                  final minimumContentHeight = math.max(
-                    0.0,
-                    constraints.maxHeight - padding.vertical,
-                  );
-
-                  return SingleChildScrollView(
-                    keyboardDismissBehavior:
-                        ScrollViewKeyboardDismissBehavior.onDrag,
-                    padding: padding,
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          maxWidth: 460,
-                          minHeight: minimumContentHeight,
+      body: AnimatedBuilder(
+        animation: _modeController,
+        builder: (context, _) => LayoutBuilder(
+          builder: (context, constraints) {
+            final progress = _modeController.value;
+            final headerHeight = compact
+                ? media.viewPadding.top +
+                      math.max(48.0, media.textScaler.scale(26) * 1.2 + 16)
+                : math.min(328.0, fullHeight * 0.39) * (1 - progress) +
+                      math.min(210.0, fullHeight * 0.25) * progress;
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: headerHeight,
+                  child: AuthWaveHeader(
+                    progress: progress,
+                    height: headerHeight,
+                    topInset: media.viewPadding.top,
+                    compact: compact,
+                    color: palette.action,
+                  ),
+                ),
+                Positioned(
+                  top: headerHeight,
+                  left: 0,
+                  right: 0,
+                  bottom: bottomInset,
+                  child: Transform.translate(
+                    offset: Offset(
+                      0,
+                      _reduceMotion ? 0 : 8 * math.sin(progress * math.pi),
+                    ),
+                    // Never swap this viewport or its autofill/form subtree
+                    // when IME metrics change. Disposing AutofillGroup ends
+                    // the iOS autofill context and resigns first responder.
+                    child: SingleChildScrollView(
+                      key: const Key('auth-form-scroll'),
+                      controller: _formScrollController,
+                      primary: false,
+                      physics: const ClampingScrollPhysics(),
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.manual,
+                      padding: EdgeInsets.fromLTRB(
+                        24,
+                        compact ? 4 : 32,
+                        24,
+                        compact ? 6 : 8,
+                      ),
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 430),
+                          child: _buildForm(palette, progress, compact),
                         ),
-                        child: IntrinsicHeight(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              ListenableBuilder(
-                                listenable: _secureFieldFocus,
-                                builder: (context, _) => _AuthFace(
-                                  animation: _faceController,
-                                  palette: palette,
-                                  reduceMotion: _reduceMotion,
-                                  eyesClosed: _isEnteringPassword,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildForm(_AuthPalette palette, double progress, bool compact) {
+    final gap = compact ? 4.0 : 10.0;
+    final registering = _mode == AuthScreenMode.register;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _ModeCaption(
+          progress: progress,
+          compact: compact,
+          color: palette.foreground,
+        ),
+        SizedBox(height: compact ? 10 : 28),
+        AutofillGroup(
+          key: const Key('auth-autofill-group'),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _AuthTextField(
+                  key: const Key('auth-email-field'),
+                  controller: _emailController,
+                  focusNode: _emailFocusNode,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) => _passwordFocusNode.requestFocus(),
+                  palette: palette,
+                  compact: true,
+                  label: 'Email address',
+                  hint: 'you@example.com',
+                  keyboardType: TextInputType.emailAddress,
+                  autofillHints: const [AutofillHints.email],
+                  validator: _validateEmail,
+                ),
+                SizedBox(height: gap),
+                _AuthTextField(
+                  key: const Key('auth-password-field'),
+                  controller: _passwordController,
+                  focusNode: _passwordFocusNode,
+                  textInputAction: registering
+                      ? TextInputAction.next
+                      : TextInputAction.done,
+                  palette: palette,
+                  compact: true,
+                  label: 'Password',
+                  hint: registering ? 'At least 8 characters' : 'Your password',
+                  obscureText: !_showPassword,
+                  autofillHints: [
+                    registering
+                        ? AutofillHints.newPassword
+                        : AutofillHints.password,
+                  ],
+                  suffixIcon: IconButton(
+                    tooltip: _showPassword ? 'Hide password' : 'Show password',
+                    onPressed: () =>
+                        setState(() => _showPassword = !_showPassword),
+                    icon: Icon(
+                      _showPassword
+                          ? Icons.visibility_off_rounded
+                          : Icons.visibility_rounded,
+                    ),
+                  ),
+                  validator: _validatePassword,
+                  onFieldSubmitted: (_) {
+                    if (registering) {
+                      _confirmPasswordFocusNode.requestFocus();
+                    } else {
+                      _submit();
+                    }
+                  },
+                ),
+                if (progress < 1)
+                  ClipRect(
+                    key: const Key('auth-forgot-password-slot'),
+                    child: Align(
+                      alignment: Alignment.topCenter,
+                      heightFactor: 1 - progress,
+                      child: Opacity(
+                        opacity: 1 - progress,
+                        child: IgnorePointer(
+                          ignoring: registering,
+                          child: ExcludeSemantics(
+                            excluding: registering,
+                            child: Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton(
+                                key: const Key('auth-forgot-password'),
+                                onPressed: _isSubmitting
+                                    ? null
+                                    : () => Navigator.of(
+                                        context,
+                                      ).pushNamed(AppRoutes.passwordReset),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: palette.action,
+                                  minimumSize: const Size(48, 44),
                                 ),
-                              ),
-                              const SizedBox(height: 14),
-                              Text(
-                                _mode == AuthScreenMode.register
-                                    ? 'A joyful place starts with you'
-                                    : 'Welcome back, grown-up',
-                                textAlign: TextAlign.center,
-                                style: theme.textTheme.headlineSmall?.copyWith(
-                                  color: palette.foreground,
-                                  fontSize: 33,
-                                  fontWeight: FontWeight.w800,
-                                  height: 1.04,
-                                  letterSpacing: -1,
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              Text(
-                                _mode == AuthScreenMode.register
-                                    ? 'Create your parent account, then make a fun profile for each little explorer.'
-                                    : 'Sign in to manage your family\'s Kingdom Kids profiles.',
-                                textAlign: TextAlign.center,
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: palette.muted,
-                                  fontSize: 14.5,
-                                  fontWeight: FontWeight.w500,
-                                  height: 1.42,
-                                ),
-                              ),
-                              const SizedBox(height: 24),
-                              AutofillGroup(
-                                child: Form(
-                                  key: _formKey,
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.stretch,
-                                    children: [
-                                      _AuthTextField(
-                                        key: const Key('auth-email-field'),
-                                        controller: _emailController,
-                                        palette: palette,
-                                        label: 'Email address',
-                                        hint: 'you@example.com',
-                                        keyboardType:
-                                            TextInputType.emailAddress,
-                                        autofillHints: const [
-                                          AutofillHints.email,
-                                        ],
-                                        validator: _validateEmail,
-                                      ),
-                                      const SizedBox(height: 13),
-                                      _AuthTextField(
-                                        key: const Key('auth-password-field'),
-                                        controller: _passwordController,
-                                        focusNode: _passwordFocusNode,
-                                        palette: palette,
-                                        label: 'Password',
-                                        hint: _mode == AuthScreenMode.register
-                                            ? 'At least 8 characters'
-                                            : 'Your password',
-                                        obscureText: !_showPassword,
-                                        autofillHints: [
-                                          _mode == AuthScreenMode.register
-                                              ? AutofillHints.newPassword
-                                              : AutofillHints.password,
-                                        ],
-                                        suffixIcon: IconButton(
-                                          tooltip: _showPassword
-                                              ? 'Hide password'
-                                              : 'Show password',
-                                          onPressed: () => setState(
-                                            () =>
-                                                _showPassword = !_showPassword,
-                                          ),
-                                          icon: Icon(
-                                            _showPassword
-                                                ? Icons.visibility_off_rounded
-                                                : Icons.visibility_rounded,
-                                          ),
-                                        ),
-                                        validator: _validatePassword,
-                                        onFieldSubmitted: (_) {
-                                          if (_mode == AuthScreenMode.login) {
-                                            _submit();
-                                          }
-                                        },
-                                      ),
-                                      if (_mode == AuthScreenMode.register) ...[
-                                        const SizedBox(height: 13),
-                                        _AuthTextField(
-                                          key: const Key(
-                                            'auth-confirm-password-field',
-                                          ),
-                                          controller:
-                                              _confirmPasswordController,
-                                          focusNode: _confirmPasswordFocusNode,
-                                          palette: palette,
-                                          label: 'Confirm password',
-                                          hint: 'One more time',
-                                          obscureText: !_showConfirmPassword,
-                                          autofillHints: const [
-                                            AutofillHints.newPassword,
-                                          ],
-                                          suffixIcon: IconButton(
-                                            tooltip: _showConfirmPassword
-                                                ? 'Hide password'
-                                                : 'Show password',
-                                            onPressed: () => setState(
-                                              () => _showConfirmPassword =
-                                                  !_showConfirmPassword,
-                                            ),
-                                            icon: Icon(
-                                              _showConfirmPassword
-                                                  ? Icons.visibility_off_rounded
-                                                  : Icons.visibility_rounded,
-                                            ),
-                                          ),
-                                          validator: (value) {
-                                            if (value !=
-                                                _passwordController.text) {
-                                              return 'Those passwords do not match.';
-                                            }
-                                            return null;
-                                          },
-                                          onFieldSubmitted: (_) => _submit(),
-                                        ),
-                                      ],
-                                    ],
+                                child: const Text(
+                                  'Forgot password?',
+                                  style: TextStyle(
+                                    fontFamily: 'OnboardingPoppins',
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ),
-                              if (_errorMessage != null) ...[
-                                const SizedBox(height: 15),
-                                _ErrorNotice(
-                                  message: _errorMessage!,
-                                  palette: palette,
-                                ),
-                              ],
-                              const SizedBox(height: 20),
-                              FilledButton(
-                                key: const Key('auth-submit-button'),
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: palette.action,
-                                  foregroundColor: palette.onAction,
-                                  disabledBackgroundColor: palette.action
-                                      .withValues(alpha: 0.48),
-                                  disabledForegroundColor: palette.onAction
-                                      .withValues(alpha: 0.7),
-                                  minimumSize: const Size.fromHeight(57),
-                                  shape: const StadiumBorder(),
-                                  textStyle: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 0.1,
-                                  ),
-                                ),
-                                onPressed: _isSubmitting ? null : _submit,
-                                child: _isSubmitting
-                                    ? SizedBox.square(
-                                        dimension: 22,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2.4,
-                                          color: palette.onAction,
-                                        ),
-                                      )
-                                    : Text(
-                                        _mode == AuthScreenMode.register
-                                            ? 'I\'m ready'
-                                            : 'Log in',
-                                      ),
-                              ),
-                              const SizedBox(height: 10),
-                              _InlineModeLink(
-                                mode: _mode,
-                                palette: palette,
-                                onChanged: _changeMode,
-                              ),
-                              const SizedBox(height: 11),
-                              _ParentSafetyNote(palette: palette),
-                            ],
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  );
-                },
-              ),
+                  ),
+                if (progress > 0)
+                  ClipRect(
+                    key: const Key('auth-confirm-password-slot'),
+                    child: Align(
+                      alignment: Alignment.topCenter,
+                      heightFactor: progress,
+                      child: Opacity(
+                        opacity: progress,
+                        child: IgnorePointer(
+                          ignoring: !registering,
+                          child: ExcludeSemantics(
+                            excluding: !registering,
+                            child: Padding(
+                              padding: EdgeInsets.only(top: gap),
+                              child: _AuthTextField(
+                                key: const Key('auth-confirm-password-field'),
+                                controller: _confirmPasswordController,
+                                focusNode: _confirmPasswordFocusNode,
+                                textInputAction: TextInputAction.done,
+                                palette: palette,
+                                compact: true,
+                                label: 'Confirm password',
+                                hint: 'One more time',
+                                obscureText: !_showConfirmPassword,
+                                autofillHints: const [
+                                  AutofillHints.newPassword,
+                                ],
+                                suffixIcon: IconButton(
+                                  tooltip: _showConfirmPassword
+                                      ? 'Hide password'
+                                      : 'Show password',
+                                  onPressed: () => setState(
+                                    () => _showConfirmPassword =
+                                        !_showConfirmPassword,
+                                  ),
+                                  icon: Icon(
+                                    _showConfirmPassword
+                                        ? Icons.visibility_off_rounded
+                                        : Icons.visibility_rounded,
+                                  ),
+                                ),
+                                validator: (value) {
+                                  if (!registering) return null;
+                                  if (value == null || value.isEmpty) {
+                                    return 'Please confirm your password.';
+                                  }
+                                  return value != _passwordController.text
+                                      ? 'Those passwords do not match.'
+                                      : null;
+                                },
+                                onFieldSubmitted: (_) => _submit(),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
-          ],
+          ),
         ),
-      ),
+        SizedBox(height: compact ? 8 : 14),
+        FilledButton(
+          key: const Key('auth-submit-button'),
+          style:
+              FilledButton.styleFrom(
+                backgroundColor: palette.action,
+                foregroundColor: palette.onAction,
+                disabledBackgroundColor: palette.action,
+                disabledForegroundColor: palette.onAction,
+                overlayColor: Colors.transparent,
+                splashFactory: NoSplash.splashFactory,
+                elevation: 0,
+                shadowColor: Colors.transparent,
+                surfaceTintColor: Colors.transparent,
+                minimumSize: const Size.fromHeight(52),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                textStyle: const TextStyle(
+                  fontFamily: 'OnboardingPoppins',
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ).copyWith(
+                side: WidgetStateProperty.resolveWith(
+                  (states) =>
+                      states.contains(WidgetState.focused) &&
+                          FocusManager.instance.highlightMode ==
+                              FocusHighlightMode.traditional
+                      ? BorderSide(color: palette.onAction, width: 2)
+                      : BorderSide.none,
+                ),
+              ),
+          onPressed: _isSubmitting || _modeController.isAnimating
+              ? null
+              : _submit,
+          child: _isSubmitting
+              ? SizedBox.square(
+                  dimension: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.4,
+                    color: palette.onAction,
+                  ),
+                )
+              : Semantics(
+                  label: registering ? 'Sign up' : 'Sign in',
+                  excludeSemantics: true,
+                  child: AuthModeWordmark(
+                    progress: progress,
+                    signInSuffix: 'in',
+                    signUpSuffix: 'up',
+                    gap: MediaQuery.textScalerOf(context).scale(4),
+                    signKey: const Key('auth-submit-sign-label'),
+                    suffixKey: const Key('auth-submit-suffix-viewport'),
+                    style: TextStyle(
+                      fontFamily: 'OnboardingPoppins',
+                      color: palette.onAction,
+                      fontSize: 15,
+                      height: 1.2,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+        ),
+        _AuthPrivacyPolicyLink(
+          mode: _mode,
+          palette: palette,
+          onPressed: _isSubmitting ? null : _openPrivacyPolicy,
+        ),
+        _InlineModeLink(mode: _mode, palette: palette, onChanged: _changeMode),
+        const SizedBox(height: 4),
+        _ParentSafetyNote(palette: palette, compact: true),
+      ],
     );
   }
 
@@ -461,438 +616,151 @@ class _AuthPalette {
     required this.fieldText,
     required this.fieldHint,
     required this.focus,
-    required this.eye,
-    required this.pupil,
-    required this.nose,
     required this.action,
     required this.onAction,
-    required this.decorative,
     required this.errorBackground,
     required this.errorText,
   });
-
-  factory _AuthPalette.forMode(AuthScreenMode mode, {required bool isDark}) {
-    if (mode == AuthScreenMode.register) {
-      return isDark
-          ? const _AuthPalette(
-              background: Color(0xFF321849),
-              foreground: Color(0xFFFFF0DF),
-              muted: Color(0xFFDEC4E9),
-              fieldFill: Color(0xFF55326A),
-              fieldText: Color(0xFFFFFAF6),
-              fieldHint: Color(0xFFD5B9DF),
-              focus: Color(0xFFFFE5CC),
-              eye: Color(0xFFFFE8D2),
-              pupil: Color(0xFF20162F),
-              nose: Color(0xFFFF7A86),
-              action: Color(0xFFFF7A86),
-              onAction: Color(0xFF26182F),
-              decorative: Color(0xFFA768D1),
-              errorBackground: Color(0xFF542840),
-              errorText: Color(0xFFFFE8B2),
-            )
-          : const _AuthPalette(
-              background: Color(0xFF7D39D8),
-              foreground: Color(0xFFFFF1DF),
-              muted: Color(0xFFE9D2F3),
-              fieldFill: Color(0xFFA35ADD),
-              fieldText: Color(0xFFFFFAF6),
-              fieldHint: Color(0xFFE8CEF2),
-              focus: Color(0xFFFFE5CC),
-              eye: Color(0xFFFFE8D2),
-              pupil: Color(0xFF3B2057),
-              nose: Color(0xFFFF7A86),
-              action: Color(0xFFFF7A86),
-              onAction: Color(0xFF291C3A),
-              decorative: Color(0xFFB971EA),
-              errorBackground: Color(0xFF5D267B),
-              errorText: Color(0xFFFFE8B2),
-            );
-    }
-
-    return isDark
-        ? const _AuthPalette(
-            background: Color(0xFF2A1C2B),
-            foreground: Color(0xFFE3C7FF),
-            muted: Color(0xFFC8AFC4),
-            fieldFill: Color(0xFF3B2B3C),
-            fieldText: Color(0xFFFFF8F4),
-            fieldHint: Color(0xFFB59EAF),
-            focus: Color(0xFFA969E5),
-            eye: Color(0xFFFFEBDD),
-            pupil: Color(0xFF7D39D8),
-            nose: Color(0xFFFF7A86),
-            action: Color(0xFFFF7A86),
-            onAction: Color(0xFF291C2E),
-            decorative: Color(0xFF684081),
-            errorBackground: Color(0xFF542840),
-            errorText: Color(0xFFFFE8B2),
-          )
-        : const _AuthPalette(
-            background: Color(0xFFF8DADC),
-            foreground: Color(0xFF6D2FC0),
-            muted: Color(0xFF7E5B78),
-            fieldFill: Color(0xFFFFF8F5),
-            fieldText: Color(0xFF2B2333),
-            fieldHint: Color(0xFF987F92),
-            focus: Color(0xFF7D39D8),
-            eye: Color(0xFFFFF1E3),
-            pupil: Color(0xFF7D39D8),
-            nose: Color(0xFFFF7482),
-            action: Color(0xFFFF7482),
-            onAction: Color(0xFF2B1F35),
-            decorative: Color(0xFFEAB8C7),
-            errorBackground: Color(0xFFFFEEF0),
-            errorText: Color(0xFF8C2744),
-          );
-  }
-
-  final Color background;
-  final Color foreground;
-  final Color muted;
-  final Color fieldFill;
-  final Color fieldText;
-  final Color fieldHint;
-  final Color focus;
-  final Color eye;
-  final Color pupil;
-  final Color nose;
-  final Color action;
-  final Color onAction;
-  final Color decorative;
-  final Color errorBackground;
-  final Color errorText;
+  factory _AuthPalette.forMode(AuthScreenMode mode, {required bool isDark}) =>
+      isDark
+      ? const _AuthPalette(
+          background: Color(0xFF111C35),
+          foreground: Color(0xFFF2F6FF),
+          muted: Color(0xFFB0BED7),
+          fieldFill: Color(0xFF1C2D4C),
+          fieldText: Color(0xFFF2F6FF),
+          fieldHint: Color(0xFFA9BAD8),
+          focus: Color(0xFF84ADFF),
+          action: Color(0xFF1457FF),
+          onAction: Colors.white,
+          errorBackground: Color(0xFF4C2738),
+          errorText: Color(0xFFFFC8D4),
+        )
+      : const _AuthPalette(
+          background: Color(0xFFF3F6FD),
+          foreground: Color(0xFF23375B),
+          muted: Color(0xFF6C7C99),
+          fieldFill: Colors.white,
+          fieldText: Color(0xFF23375B),
+          fieldHint: Color(0xFF6C7C99),
+          focus: Color(0xFF1457FF),
+          action: Color(0xFF1457FF),
+          onAction: Colors.white,
+          errorBackground: Color(0xFFFFEBEF),
+          errorText: Color(0xFFA3334E),
+        );
+  final Color background,
+      foreground,
+      muted,
+      fieldFill,
+      fieldText,
+      fieldHint,
+      focus,
+      action,
+      onAction,
+      errorBackground,
+      errorText;
 }
 
-class _AuthBackdrop extends StatelessWidget {
-  const _AuthBackdrop({required this.palette});
-
-  final _AuthPalette palette;
-
+class _ModeCaption extends StatelessWidget {
+  const _ModeCaption({
+    required this.progress,
+    required this.compact,
+    required this.color,
+  });
+  final double progress;
+  final bool compact;
+  final Color color;
   @override
   Widget build(BuildContext context) {
-    return IgnorePointer(
+    final style = TextStyle(
+      fontFamily: 'OnboardingPoppins',
+      fontSize: compact ? 21 : 25,
+      height: 1.2,
+      fontWeight: FontWeight.w600,
+      color: color,
+      letterSpacing: -0.5,
+    );
+    return SizedBox(
+      height: MediaQuery.textScalerOf(context).scale(compact ? 26 : 31),
       child: Stack(
+        alignment: Alignment.center,
         children: [
-          Positioned(
-            top: -90,
-            right: -70,
-            child: _SoftOrb(
-              size: 210,
-              color: palette.decorative.withValues(alpha: 0.34),
+          if (progress < 1)
+            Opacity(
+              opacity: (1 - 2 * progress).clamp(0.0, 1.0),
+              child: Transform.translate(
+                offset: Offset(0, -8 * progress),
+                child: Text('Welcome back!', style: style),
+              ),
             ),
-          ),
-          Positioned(
-            top: 285,
-            left: -92,
-            child: _SoftOrb(
-              size: 170,
-              color: palette.nose.withValues(alpha: 0.11),
+          if (progress > 0)
+            Opacity(
+              opacity: (2 * progress - 1).clamp(0.0, 1.0),
+              child: Transform.translate(
+                offset: Offset(0, 8 * (1 - progress)),
+                child: Text('Hey, welcome!', style: style),
+              ),
             ),
-          ),
-          Positioned(
-            bottom: -95,
-            right: -75,
-            child: _SoftOrb(
-              size: 190,
-              color: palette.eye.withValues(alpha: 0.12),
-            ),
-          ),
         ],
       ),
     );
   }
 }
 
-class _SoftOrb extends StatelessWidget {
-  const _SoftOrb({required this.size, required this.color});
-
-  final double size;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-    );
-  }
-}
-
-class _AuthFace extends StatelessWidget {
-  const _AuthFace({
-    required this.animation,
+class _AuthPrivacyPolicyLink extends StatelessWidget {
+  const _AuthPrivacyPolicyLink({
+    required this.mode,
     required this.palette,
-    required this.reduceMotion,
-    required this.eyesClosed,
+    required this.onPressed,
   });
 
-  final Animation<double> animation;
+  final AuthScreenMode mode;
   final _AuthPalette palette;
-  final bool reduceMotion;
-  final bool eyesClosed;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      key: const Key('auth-face'),
-      container: true,
-      image: true,
-      label: 'Playful Kingdom Kids face',
-      value: eyesClosed
-          ? 'Eyes closed while password is being entered'
-          : 'Eyes open',
-      child: SizedBox(
-        height: 148,
-        child: TweenAnimationBuilder<double>(
-          key: const Key('auth-eye-closure-animation'),
-          tween: Tween<double>(begin: 0, end: eyesClosed ? 1 : 0),
-          duration: reduceMotion
-              ? Duration.zero
-              : Duration(milliseconds: eyesClosed ? 190 : 260),
-          curve: eyesClosed ? Curves.easeInCubic : Curves.easeOutCubic,
-          builder: (context, eyeClosure, _) {
-            return AnimatedBuilder(
-              animation: animation,
-              builder: (context, _) {
-                final progress = reduceMotion ? 0.5 : animation.value;
-                final gazeX = (progress - 0.5) * 0.76;
-                final gazeY = reduceMotion
-                    ? 0.16
-                    : 0.12 + math.sin(progress * math.pi) * 0.11;
-                final bob = reduceMotion
-                    ? 0.0
-                    : -3.5 * math.sin(progress * math.pi);
+    const prefix = '';
 
-                return Transform.translate(
-                  offset: Offset(0, bob),
-                  child: Stack(
-                    alignment: Alignment.topCenter,
-                    clipBehavior: Clip.none,
-                    children: [
-                      Positioned(
-                        top: 0,
-                        child: CustomPaint(
-                          size: const Size(54, 28),
-                          painter: _SquigglePainter(color: palette.foreground),
-                        ),
-                      ),
-                      Positioned(
-                        top: 34,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Transform.rotate(
-                              angle: -0.045,
-                              child: _AuthEye(
-                                palette: palette,
-                                gazeX: gazeX,
-                                gazeY: gazeY,
-                                closure: eyeClosure,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Transform.rotate(
-                              angle: 0.045,
-                              child: _AuthEye(
-                                palette: palette,
-                                gazeX: gazeX,
-                                gazeY: gazeY,
-                                closure: eyeClosure,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Positioned(
-                        top: 98,
-                        child: CustomPaint(
-                          size: const Size(29, 22),
-                          painter: _NosePainter(color: palette.nose),
-                        ),
-                      ),
-                      Positioned(
-                        top: 117,
-                        left: 74,
-                        child: _Cheek(color: palette.nose),
-                      ),
-                      Positioned(
-                        top: 117,
-                        right: 74,
-                        child: _Cheek(color: palette.nose),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            );
-          },
+    return TextButton(
+      key: const Key('auth-privacy-policy'),
+      onPressed: onPressed,
+      style: TextButton.styleFrom(
+        foregroundColor: palette.foreground,
+        minimumSize: const Size(48, 44),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      ),
+      child: Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(
+              text: prefix,
+              style: TextStyle(
+                color: palette.muted,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            TextSpan(
+              text: 'Privacy policy',
+              style: TextStyle(
+                color: palette.foreground,
+                fontWeight: FontWeight.w800,
+                decoration: TextDecoration.underline,
+                decorationColor: palette.foreground,
+              ),
+            ),
+          ],
+        ),
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          fontFamily: 'OnboardingPoppins',
+          fontSize: 12,
+          height: 1.3,
         ),
       ),
     );
   }
-}
-
-class _AuthEye extends StatelessWidget {
-  const _AuthEye({
-    required this.palette,
-    required this.gazeX,
-    required this.gazeY,
-    required this.closure,
-  });
-
-  final _AuthPalette palette;
-  final double gazeX;
-  final double gazeY;
-  final double closure;
-
-  @override
-  Widget build(BuildContext context) {
-    final openAmount = 1 - closure;
-    return SizedBox(
-      width: 92,
-      height: 82,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Opacity(
-            opacity: openAmount,
-            child: Transform.scale(
-              scaleY: 0.08 + openAmount * 0.92,
-              child: Container(
-                width: 92,
-                height: 82,
-                decoration: BoxDecoration(
-                  color: palette.eye,
-                  borderRadius: BorderRadius.circular(48),
-                  boxShadow: [
-                    BoxShadow(
-                      color: palette.pupil.withValues(alpha: 0.08),
-                      blurRadius: 0,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: Align(
-                  alignment: Alignment(gazeX, gazeY),
-                  child: Container(
-                    width: 30,
-                    height: 30,
-                    decoration: BoxDecoration(
-                      color: palette.pupil,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          Opacity(
-            opacity: closure,
-            child: Transform.scale(
-              scaleX: 0.72 + closure * 0.28,
-              child: CustomPaint(
-                key: const Key('auth-closed-eyelid'),
-                size: const Size(76, 25),
-                painter: _ClosedEyePainter(color: palette.pupil),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ClosedEyePainter extends CustomPainter {
-  const _ClosedEyePainter({required this.color});
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeWidth = 5;
-    final path = Path()
-      ..moveTo(3, size.height * 0.32)
-      ..quadraticBezierTo(
-        size.width / 2,
-        size.height * 0.9,
-        size.width - 3,
-        size.height * 0.32,
-      );
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(_ClosedEyePainter oldDelegate) =>
-      oldDelegate.color != color;
-}
-
-class _Cheek extends StatelessWidget {
-  const _Cheek({required this.color});
-
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 18,
-      height: 8,
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.42),
-        borderRadius: BorderRadius.circular(99),
-      ),
-    );
-  }
-}
-
-class _SquigglePainter extends CustomPainter {
-  const _SquigglePainter({required this.color});
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round
-      ..strokeWidth = 3.2;
-    final path = Path()
-      ..moveTo(2, size.height - 3)
-      ..cubicTo(7, 4, 14, 3, size.width / 2, size.height - 4)
-      ..cubicTo(size.width - 14, 3, size.width - 7, 4, size.width - 2, 12);
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(_SquigglePainter oldDelegate) =>
-      oldDelegate.color != color;
-}
-
-class _NosePainter extends CustomPainter {
-  const _NosePainter({required this.color});
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final path = Path()
-      ..moveTo(size.width / 2, size.height)
-      ..lineTo(0, 0)
-      ..quadraticBezierTo(size.width / 2, 5, size.width, 0)
-      ..close();
-    canvas.drawPath(path, Paint()..color = color);
-  }
-
-  @override
-  bool shouldRepaint(_NosePainter oldDelegate) => oldDelegate.color != color;
 }
 
 class _InlineModeLink extends StatelessWidget {
@@ -912,15 +780,30 @@ class _InlineModeLink extends StatelessWidget {
     final prefix = isRegister
         ? 'Already have an account? '
         : 'New to Kingdom Kids? ';
-    final action = isRegister ? 'Sign in' : 'Create account';
+    final action = isRegister ? 'Sign in' : 'Sign up';
 
     return TextButton(
       key: const Key('auth-mode-link'),
-      style: TextButton.styleFrom(
-        foregroundColor: palette.foreground,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-        minimumSize: const Size(48, 44),
-      ),
+      style:
+          TextButton.styleFrom(
+            foregroundColor: palette.foreground,
+            overlayColor: Colors.transparent,
+            splashFactory: NoSplash.splashFactory,
+            elevation: 0,
+            shadowColor: Colors.transparent,
+            surfaceTintColor: Colors.transparent,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+            minimumSize: const Size(48, 44),
+          ).copyWith(
+            side: WidgetStateProperty.resolveWith(
+              (states) =>
+                  states.contains(WidgetState.focused) &&
+                      FocusManager.instance.highlightMode ==
+                          FocusHighlightMode.traditional
+                  ? BorderSide(color: palette.focus, width: 1.5)
+                  : BorderSide.none,
+            ),
+          ),
       onPressed: () => onChanged(
         isRegister ? AuthScreenMode.login : AuthScreenMode.register,
       ),
@@ -946,7 +829,11 @@ class _InlineModeLink extends StatelessWidget {
           ],
         ),
         textAlign: TextAlign.center,
-        style: const TextStyle(fontSize: 13.5, height: 1.25),
+        style: const TextStyle(
+          fontFamily: 'OnboardingPoppins',
+          fontSize: 12.5,
+          height: 1.3,
+        ),
       ),
     );
   }
@@ -957,6 +844,7 @@ class _AuthTextField extends StatelessWidget {
     super.key,
     required this.controller,
     this.focusNode,
+    this.compact = false,
     required this.palette,
     required this.label,
     required this.hint,
@@ -966,10 +854,12 @@ class _AuthTextField extends StatelessWidget {
     this.suffixIcon,
     this.validator,
     this.onFieldSubmitted,
+    this.textInputAction = TextInputAction.next,
   });
 
   final TextEditingController controller;
   final FocusNode? focusNode;
+  final bool compact;
   final _AuthPalette palette;
   final String label;
   final String hint;
@@ -979,6 +869,7 @@ class _AuthTextField extends StatelessWidget {
   final Widget? suffixIcon;
   final FormFieldValidator<String>? validator;
   final ValueChanged<String>? onFieldSubmitted;
+  final TextInputAction textInputAction;
 
   @override
   Widget build(BuildContext context) {
@@ -990,43 +881,64 @@ class _AuthTextField extends StatelessWidget {
       obscureText: obscureText,
       enableSuggestions: !obscureText,
       autocorrect: !obscureText,
-      textInputAction: onFieldSubmitted == null
-          ? TextInputAction.next
-          : TextInputAction.done,
+      textInputAction: textInputAction,
+      scrollPadding: const EdgeInsets.fromLTRB(8, 12, 8, 24),
       validator: validator,
       onFieldSubmitted: onFieldSubmitted,
       cursorColor: palette.focus,
       style: TextStyle(
+        fontFamily: 'OnboardingPoppins',
         color: palette.fieldText,
         fontSize: 15,
         fontWeight: FontWeight.w600,
       ),
       decoration: InputDecoration(
         labelText: label,
-        hintText: hint,
+        floatingLabelBehavior: FloatingLabelBehavior.always,
         suffixIcon: suffixIcon,
         suffixIconColor: palette.fieldHint,
-        filled: true,
-        fillColor: palette.fieldFill,
+        filled: false,
         labelStyle: TextStyle(
+          fontFamily: 'OnboardingPoppins',
+          fontSize: 14,
+          height: 1.2,
           color: palette.fieldHint,
           fontWeight: FontWeight.w600,
         ),
-        floatingLabelStyle: TextStyle(
-          color: palette.focus,
-          fontWeight: FontWeight.w800,
+        floatingLabelStyle: WidgetStateTextStyle.resolveWith(
+          (states) => TextStyle(
+            fontFamily: 'OnboardingPoppins',
+            fontSize: 14,
+            height: 1.2,
+            color: states.contains(WidgetState.error)
+                ? palette.errorText
+                : palette.focus,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         hintStyle: TextStyle(
+          fontFamily: 'OnboardingPoppins',
           color: palette.fieldHint,
           fontWeight: FontWeight.w500,
         ),
-        errorStyle: TextStyle(
-          color: palette.errorText,
-          fontWeight: FontWeight.w700,
+        helperText: ' ',
+        helperStyle: const TextStyle(
+          fontFamily: 'OnboardingPoppins',
+          fontSize: 11.5,
+          height: 1.2,
         ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 20,
-          vertical: 16,
+        errorStyle: TextStyle(
+          fontFamily: 'OnboardingPoppins',
+          color: palette.errorText,
+          fontSize: 11.5,
+          height: 1.2,
+          fontWeight: FontWeight.w500,
+        ),
+        errorMaxLines: 2,
+        isDense: compact,
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: 4,
+          vertical: compact ? 0 : 12,
         ),
         border: _border(),
         enabledBorder: _border(),
@@ -1037,68 +949,27 @@ class _AuthTextField extends StatelessWidget {
     );
   }
 
-  OutlineInputBorder _border({
-    Color color = Colors.transparent,
-    double width = 1,
+  UnderlineInputBorder _border({
+    Color color = const Color(0xFFD8E2F4),
+    double width = 1.2,
   }) {
-    return OutlineInputBorder(
-      borderRadius: BorderRadius.circular(28),
+    return UnderlineInputBorder(
       borderSide: BorderSide(color: color, width: width),
     );
   }
 }
 
-class _ErrorNotice extends StatelessWidget {
-  const _ErrorNotice({required this.message, required this.palette});
-
-  final String message;
-  final _AuthPalette palette;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      liveRegion: true,
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: palette.errorBackground,
-          borderRadius: BorderRadius.circular(18),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(
-              Icons.info_outline_rounded,
-              color: palette.errorText,
-              size: 20,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                message,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: palette.errorText,
-                  fontWeight: FontWeight.w600,
-                  height: 1.35,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _ParentSafetyNote extends StatelessWidget {
-  const _ParentSafetyNote({required this.palette});
+  const _ParentSafetyNote({required this.palette, this.compact = false});
 
   final _AuthPalette palette;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      key: const Key('auth-parent-safety-note'),
+      padding: EdgeInsets.symmetric(horizontal: 14, vertical: compact ? 4 : 12),
       decoration: BoxDecoration(
         color: palette.fieldFill.withValues(alpha: 0.45),
         borderRadius: BorderRadius.circular(18),
@@ -1110,11 +981,12 @@ class _ParentSafetyNote extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Only parents sign in. Each child gets a separate profile—no child email or password needed.',
+              'Only parents sign in. Kids use profiles—no child email or password.',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontFamily: 'OnboardingPoppins',
                 color: palette.muted,
-                height: 1.4,
-                fontSize: 12.5,
+                height: 1.35,
+                fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),
             ),

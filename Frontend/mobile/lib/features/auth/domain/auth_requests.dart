@@ -37,6 +37,50 @@ class VerifyEmailRequest {
   };
 }
 
+class PasswordResetRequest {
+  const PasswordResetRequest({required this.email});
+
+  final String email;
+
+  Map<String, dynamic> toJson() => {'email': email.trim().toLowerCase()};
+}
+
+class PasswordResetVerifyRequest {
+  const PasswordResetVerifyRequest({
+    required this.challengeId,
+    required this.code,
+  });
+
+  final String challengeId;
+  final String code;
+
+  Map<String, dynamic> toJson() => {
+    'challenge_id': challengeId,
+    'code': code.trim(),
+  };
+}
+
+class PasswordResetConfirmRequest {
+  const PasswordResetConfirmRequest({
+    required this.challengeId,
+    required this.code,
+    required this.newPassword,
+    required this.newPasswordConfirmation,
+  });
+
+  final String challengeId;
+  final String code;
+  final String newPassword;
+  final String newPasswordConfirmation;
+
+  Map<String, dynamic> toJson() => {
+    'challenge_id': challengeId,
+    'code': code.trim(),
+    'new_password': newPassword,
+    'new_password_confirmation': newPasswordConfirmation,
+  };
+}
+
 class CreateKidProfileRequest {
   const CreateKidProfileRequest({
     required this.displayName,

@@ -8,8 +8,8 @@ class ParentAccount {
 
   factory ParentAccount.fromJson(Map<String, dynamic> json) {
     return ParentAccount(
-      id: json['id'].toString(),
-      email: (json['email'] ?? '').toString(),
+      id: _requiredString(json['id']),
+      email: _requiredString(json['email']).toLowerCase(),
       firstName: _nullableString(json['first_name'] ?? json['firstName']),
     );
   }
@@ -27,6 +27,11 @@ class ParentAccount {
       firstName: firstName ?? this.firstName,
     );
   }
+}
+
+String _requiredString(Object? value) {
+  final result = value?.toString().trim() ?? '';
+  return result == 'null' ? '' : result;
 }
 
 String? _nullableString(Object? value) {

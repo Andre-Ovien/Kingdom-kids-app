@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
+import '../../../app/app_route_observer.dart';
 import '../../../app/router.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../shared/widgets/liquid_glass.dart';
@@ -12,7 +15,10 @@ import '../../auth/presentation/session_expiry_navigation.dart';
 import '../../parental_controls/data/parental_controls_repository.dart';
 import '../../parental_controls/domain/parent_settings.dart';
 import '../data/story_repository.dart';
+import '../data/story_reading_bookmark_store.dart';
+import '../domain/story_availability.dart';
 import '../domain/story_detail.dart';
+import '../domain/story_reading_bookmark.dart';
 import 'story_cover_image.dart';
 
 class StoryDetailScreen extends StatefulWidget {
@@ -22,22 +28,44 @@ class StoryDetailScreen extends StatefulWidget {
     this.repository,
     this.authRepository,
     this.settingsRepository,
+    this.bookmarkStore,
+    this.resumeReading = false,
   });
 
   final StoryDetail story;
   final StoryRepository? repository;
   final AuthRepository? authRepository;
   final ParentalControlsRepository? settingsRepository;
+  final StoryReadingBookmarkStore? bookmarkStore;
+  final bool resumeReading;
 
   @override
   State<StoryDetailScreen> createState() => _StoryDetailScreenState();
 }
 
-class _StoryDetailScreenState extends State<StoryDetailScreen> {
+class _StoryDetailScreenState extends State<StoryDetailScreen>
+    with WidgetsBindingObserver, RouteAware {
   late StoryDetail _story;
   late final StoryRepository _repository;
   late final AuthRepository _authRepository;
   late final ParentalControlsRepository _settingsRepository;
+  late final StoryReadingBookmarkStore _bookmarkStore;
+  final ScrollController _scrollController = ScrollController();
+  final GlobalKey _bodyKey = GlobalKey();
+  ModalRoute<dynamic>? _observedRoute;
+  Timer? _bookmarkTimer;
+  StoryReadingBookmark? _savedBookmark;
+  bool _bookmarkMetadataResolved = false;
+  bool _preferencesResolved = false;
+  bool _resumeApplied = false;
+  bool _routeIsActive = true;
+  bool _userScrolling = false;
+  bool _bookmarkDirty = false;
+  bool _bookmarkFinished = false;
+  bool _captureScheduled = false;
+  bool _flushAfterCapture = false;
+  int _textOffset = 0;
+  DateTime? _lastReadingInteraction;
   KidProfile? _activeProfile;
   ParentSettings? _readerSettings;
   String? _syncMessage;
@@ -46,7 +74,13 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _story = widget.story;
+    _story = isStoryAvailable(widget.story.slug)
+        ? widget.story
+        : StoryDetail.unavailable;
+    if (!isStoryAvailable(widget.story.slug)) {
+      _syncMessage =
+          'This story is no longer in the library. Choose another adventure.';
+    }
     _authRepository = widget.authRepository ?? AuthRepository();
     _repository =
         widget.repository ??
@@ -54,6 +88,8 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
     _settingsRepository =
         widget.settingsRepository ??
         RemoteParentalControlsRepository(authRepository: _authRepository);
+    _bookmarkStore = widget.bookmarkStore ?? SecureStoryReadingBookmarkStore();
+    WidgetsBinding.instance.addObserver(this);
     _isLoading = _story.slug.isNotEmpty;
     _loadStory();
     _loadActiveProfile();
@@ -68,6 +104,7 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
         });
       }
       if (profile == null) return;
+      unawaited(_refreshBookmarkMetadata());
       try {
         final settings = await _settingsRepository.fetchSettings(
           profileId: profile.id,
@@ -83,6 +120,229 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
       }
     } catch (_) {
       // A saved preview remains readable before a profile is selected.
+    } finally {
+      _preferencesResolved = true;
+      _scheduleResume();
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (!identical(route, _observedRoute)) {
+      if (_observedRoute != null) appRouteObserver.unsubscribe(this);
+      _observedRoute = route;
+      if (route != null) appRouteObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void didPushNext() {
+    unawaited(_saveBookmark());
+    _routeIsActive = false;
+    _userScrolling = false;
+  }
+
+  @override
+  void didPopNext() {
+    _routeIsActive = true;
+    _bookmarkDirty = false;
+    _userScrolling = false;
+    // A narrated session above this page may have advanced or completed. Its
+    // newer cursor/coverage must not be replaced by this page's old viewport.
+    unawaited(_refreshBookmarkMetadata());
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) {
+      unawaited(_saveBookmark());
+      _userScrolling = false;
+    }
+  }
+
+  Future<bool> _scopeStillActive(KidProfile profile) async {
+    final session = await _authRepository.restoreSession();
+    final selected = await _authRepository.currentKid();
+    return session?.parent.id == profile.parentId &&
+        selected?.id == profile.id &&
+        selected?.parentId == profile.parentId;
+  }
+
+  Future<void> _refreshBookmarkMetadata() async {
+    final profile = _activeProfile;
+    if (profile == null || profile.parentId.isEmpty) return;
+    try {
+      if (!await _scopeStillActive(profile)) return;
+      final bookmarks = await _bookmarkStore.readAll(
+        parentId: profile.parentId,
+        profileId: profile.id,
+      );
+      if (!mounted || _activeProfile?.id != profile.id) return;
+      _savedBookmark = null;
+      for (final saved in bookmarks) {
+        if (saved.isForStory(_story)) {
+          _savedBookmark = saved;
+          break;
+        }
+      }
+    } catch (_) {
+      // The story is readable even when local storage is unavailable.
+    } finally {
+      _bookmarkMetadataResolved = true;
+      _scheduleResume();
+    }
+  }
+
+  void _scheduleResume() {
+    if (!mounted ||
+        !widget.resumeReading ||
+        _resumeApplied ||
+        !_preferencesResolved ||
+        !_bookmarkMetadataResolved ||
+        _isLoading ||
+        _story.body.isEmpty) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _resumeApplied || !_scrollController.hasClients) return;
+      final paragraph = _bodyKey.currentContext?.findRenderObject();
+      if (paragraph is! RenderParagraph || !paragraph.attached) return;
+      final offset = _savedBookmark?.resumeOffsetFor(_story) ?? 0;
+      final caret = paragraph.getOffsetForCaret(
+        TextPosition(offset: offset),
+        Rect.zero,
+      );
+      final top = MediaQuery.paddingOf(context).top + 72;
+      final target =
+          _scrollController.offset + paragraph.localToGlobal(caret).dy - top;
+      _resumeApplied = true;
+      _textOffset = offset;
+      _scrollController.jumpTo(
+        target.clamp(0.0, _scrollController.position.maxScrollExtent),
+      );
+    });
+    WidgetsBinding.instance.scheduleFrame();
+  }
+
+  bool _onReadingScroll(ScrollNotification notification) {
+    if (!_routeIsActive || notification.depth != 0) return false;
+    if (notification is ScrollStartNotification &&
+        notification.dragDetails != null) {
+      _userScrolling = true;
+      _resumeApplied = true;
+    }
+    if (notification is ScrollUpdateNotification && _userScrolling) {
+      _scheduleReadingCapture();
+    }
+    if (notification is ScrollEndNotification && _userScrolling) {
+      _userScrolling = false;
+      _scheduleReadingCapture(flush: true);
+    }
+    return false;
+  }
+
+  void _scheduleReadingCapture({bool flush = false}) {
+    _flushAfterCapture |= flush;
+    if (_captureScheduled) return;
+    _captureScheduled = true;
+    // Scroll notifications arrive before the viewport has laid out its new
+    // offset. Measure the visible text after that frame, not its old position.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _captureScheduled = false;
+      final shouldFlush = _flushAfterCapture;
+      _flushAfterCapture = false;
+      if (!mounted || !_routeIsActive) return;
+      _captureReadingPosition();
+      if (shouldFlush) unawaited(_saveBookmark());
+    });
+    WidgetsBinding.instance.scheduleFrame();
+  }
+
+  void _captureReadingPosition() {
+    if (_story.id.isEmpty || !isStoryAvailable(_story.slug)) return;
+    final paragraph = _bodyKey.currentContext?.findRenderObject();
+    if (paragraph is! RenderParagraph || !paragraph.attached) return;
+    final padding = MediaQuery.paddingOf(context);
+    final top = padding.top + 72;
+    final bottom = MediaQuery.sizeOf(context).height - padding.bottom;
+    final bodyTop = paragraph.localToGlobal(Offset.zero).dy;
+    final bodyBottom = bodyTop + paragraph.size.height;
+    if (bodyTop >= bottom || bodyBottom <= top) return;
+    final localTop = (top - bodyTop).clamp(0.0, paragraph.size.height);
+    _textOffset = paragraph
+        .getPositionForOffset(Offset(0, localTop))
+        .offset
+        .clamp(0, _story.body.length - 1);
+    _bookmarkFinished = bodyBottom <= bottom;
+    _bookmarkDirty = true;
+    _lastReadingInteraction = DateTime.now().toUtc();
+    _bookmarkTimer ??= Timer(const Duration(seconds: 5), () {
+      _bookmarkTimer = null;
+      unawaited(_saveBookmark());
+    });
+  }
+
+  Future<void> _saveBookmark() async {
+    _bookmarkTimer?.cancel();
+    _bookmarkTimer = null;
+    final profile = _activeProfile;
+    if (!_bookmarkDirty ||
+        !_routeIsActive ||
+        profile == null ||
+        profile.parentId.isEmpty ||
+        _story.id.isEmpty ||
+        _story.body.isEmpty ||
+        !isStoryAvailable(_story.slug)) {
+      return;
+    }
+    _bookmarkDirty = false;
+    final story = _story;
+    final finished = _bookmarkFinished;
+    final offset = _textOffset;
+    final updatedAt = _lastReadingInteraction ?? DateTime.now().toUtc();
+    try {
+      if (!await _scopeStillActive(profile)) return;
+      // Read the latest coverage even if the page's initial bookmark lookup
+      // was still in flight when the child began scrolling.
+      final saved = await _bookmarkStore.readAll(
+        parentId: profile.parentId,
+        profileId: profile.id,
+      );
+      StoryReadingBookmark? previous;
+      for (final bookmark in saved) {
+        if (bookmark.isForStory(story)) {
+          previous = bookmark;
+          break;
+        }
+      }
+      if (previous != null && previous.updatedAt.isAfter(updatedAt)) return;
+      final bookmark = StoryReadingBookmark.forStory(
+        story: story,
+        textOffset: offset,
+        updatedAt: updatedAt,
+        readingMode: StoryReadingMode.read,
+        heardRanges: previous?.hasCurrentBody(story) == true
+            ? previous!.heardRanges
+            : const [],
+      );
+      if (finished) {
+        await _bookmarkStore.remove(
+          parentId: profile.parentId,
+          profileId: profile.id,
+          storyId: story.id,
+        );
+      } else {
+        await _bookmarkStore.save(
+          parentId: profile.parentId,
+          profileId: profile.id,
+          bookmark: bookmark,
+        );
+        _savedBookmark = bookmark;
+      }
+    } catch (_) {
+      // Bookmark failures never prevent reading or navigating away.
     }
   }
 
@@ -97,7 +357,7 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
         setState(() {
           _story = story;
           _syncMessage = story.body.trim().isEmpty
-              ? 'The full story is not available from the server yet.'
+              ? 'This story adventure is still being prepared. Please check back soon.'
               : null;
         });
       }
@@ -110,7 +370,7 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
       if (mounted) {
         setState(() {
           _syncMessage = _story.body.isEmpty
-              ? error.message
+              ? error.userMessage
               : 'Showing the saved preview. Connect to refresh this story and its voices.';
         });
       }
@@ -125,12 +385,15 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
+        _scheduleResume();
       }
     }
   }
 
-  void _openReadAlong() {
+  Future<void> _openReadAlong() async {
     if (_story.body.trim().isEmpty) return;
+    await _saveBookmark();
+    if (!mounted || !_routeIsActive) return;
     Navigator.of(
       context,
     ).pushNamed(AppRoutes.storyReadAlong, arguments: _story);
@@ -141,95 +404,106 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
     final viewPadding = MediaQuery.paddingOf(context);
     final hasFullStory = _story.body.trim().isNotEmpty;
 
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: _detailOverlayStyle(context),
-      child: Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        body: Stack(
-          children: [
-            CustomScrollView(
-              key: const Key('story-detail-scroll'),
-              slivers: [
-                SliverPadding(
-                  padding: EdgeInsets.fromLTRB(
-                    24,
-                    viewPadding.top,
-                    24,
-                    viewPadding.bottom + 36,
-                  ),
-                  sliver: SliverList.list(
-                    children: [
-                      _StoryIntro(story: _story),
-                      if (_isLoading && _story.body.isEmpty) ...[
-                        const LinearProgressIndicator(
-                          minHeight: 2,
-                          color: Color(0xFFFF7043),
-                        ),
-                        const SizedBox(height: 15),
-                      ],
-                      if (_syncMessage != null) ...[
-                        _StorySyncNotice(
-                          message: _syncMessage!,
-                          isBlocking: !hasFullStory,
-                          onRetry: _loadStory,
-                        ),
-                        const SizedBox(height: 17),
-                      ],
-                      _StoryTextHeader(
-                        story: _story,
-                        label: hasFullStory ? 'The story' : 'Summary',
+    // The intro glow extends beyond its layout. A viewport skips clipping when
+    // all content fits, so contain the page during native push/pop transitions.
+    return ClipRect(
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: _detailOverlayStyle(context),
+        child: Scaffold(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          body: Stack(
+            children: [
+              NotificationListener<ScrollNotification>(
+                onNotification: _onReadingScroll,
+                child: CustomScrollView(
+                  key: const Key('story-detail-scroll'),
+                  controller: _scrollController,
+                  slivers: [
+                    SliverPadding(
+                      padding: EdgeInsets.fromLTRB(
+                        24,
+                        viewPadding.top,
+                        24,
+                        viewPadding.bottom + 36,
                       ),
-                      const SizedBox(height: 15),
-                      if (hasFullStory)
-                        Text(
-                          _story.body,
-                          key: const Key('story-reading-text'),
-                          style: Theme.of(context).textTheme.bodyLarge
-                              ?.copyWith(
-                                color: _mutedText(context),
-                                fontSize: 16 * _storyTextScaleMultiplier,
-                                height: 1.68,
-                                letterSpacing: 0,
+                      sliver: SliverList.list(
+                        children: [
+                          _StoryIntro(story: _story),
+                          if (_isLoading && _story.body.isEmpty) ...[
+                            const LinearProgressIndicator(
+                              minHeight: 2,
+                              color: Color(0xFFFF7043),
+                            ),
+                            const SizedBox(height: 15),
+                          ],
+                          if (_syncMessage != null) ...[
+                            _StorySyncNotice(
+                              message: _syncMessage!,
+                              isBlocking: !hasFullStory,
+                              onRetry: _loadStory,
+                            ),
+                            const SizedBox(height: 17),
+                          ],
+                          _StoryTextHeader(
+                            story: _story,
+                            label: hasFullStory ? 'The story' : 'Summary',
+                          ),
+                          const SizedBox(height: 15),
+                          if (hasFullStory)
+                            KeyedSubtree(
+                              key: _bodyKey,
+                              child: Text(
+                                _story.body,
+                                key: const Key('story-reading-text'),
+                                style: Theme.of(context).textTheme.bodyLarge
+                                    ?.copyWith(
+                                      color: _mutedText(context),
+                                      fontSize: 16 * _storyTextScaleMultiplier,
+                                      height: 1.68,
+                                      letterSpacing: 0,
+                                    ),
                               ),
-                        )
-                      else ...[
-                        if (_story.summary.trim().isNotEmpty) ...[
-                          Text(
-                            _story.summary,
-                            key: const Key('story-summary-text'),
-                            style: Theme.of(context).textTheme.bodyLarge
-                                ?.copyWith(
-                                  color: _mutedText(context),
-                                  fontSize: 16 * _storyTextScaleMultiplier,
-                                  height: 1.68,
-                                  letterSpacing: 0,
-                                ),
-                          ),
-                          const SizedBox(height: 18),
+                            )
+                          else ...[
+                            if (_story.summary.trim().isNotEmpty) ...[
+                              Text(
+                                _story.summary,
+                                key: const Key('story-summary-text'),
+                                style: Theme.of(context).textTheme.bodyLarge
+                                    ?.copyWith(
+                                      color: _mutedText(context),
+                                      fontSize: 16 * _storyTextScaleMultiplier,
+                                      height: 1.68,
+                                      letterSpacing: 0,
+                                    ),
+                              ),
+                              const SizedBox(height: 18),
+                            ],
+                            if (_syncMessage == null)
+                              _MissingStoryBody(
+                                isLoading: _isLoading,
+                                canRetry: _story.slug.isNotEmpty,
+                                onRetry: _loadStory,
+                              ),
+                          ],
                         ],
-                        if (_syncMessage == null)
-                          _MissingStoryBody(
-                            isLoading: _isLoading,
-                            canRetry: _story.slug.isNotEmpty,
-                            onRetry: _loadStory,
-                          ),
-                      ],
-                    ],
-                  ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            Positioned(
-              top: viewPadding.top,
-              left: 24,
-              right: 24,
-              child: _StoryDetailTopBar(
-                readAlongEnabled: hasFullStory,
-                isLoading: _isLoading && !hasFullStory,
-                onReadAlongPressed: _openReadAlong,
               ),
-            ),
-          ],
+              Positioned(
+                top: viewPadding.top,
+                left: 24,
+                right: 24,
+                child: _StoryDetailTopBar(
+                  readAlongEnabled: hasFullStory,
+                  isLoading: _isLoading && !hasFullStory,
+                  onReadAlongPressed: _openReadAlong,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -241,6 +515,16 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
         StoryTextScale.extraLarge => 1.4,
         _ => 1,
       };
+
+  @override
+  void dispose() {
+    unawaited(_saveBookmark());
+    _bookmarkTimer?.cancel();
+    if (_observedRoute != null) appRouteObserver.unsubscribe(this);
+    WidgetsBinding.instance.removeObserver(this);
+    _scrollController.dispose();
+    super.dispose();
+  }
 }
 
 class _StoryIntro extends StatelessWidget {
