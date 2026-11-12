@@ -1,0 +1,76 @@
+{
+  "1": {
+    "mode": "wise_builders",
+    "builders": {
+      "houses": [
+        {
+          "id": "house-a",
+          "label": "Little house"
+        },
+        {
+          "id": "house-b",
+          "label": "Garden house"
+        }
+      ],
+      "parts": [
+        "back-wall",
+        "left-wall",
+        "right-wall",
+        "front-wall",
+        "roof"
+      ],
+      "storm": "rain",
+      "target_moves": 14
+    }
+  },
+  "2": {
+    "mode": "wise_builders",
+    "builders": {
+      "houses": [
+        {
+          "id": "house-a",
+          "label": "Little house"
+        },
+        {
+          "id": "house-b",
+          "label": "Garden house"
+        }
+      ],
+      "parts": [
+        "back-wall",
+        "left-wall",
+        "right-wall",
+        "front-wall",
+        "roof",
+        "brace"
+      ],
+      "storm": "wind",
+      "target_moves": 16
+    }
+  },
+  "3": {
+    "mode": "wise_builders",
+    "builders": {
+      "houses": [
+        {
+          "id": "house-a",
+          "label": "Little house"
+        },
+        {
+          "id": "house-b",
+          "label": "Garden house"
+        }
+      ],
+      "parts": [
+        "back-wall",
+        "left-wall",
+        "right-wall",
+        "front-wall",
+        "roof",
+        "brace"
+      ],
+      "storm": "rain_and_wind",
+      "target_moves": 16
+    }
+  }
+}

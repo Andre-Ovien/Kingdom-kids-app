@@ -1,0 +1,24 @@
+{
+  "checkedFootSamples": 10272,
+  "method": "Actual water_point/FFT field and render camera, 24 phases",
+  "fullDryPolygonFootMinMargin": 0.018471000000000015,
+  "seaFeetOutsideFullPolygon": true,
+  "animatedClosedShoreScreenYRange": [
+    0.745,
+    0.745
+  ],
+  "mosesFeetNormalized": [
+    0.265,
+    0.765
+  ],
+  "mosesDryClearanceY": 0.020000000000000018,
+  "staffContactNormalized": [
+    0.294,
+    0.743
+  ],
+  "closedTopEdgeYAtStaffContact": 0.745,
+  "staffOnSeaSideOfTopEdge": true,
+  "staffContactTopEdgeClearancePixelsAt844": 1.6880000000000015,
+  "oceanSurfaceLevel": 0.0,
+  "deepSeabedLevel": -24.0
+}

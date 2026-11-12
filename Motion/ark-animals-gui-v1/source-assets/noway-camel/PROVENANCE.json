@@ -1,0 +1,11 @@
+{
+  "asset": "camel.blend",
+  "author": "noway",
+  "publisher_page": "https://opengameart.org/content/camel-basemesh",
+  "download_url": "https://opengameart.org/sites/default/files/camel.blend",
+  "license": "CC0 1.0",
+  "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "sha256": "beb93a522d8e956ae93ab5d1ed95410f41d6b7d20639ece269456fced69ccfb2",
+  "bytes": 516700,
+  "inspection_note": "unrigged camel anatomical base; needs rigging and material work; downloaded as data only, no Blender execution."
+}

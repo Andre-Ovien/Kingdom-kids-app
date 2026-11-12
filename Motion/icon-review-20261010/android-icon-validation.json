@@ -1,0 +1,89 @@
+{
+  "source": "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/Frontend/mobile/assets/images/branding/kingdom-kids-car-icon-v1.png",
+  "source_dimensions": [
+    1254,
+    1254
+  ],
+  "aspect_ratio_preserved": true,
+  "ios_unchanged": true,
+  "adaptive_inset_percent": 16,
+  "obsolete_monochrome_removed": true,
+  "resources": [
+    {
+      "density": "mdpi",
+      "legacy": [
+        48,
+        48
+      ],
+      "adaptive": [
+        108,
+        108
+      ],
+      "round": [
+        48,
+        48
+      ]
+    },
+    {
+      "density": "hdpi",
+      "legacy": [
+        72,
+        72
+      ],
+      "adaptive": [
+        162,
+        162
+      ],
+      "round": [
+        72,
+        72
+      ]
+    },
+    {
+      "density": "xhdpi",
+      "legacy": [
+        96,
+        96
+      ],
+      "adaptive": [
+        216,
+        216
+      ],
+      "round": [
+        96,
+        96
+      ]
+    },
+    {
+      "density": "xxhdpi",
+      "legacy": [
+        144,
+        144
+      ],
+      "adaptive": [
+        324,
+        324
+      ],
+      "round": [
+        144,
+        144
+      ]
+    },
+    {
+      "density": "xxxhdpi",
+      "legacy": [
+        192,
+        192
+      ],
+      "adaptive": [
+        432,
+        432
+      ],
+      "round": [
+        192,
+        192
+      ]
+    }
+  ],
+  "preview": "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/Motion/icon-review-20261010/icon-mask-review.png"
+}

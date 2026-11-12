@@ -1,0 +1,397 @@
+{
+  "1": {
+    "commands": [
+      {
+        "op": "place",
+        "piece_id": "light-1",
+        "cell": 0
+      },
+      {
+        "op": "advance",
+        "day": 1
+      },
+      {
+        "op": "place",
+        "piece_id": "cloud-1",
+        "cell": 1
+      },
+      {
+        "op": "advance",
+        "day": 2
+      },
+      {
+        "op": "place",
+        "piece_id": "water-1",
+        "cell": 0
+      },
+      {
+        "op": "place",
+        "piece_id": "water-2",
+        "cell": 5
+      },
+      {
+        "op": "place",
+        "piece_id": "water-3",
+        "cell": 10
+      },
+      {
+        "op": "place",
+        "piece_id": "water-4",
+        "cell": 15
+      },
+      {
+        "op": "place",
+        "piece_id": "water-5",
+        "cell": 1
+      },
+      {
+        "op": "place",
+        "piece_id": "water-6",
+        "cell": 2
+      },
+      {
+        "op": "place",
+        "piece_id": "land-1",
+        "cell": 3
+      },
+      {
+        "op": "place",
+        "piece_id": "land-2",
+        "cell": 4
+      },
+      {
+        "op": "place",
+        "piece_id": "land-3",
+        "cell": 8
+      },
+      {
+        "op": "place",
+        "piece_id": "land-4",
+        "cell": 9
+      },
+      {
+        "op": "place",
+        "piece_id": "land-5",
+        "cell": 13
+      },
+      {
+        "op": "place",
+        "piece_id": "land-6",
+        "cell": 14
+      },
+      {
+        "op": "place",
+        "piece_id": "land-7",
+        "cell": 18
+      },
+      {
+        "op": "place",
+        "piece_id": "land-8",
+        "cell": 19
+      },
+      {
+        "op": "place",
+        "piece_id": "forest-1",
+        "cell": 6
+      },
+      {
+        "op": "place",
+        "piece_id": "forest-2",
+        "cell": 11
+      },
+      {
+        "op": "advance",
+        "day": 3
+      }
+    ],
+    "elapsed_seconds": 120
+  },
+  "2": {
+    "commands": [
+      {
+        "op": "place",
+        "piece_id": "light-1",
+        "cell": 0
+      },
+      {
+        "op": "advance",
+        "day": 1
+      },
+      {
+        "op": "place",
+        "piece_id": "cloud-1",
+        "cell": 1
+      },
+      {
+        "op": "advance",
+        "day": 2
+      },
+      {
+        "op": "place",
+        "piece_id": "water-1",
+        "cell": 0
+      },
+      {
+        "op": "place",
+        "piece_id": "water-2",
+        "cell": 5
+      },
+      {
+        "op": "place",
+        "piece_id": "water-3",
+        "cell": 10
+      },
+      {
+        "op": "place",
+        "piece_id": "water-4",
+        "cell": 15
+      },
+      {
+        "op": "place",
+        "piece_id": "water-5",
+        "cell": 1
+      },
+      {
+        "op": "place",
+        "piece_id": "water-6",
+        "cell": 2
+      },
+      {
+        "op": "place",
+        "piece_id": "land-1",
+        "cell": 3
+      },
+      {
+        "op": "place",
+        "piece_id": "land-2",
+        "cell": 4
+      },
+      {
+        "op": "place",
+        "piece_id": "land-3",
+        "cell": 8
+      },
+      {
+        "op": "place",
+        "piece_id": "land-4",
+        "cell": 9
+      },
+      {
+        "op": "place",
+        "piece_id": "land-5",
+        "cell": 13
+      },
+      {
+        "op": "place",
+        "piece_id": "land-6",
+        "cell": 14
+      },
+      {
+        "op": "place",
+        "piece_id": "land-7",
+        "cell": 18
+      },
+      {
+        "op": "place",
+        "piece_id": "land-8",
+        "cell": 19
+      },
+      {
+        "op": "place",
+        "piece_id": "forest-1",
+        "cell": 6
+      },
+      {
+        "op": "place",
+        "piece_id": "forest-2",
+        "cell": 11
+      },
+      {
+        "op": "advance",
+        "day": 3
+      },
+      {
+        "op": "place",
+        "piece_id": "sun-1",
+        "cell": 2
+      },
+      {
+        "op": "place",
+        "piece_id": "moon-1",
+        "cell": 3
+      },
+      {
+        "op": "advance",
+        "day": 4
+      },
+      {
+        "op": "place",
+        "piece_id": "fish-1",
+        "cell": 5
+      },
+      {
+        "op": "place",
+        "piece_id": "bird-1",
+        "cell": 6
+      },
+      {
+        "op": "advance",
+        "day": 5
+      }
+    ],
+    "elapsed_seconds": 120
+  },
+  "3": {
+    "commands": [
+      {
+        "op": "place",
+        "piece_id": "light-1",
+        "cell": 0
+      },
+      {
+        "op": "advance",
+        "day": 1
+      },
+      {
+        "op": "place",
+        "piece_id": "cloud-1",
+        "cell": 1
+      },
+      {
+        "op": "advance",
+        "day": 2
+      },
+      {
+        "op": "place",
+        "piece_id": "water-1",
+        "cell": 0
+      },
+      {
+        "op": "place",
+        "piece_id": "water-2",
+        "cell": 5
+      },
+      {
+        "op": "place",
+        "piece_id": "water-3",
+        "cell": 10
+      },
+      {
+        "op": "place",
+        "piece_id": "water-4",
+        "cell": 15
+      },
+      {
+        "op": "place",
+        "piece_id": "water-5",
+        "cell": 1
+      },
+      {
+        "op": "place",
+        "piece_id": "water-6",
+        "cell": 2
+      },
+      {
+        "op": "place",
+        "piece_id": "land-1",
+        "cell": 3
+      },
+      {
+        "op": "place",
+        "piece_id": "land-2",
+        "cell": 4
+      },
+      {
+        "op": "place",
+        "piece_id": "land-3",
+        "cell": 8
+      },
+      {
+        "op": "place",
+        "piece_id": "land-4",
+        "cell": 9
+      },
+      {
+        "op": "place",
+        "piece_id": "land-5",
+        "cell": 13
+      },
+      {
+        "op": "place",
+        "piece_id": "land-6",
+        "cell": 14
+      },
+      {
+        "op": "place",
+        "piece_id": "land-7",
+        "cell": 18
+      },
+      {
+        "op": "place",
+        "piece_id": "land-8",
+        "cell": 19
+      },
+      {
+        "op": "place",
+        "piece_id": "forest-1",
+        "cell": 6
+      },
+      {
+        "op": "place",
+        "piece_id": "forest-2",
+        "cell": 11
+      },
+      {
+        "op": "advance",
+        "day": 3
+      },
+      {
+        "op": "place",
+        "piece_id": "sun-1",
+        "cell": 2
+      },
+      {
+        "op": "place",
+        "piece_id": "moon-1",
+        "cell": 3
+      },
+      {
+        "op": "advance",
+        "day": 4
+      },
+      {
+        "op": "place",
+        "piece_id": "fish-1",
+        "cell": 5
+      },
+      {
+        "op": "place",
+        "piece_id": "bird-1",
+        "cell": 6
+      },
+      {
+        "op": "advance",
+        "day": 5
+      },
+      {
+        "op": "place",
+        "piece_id": "goat-1",
+        "cell": 3
+      },
+      {
+        "op": "place",
+        "piece_id": "rabbit-1",
+        "cell": 19
+      },
+      {
+        "op": "advance",
+        "day": 6
+      },
+      {
+        "op": "advance",
+        "day": 7
+      }
+    ],
+    "elapsed_seconds": 120
+  }
+}

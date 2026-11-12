@@ -1,0 +1,10 @@
+{
+  "Frontend/mobile/ios/Runner/AppDelegate.swift": {
+    "archive": "AppDelegate.swift.txt",
+    "sha256": "cb006a8f29873a27f090f66f873d804f829e67a21802bd5a8fddff35ab3e2f99"
+  },
+  "Frontend/mobile/ios/Runner.xcodeproj/project.pbxproj": {
+    "archive": "project.pbxproj.txt",
+    "sha256": "aa3d3bfa27c43b61c2770b94bf92c8c29ad3065ffa8c89bf780859a8249cc7e3"
+  }
+}

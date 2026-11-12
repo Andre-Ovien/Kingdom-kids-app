@@ -1,0 +1,23 @@
+// Device-review entry point. Normal builds continue to use lib/main.dart.
+import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
+import 'package:mobile/core/storage/secure_storage.dart';
+import 'package:mobile/features/auth/data/auth_session_store.dart';
+import 'package:mobile/main.dart' as production;
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // A release build must never reset a family's installation state.
+  if (!kReleaseMode) {
+    const reviewKey =
+        'kingdom_kids.first_launch_review.20261108.native_photo_first_two';
+    if (await kingdomKidsSecureStorage.read(key: reviewKey) != '1') {
+      // Reset only the local sign-in and welcome flag for the authorized
+      // review. Account records, earned progress and story bookmarks remain.
+      await SecureAuthSessionStore().clear();
+      await kingdomKidsSecureStorage.delete(key: 'kingdom_kids.has_launched');
+      await kingdomKidsSecureStorage.write(key: reviewKey, value: '1');
+    }
+  }
+  production.main();
+}

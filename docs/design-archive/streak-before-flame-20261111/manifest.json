@@ -1,0 +1,18 @@
+{
+  "archivedAt": "2026-11-11T14:15:13.350419+00:00",
+  "reason": "Restorable original streak design before the user-approved V3 light background / orange animated flame integration.",
+  "sourceCommit": "a71f992663f30a31b05adf806e5a860df96d7bb0",
+  "files": {
+    "streak_screen.dart.txt": {
+      "originalPath": "Frontend/mobile/lib/features/streak/presentation/streak_screen.dart",
+      "sha256": "fcd42bb3b4649a9584bae9ebbccd96fc39136fbb0f5822b970f64acfbbcaff5b"
+    },
+    "streak_screen_test.dart.txt": {
+      "originalPath": "Frontend/mobile/test/streak_screen_test.dart",
+      "sha256": "6986c8fb1b6f12e477c7687aa635102050c7c0ffa2b3e857e6f9ce8c93da9b0d"
+    }
+  },
+  "untouchedDependencies": [
+    "kid_character_pose.dart and bundled character artwork remain in the app for other screens; no streak API, claim, repository, reminder, session or storage changes are part of this UI replacement."
+  ]
+}

@@ -1,0 +1,12 @@
+--- before/Frontend/mobile/test/widget_test.dart
++++ Frontend/mobile/test/widget_test.dart
+@@ -66,7 +66,8 @@
+     await tester.pump(const Duration(seconds: 1));
+ 
+     expect(find.text('Ready to play?'), findsOneWidget);
+-    expect(find.byKey(const Key('games-header-icon')), findsOneWidget);
++    expect(find.byKey(const Key('games-header-icon')), findsNothing);
++    expect(find.byKey(const Key('game-filter-button')), findsOneWidget);
+     expect(find.byKey(const Key('game-search-field')), findsOneWidget);
+     expect(find.text('Quick Bible Games'), findsNothing);
+   });

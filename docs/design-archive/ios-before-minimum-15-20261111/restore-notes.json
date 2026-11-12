@@ -1,0 +1,13 @@
+{
+  "created_at_utc": "2026-11-11T19:32:59.856603+00:00",
+  "reason": "Native unsigned Release build proves SDK27.1 rejects deployment targets below15.0. Restore these files together and run pod install if reverting. No package/signing/team changes authorized.",
+  "files": {
+    "Frontend/mobile/ios/Podfile": "e248cee06e31f937e07ce3650d7c183bf9bc7e01ae57a3e560ea3a221e0d3437",
+    "Frontend/mobile/ios/Podfile.lock": "b9bfbef47bfb260db737ca28672c7c03b0cdc0dd58bd45544e068c12d59d4dc8",
+    "Frontend/mobile/ios/Runner.xcodeproj/project.pbxproj": "113c5de40a32ba2cabc0cbb32799b02f8d914fc17bb1e6a791306b857a047088",
+    "Frontend/mobile/ios/Pods/Pods.xcodeproj/project.pbxproj": "a785ee1d123d1049d91bfdd9110d3389b0277524fe6f08fe18bf81293c8564a3",
+    "Frontend/mobile/ios/Runner/Info.plist": "82765edf3d5a504e40fa1ba0c2cdb2eb775bbfc7c1849cc35c156ece872b6e05",
+    "Frontend/mobile/ios/Runner/PrivacyInfo.xcprivacy": "56f217dc1959eb1312026aa59a4b7b6ef4040575bcea1e91b398b2006707e560",
+    "Frontend/mobile/ios/Flutter/AppFrameworkInfo.plist": "da12038f9b2688a8a26160fea2609fa8fcb11421448c109f09c0f573efe7698d"
+  }
+}

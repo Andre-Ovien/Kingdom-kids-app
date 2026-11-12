@@ -1,0 +1,8 @@
+{
+  "Backend/Core/Core/settings.py": "edfc61bb8b54b847de82a01b1471afb8816f50f8990ab24e6738be3fb0bd698c",
+  "Backend/Core/apps/accounts/views.py": "60bf449456a3be52cfff2465847585dccb7812892c67a38b477fd0c0fa44b683",
+  "Backend/Core/apps/accounts/serializers.py": "a1e92465ec7ca552de389569d5d25ddcd58205128037784a7134812cb5a9eeed",
+  "Backend/Core/apps/accounts/email_verification.py": "3c637d45f1462264f8b5c3111376f55bd91775ceedcbc1eb9e15190c15cbbce0",
+  "Backend/Core/apps/accounts/password_reset.py": "704aca40165df259902d6311f71f1771cbcd746e7231277d9d5817cf641bfd78",
+  "Backend/Core/apps/accounts/account_deletion.py": "e9d0f8137e8c5922fa1bbaa5af753b6b664f1ac8f607ef7a88b7fdb2f0a98795"
+}

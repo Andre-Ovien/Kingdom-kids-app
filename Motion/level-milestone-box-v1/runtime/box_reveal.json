@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "name": "Kingdom Kids milestone chest",
+  "cellWidth": 352,
+  "cellHeight": 352,
+  "columns": 10,
+  "frameCount": 80,
+  "fps": 20,
+  "durationSeconds": 4.0,
+  "sourceFps": 24,
+  "atlases": [
+    {
+      "asset": "assets/images/milestones/box_reveal_atlas.webp",
+      "firstFrame": 0,
+      "frameCount": 80
+    }
+  ],
+  "posterAsset": "assets/images/milestones/box_reveal_poster.webp",
+  "timings": {
+    "spotlightHold": 0.6,
+    "shakeStart": 0.6,
+    "openingStarts": 1.6,
+    "boxOpen": 2.1,
+    "badgeStart": 2.1,
+    "badgeEnd": 2.8
+  },
+  "boxAnchor": [
+    0.5,
+    0.54
+  ],
+  "badgeAnchor": [
+    0.46,
+    0.1
+  ],
+  "badgeEmergenceAnchor": [
+    0.5,
+    0.54
+  ],
+  "blendFile": "source/kingdom_kids_milestone_chest.blend",
+  "contains": [
+    "chest",
+    "rigid lid",
+    "seam glow"
+  ],
+  "flutterOverlays": [
+    "stage",
+    "spotlight",
+    "badge",
+    "confetti",
+    "rank/level",
+    "Keep exploring"
+  ],
+  "decodedAtlasBytes": 39649280,
+  "floorAnchor": [
+    0.5,
+    0.925
+  ]
+}

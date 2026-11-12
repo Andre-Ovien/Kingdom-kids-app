@@ -1,0 +1,2505 @@
+import 'dart:async';
+import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
+
+import '../../../app/router.dart';
+import '../../../core/errors/app_exception.dart';
+import '../../../shared/widgets/floating_liquid_nav.dart';
+import '../../../shared/widgets/liquid_glass.dart';
+import '../../auth/data/auth_repository.dart';
+import '../../auth/domain/kid_profile.dart';
+import '../../auth/presentation/adult_gate.dart';
+import '../../auth/presentation/kid_character_pose.dart';
+import '../../auth/presentation/kid_profile_avatar.dart';
+import '../../auth/presentation/session_expiry_navigation.dart';
+import '../data/profile_repository.dart';
+import '../domain/progress_summary.dart';
+
+class ProfileScreen extends StatefulWidget {
+  const ProfileScreen({super.key, this.authRepository, this.profileRepository});
+
+  final AuthRepository? authRepository;
+  final ProfileRepository? profileRepository;
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  late final AuthRepository _authRepository;
+  late final ProfileRepository _profileRepository;
+
+  KidProfile? _activeProfile;
+  ProfileProgressSummary? _summary;
+  List<KidProfile> _profiles = const [];
+  String? _errorMessage;
+  bool _isLoading = true;
+  bool _isSwitching = false;
+  bool _requiresSignIn = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _authRepository = widget.authRepository ?? AuthRepository();
+    _profileRepository =
+        widget.profileRepository ??
+        RemoteProfileRepository(authRepository: _authRepository);
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile({bool isRefresh = false}) async {
+    if (!isRefresh) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+        _requiresSignIn = false;
+      });
+    }
+
+    try {
+      final existingSession = await _authRepository.restoreSession();
+      if (existingSession == null) {
+        if (mounted) {
+          setState(() {
+            _activeProfile = null;
+            _summary = null;
+            _profiles = const [];
+            _requiresSignIn = true;
+            _errorMessage = null;
+          });
+        }
+        return;
+      }
+
+      final profile = await _authRepository.refreshCurrentKid();
+      final refreshedSession = await _authRepository.restoreSession();
+      final profiles = refreshedSession?.profiles ?? const <KidProfile>[];
+      if (profile == null) {
+        if (mounted) {
+          setState(() {
+            _activeProfile = null;
+            _summary = null;
+            _profiles = profiles;
+            _requiresSignIn = false;
+            _errorMessage = null;
+          });
+        }
+        return;
+      }
+
+      final summary = await _profileRepository.fetchSummary(
+        profileId: profile.id,
+      );
+      if (!mounted) return;
+      setState(() {
+        _activeProfile = profile;
+        _summary = summary;
+        _profiles = profiles;
+        _requiresSignIn = false;
+        _errorMessage = null;
+      });
+    } on AppException catch (error) {
+      if (mounted && returnToSignInIfSessionExpired(context, error)) return;
+      if (!mounted) return;
+      if (isRefresh && _summary != null) {
+        _showMessage(error.userMessage);
+      } else {
+        setState(() => _errorMessage = error.userMessage);
+      }
+    } catch (_) {
+      if (!mounted) return;
+      const message = 'We could not load this adventure yet. Please try again.';
+      if (isRefresh && _summary != null) {
+        _showMessage(message);
+      } else {
+        setState(() => _errorMessage = message);
+      }
+    } finally {
+      if (mounted && !isRefresh) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _openProfileChoice() async {
+    if (_isSwitching) return;
+    setState(() => _isSwitching = true);
+    try {
+      final profiles = await _authRepository.fetchKidProfiles();
+      if (!mounted) return;
+      setState(() => _profiles = profiles);
+      final route = profiles.isEmpty
+          ? AppRoutes.kidProfileSetup
+          : AppRoutes.profilePicker;
+      await Navigator.of(context).pushNamed(route, arguments: profiles);
+    } on AppException catch (error) {
+      if (mounted && returnToSignInIfSessionExpired(context, error)) return;
+      if (mounted) _showMessage(error.userMessage);
+    } catch (_) {
+      if (mounted) {
+        _showMessage('We could not open your family profiles. Try again.');
+      }
+    } finally {
+      if (mounted) setState(() => _isSwitching = false);
+    }
+  }
+
+  Future<void> _editProfile() async {
+    final profile = _activeProfile;
+    if (profile == null) return;
+    final authorized = await showAdultGate(
+      context: context,
+      repository: _authRepository,
+      title: 'Edit child profile',
+      reason: 'Enter the parent password before changing this profile.',
+    );
+    if (!mounted || !authorized) return;
+
+    final saved = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => _EditProfileSheet(
+        profile: profile,
+        onSave: (displayName, avatarKey) =>
+            _saveProfile(profile.id, displayName, avatarKey),
+      ),
+    );
+    if (saved == true && mounted) {
+      _showMessage('Profile updated! Looking great.');
+    }
+  }
+
+  Future<String?> _saveProfile(
+    String profileId,
+    String displayName,
+    String avatarKey,
+  ) async {
+    try {
+      final updated = await _authRepository.updateKidProfile(
+        profileId: profileId,
+        displayName: displayName,
+        avatarKey: avatarKey,
+      );
+      if (mounted) {
+        setState(() {
+          _activeProfile = updated;
+          _profiles = _profiles
+              .map((profile) => profile.id == updated.id ? updated : profile)
+              .toList(growable: false);
+        });
+      }
+      return null;
+    } on AppException catch (error) {
+      if (mounted && returnToSignInIfSessionExpired(context, error)) {
+        return null;
+      }
+      return error.userMessage;
+    } catch (_) {
+      return 'We could not save those changes. Please try again.';
+    }
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _goToSignIn() {
+    Navigator.of(
+      context,
+    ).pushNamedAndRemoveUntil(AppRoutes.login, (_) => false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: SafeArea(
+        child: Stack(
+          children: [
+            const Positioned.fill(child: _ProfileBackdrop()),
+            Positioned.fill(
+              child: RefreshIndicator(
+                color: const Color(0xFF2D7D6F),
+                onRefresh: () => _loadProfile(isRefresh: true),
+                child: CustomScrollView(
+                  key: const Key('profile-scroll'),
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  slivers: [
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(20, 14, 20, 122),
+                      sliver: SliverList.list(
+                        children: [
+                          _ProfileTopBar(profile: _activeProfile),
+                          const SizedBox(height: 22),
+                          if (_isLoading)
+                            const _ProfileLoadingState()
+                          else if (_requiresSignIn)
+                            _ProfileSignedOutState(onSignIn: _goToSignIn)
+                          else if (_errorMessage != null && _summary == null)
+                            _ProfileErrorState(
+                              message: _errorMessage!,
+                              onRetry: _loadProfile,
+                            )
+                          else if (_activeProfile == null)
+                            _NoActiveProfileState(
+                              hasProfiles: _profiles.isNotEmpty,
+                              isOpening: _isSwitching,
+                              onOpen: _openProfileChoice,
+                            )
+                          else if (_summary != null)
+                            _ProfileContent(
+                              profile: _activeProfile!,
+                              summary: _summary!,
+                              isSwitching: _isSwitching,
+                              onEdit: _editProfile,
+                              onSwitch: _openProfileChoice,
+                            )
+                          else
+                            _ProfileErrorState(
+                              message:
+                                  'This profile did not include any progress yet.',
+                              onRetry: _loadProfile,
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: FloatingLiquidNav(
+                selectedRoute: AppRoutes.profile,
+                activeProfile: _activeProfile,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileTopBar extends StatelessWidget {
+  const _ProfileTopBar({this.profile});
+
+  final KidProfile? profile;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        if (profile != null) ...[
+          KidProfileAvatar(profile: profile!, size: 50),
+          const SizedBox(width: 12),
+        ],
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                profile == null ? 'My adventure' : 'Hello,',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: _mutedText(context),
+                  fontSize: profile == null ? 13.5 : 12.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 1),
+              Text(
+                profile?.displayName ?? 'Progress dashboard',
+                key: const Key('profile-display-name'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontSize: 23,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.6,
+                ),
+              ),
+            ],
+          ),
+        ),
+        LiquidGlass(
+          borderRadius: 28,
+          opacity: 0.02,
+          blur: 28,
+          borderOpacity: 0.38,
+          child: SizedBox.square(
+            dimension: 50,
+            child: IconButton(
+              key: const Key('profile-settings'),
+              tooltip: 'Parent settings',
+              onPressed: () =>
+                  Navigator.of(context).pushNamed(AppRoutes.parentalControls),
+              icon: Icon(
+                Icons.settings_rounded,
+                semanticLabel: 'Parent settings',
+                color: _primaryText(context),
+                size: 23,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ProfileContent extends StatelessWidget {
+  const _ProfileContent({
+    required this.profile,
+    required this.summary,
+    required this.isSwitching,
+    required this.onEdit,
+    required this.onSwitch,
+  });
+
+  final KidProfile profile;
+  final ProfileProgressSummary summary;
+  final bool isSwitching;
+  final VoidCallback onEdit;
+  final VoidCallback onSwitch;
+
+  @override
+  Widget build(BuildContext context) {
+    ProfileBadge? nextBadge;
+    for (final badge in summary.badges) {
+      if (!badge.earned) {
+        nextBadge = badge;
+        break;
+      }
+    }
+    nextBadge ??= summary.badges.isEmpty ? null : summary.badges.last;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _ProfileHero(
+          profile: profile,
+          level: summary.level,
+          nextBadge: nextBadge,
+          isSwitching: isSwitching,
+          onEdit: onEdit,
+          onSwitch: onSwitch,
+        ),
+        const SizedBox(height: 22),
+        _SectionHeading(
+          title: 'Progress overview',
+          trailing: _progressOverviewLabel(summary.stats),
+        ),
+        const SizedBox(height: 13),
+        _StatsGrid(stats: summary.stats, badgeCount: summary.badges.length),
+        const SizedBox(height: 24),
+        _ActivityCard(
+          streak: summary.activityStreak,
+          weeks: summary.weeklyActivity,
+          lastActivityAt: summary.lastActivityAt,
+        ),
+        const SizedBox(height: 30),
+        _SectionHeading(
+          title: 'My badges',
+          trailing:
+              '${summary.stats.earnedBadges}/${summary.badges.length} earned',
+        ),
+        const SizedBox(height: 13),
+        _BadgeShelf(badges: summary.badges),
+      ],
+    );
+  }
+}
+
+class _ProfileHero extends StatelessWidget {
+  const _ProfileHero({
+    required this.profile,
+    required this.level,
+    required this.nextBadge,
+    required this.isSwitching,
+    required this.onEdit,
+    required this.onSwitch,
+  });
+
+  final KidProfile profile;
+  final ProfileLevel level;
+  final ProfileBadge? nextBadge;
+  final bool isSwitching;
+  final VoidCallback onEdit;
+  final VoidCallback onSwitch;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    final levelFloor = math.max(0, (level.number - 1) * 300);
+    final levelTarget = math.max(1, level.nextLevelXp - levelFloor);
+    final levelXp = (level.xp - levelFloor).clamp(0, levelTarget);
+    final foreground = isDark ? Colors.white : const Color(0xFF171421);
+    final muted = foreground.withValues(alpha: 0.7);
+    final challengeComplete = nextBadge?.earned ?? false;
+    return Container(
+      key: const Key('profile-live-hero'),
+      padding: const EdgeInsets.fromLTRB(18, 19, 17, 17),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF514582) : const Color(0xFFB7A5FF),
+        borderRadius: BorderRadius.circular(25),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.13)
+              : const Color(0xFF171421).withValues(alpha: 0.13),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF5E4BAE).withValues(alpha: 0.16),
+            blurRadius: 18,
+            offset: const Offset(0, 9),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 9,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: foreground,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                  child: Text(
+                    challengeComplete ? 'QUEST BOARD' : 'NEXT QUEST',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: isDark ? const Color(0xFF514582) : Colors.white,
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  nextBadge?.title ?? 'Begin the adventure',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: foreground,
+                    fontSize: 27,
+                    height: 0.98,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -1,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  nextBadge?.description ??
+                      'Play a game round to start collecting progress.',
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: muted,
+                    fontWeight: FontWeight.w600,
+                    height: 1.28,
+                  ),
+                ),
+                if (nextBadge != null) ...[
+                  const SizedBox(height: 13),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: LinearProgressIndicator(
+                          value: nextBadge!.completion,
+                          minHeight: 7,
+                          borderRadius: BorderRadius.circular(9),
+                          backgroundColor: foreground.withValues(alpha: 0.16),
+                          valueColor: AlwaysStoppedAnimation(foreground),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            '${nextBadge!.progress}/${nextBadge!.target}',
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
+                                  color: foreground,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: 15),
+                Text(
+                  'Level ${level.number}  •  ${level.title}',
+                  key: const Key('profile-level-title'),
+                  maxLines: 2,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: foreground,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Semantics(
+                  label: level.isMaxLevel
+                      ? 'Maximum level achieved. ${level.xp} total experience points'
+                      : '$levelXp of $levelTarget experience points',
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0, end: level.progress),
+                    duration: const Duration(milliseconds: 800),
+                    curve: Curves.easeOutCubic,
+                    builder: (context, value, _) => LinearProgressIndicator(
+                      key: const Key('profile-level-progress'),
+                      value: value,
+                      minHeight: 7,
+                      borderRadius: BorderRadius.circular(9),
+                      backgroundColor: foreground.withValues(alpha: 0.16),
+                      valueColor: AlwaysStoppedAnimation(foreground),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  level.isMaxLevel
+                      ? 'Maximum level achieved • ${level.xp} total XP'
+                      : '$levelXp of $levelTarget XP',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: muted,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 7),
+                Text(
+                  'Earn XP with stories, quests, and daily streaks.',
+                  key: const Key('profile-xp-sources'),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: muted, height: 1.3),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 13),
+          SizedBox(
+            width: 112,
+            child: Column(
+              children: [
+                Container(
+                  height: 151,
+                  width: 112,
+                  padding: const EdgeInsets.fromLTRB(4, 3, 4, 1),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.17),
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0.86, end: 1),
+                    duration: reduceMotion
+                        ? Duration.zero
+                        : const Duration(milliseconds: 520),
+                    curve: Curves.easeOutBack,
+                    builder: (context, value, child) =>
+                        Transform.scale(scale: value, child: child),
+                    child: KidProfileCharacterPose(
+                      key: const Key('profile-hero-character-pose'),
+                      profile: profile,
+                      pose: KidCharacterPose.wave,
+                      fit: BoxFit.contain,
+                      fallbackSize: 96,
+                      semanticLabel:
+                          '${kidAvatarOptionFor(profile.avatarKey).label} waving on ${profile.displayName}\'s profile',
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      key: const Key('profile-edit'),
+                      tooltip: 'Edit profile',
+                      onPressed: onEdit,
+                      style: IconButton.styleFrom(
+                        backgroundColor: foreground,
+                        foregroundColor: isDark
+                            ? const Color(0xFF514582)
+                            : Colors.white,
+                      ),
+                      icon: const Icon(
+                        Icons.edit_rounded,
+                        semanticLabel: 'Edit profile',
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    IconButton(
+                      key: const Key('profile-switch'),
+                      tooltip: 'Switch child',
+                      onPressed: isSwitching ? null : onSwitch,
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.white.withValues(alpha: 0.3),
+                        foregroundColor: foreground,
+                        disabledBackgroundColor: Colors.white.withValues(
+                          alpha: 0.14,
+                        ),
+                      ),
+                      icon: isSwitching
+                          ? SizedBox.square(
+                              dimension: 17,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: foreground,
+                              ),
+                            )
+                          : const Icon(
+                              Icons.switch_account_rounded,
+                              semanticLabel: 'Switch child',
+                              size: 19,
+                            ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatsGrid extends StatelessWidget {
+  const _StatsGrid({required this.stats, required this.badgeCount});
+
+  final ProfileStats stats;
+  final int badgeCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = [
+      _LiveStat(
+        value: '${stats.completedGameLevels}/${stats.totalGameLevels}',
+        label: 'Levels won',
+        icon: Icons.flag_rounded,
+        color: const Color(0xFF9B92F6),
+      ),
+      _LiveStat(
+        value: '${stats.gameStars}/${stats.maxGameStars}',
+        label: 'Stars',
+        icon: Icons.star_rounded,
+        color: const Color(0xFFE5A0F2),
+      ),
+      _LiveStat(
+        value: '${stats.gamesStarted}',
+        label: 'Games tried',
+        icon: Icons.extension_rounded,
+        color: const Color(0xFFFFC45B),
+      ),
+      _LiveStat(
+        value: '${stats.earnedBadges}/$badgeCount',
+        label: 'Badges',
+        icon: Icons.workspace_premium_rounded,
+        color: const Color(0xFF63D276),
+      ),
+      _LiveStat(
+        value: '${stats.storiesStarted}/${stats.totalStories}',
+        label: 'Stories explored',
+        icon: Icons.auto_stories_rounded,
+        color: const Color(0xFF66C9E8),
+      ),
+      _LiveStat(
+        value: '${stats.storiesCompleted}/${stats.totalStories}',
+        label: 'Stories completed',
+        icon: Icons.menu_book_rounded,
+        color: const Color(0xFFFF9078),
+      ),
+    ];
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const gap = 10.0;
+        final cardWidth = math.max(126.0, (constraints.maxWidth - gap) / 2);
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: [
+            for (final item in items)
+              SizedBox(
+                width: cardWidth,
+                child: _StatCard(stat: item),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+String _progressOverviewLabel(ProfileStats stats) {
+  final storyLabel = stats.storiesStarted == 1 ? 'story' : 'stories';
+  final gameLabel = stats.gamesStarted == 1 ? 'game' : 'games';
+  return '${stats.storiesStarted} $storyLabel • ${stats.gamesStarted} $gameLabel';
+}
+
+class _StatCard extends StatelessWidget {
+  const _StatCard({required this.stat});
+
+  final _LiveStat stat;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final foreground = isDark ? Colors.white : const Color(0xFF171421);
+    return Container(
+      constraints: const BoxConstraints(minHeight: 132),
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: isDark
+            ? Color.alphaBlend(Colors.black.withValues(alpha: 0.28), stat.color)
+            : stat.color,
+        borderRadius: BorderRadius.circular(21),
+        border: Border.all(color: foreground.withValues(alpha: 0.15)),
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -25,
+            bottom: -38,
+            child: Container(
+              width: 108,
+              height: 108,
+              decoration: BoxDecoration(
+                color: foreground.withValues(alpha: 0.07),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Positioned(
+            right: 30,
+            bottom: -45,
+            child: Container(
+              width: 82,
+              height: 82,
+              decoration: BoxDecoration(
+                color: foreground.withValues(alpha: 0.055),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 13, 13, 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.32),
+                        borderRadius: BorderRadius.circular(11),
+                      ),
+                      child: Icon(stat.icon, color: foreground, size: 20),
+                    ),
+                    const Spacer(),
+                    Icon(
+                      Icons.more_horiz_rounded,
+                      color: foreground.withValues(alpha: 0.55),
+                      size: 19,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 13),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    stat.value,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      color: foreground,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w900,
+                      height: 0.95,
+                      letterSpacing: -0.8,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  stat.label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: foreground.withValues(alpha: 0.75),
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionHeading extends StatelessWidget {
+  const _SectionHeading({required this.title, required this.trailing});
+
+  final String title;
+  final String trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final titleWidget = Text(
+      title,
+      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+        fontSize: 20,
+        fontWeight: FontWeight.w800,
+        letterSpacing: -0.3,
+      ),
+    );
+    final trailingWidget = Text(
+      trailing,
+      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+        color: const Color(0xFF2D7D6F),
+        fontWeight: FontWeight.w700,
+      ),
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
+        final shouldStack = constraints.maxWidth < 330 || textScale > 1.35;
+        if (shouldStack) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [titleWidget, const SizedBox(height: 4), trailingWidget],
+          );
+        }
+        return Row(
+          children: [
+            Expanded(child: titleWidget),
+            trailingWidget,
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _BadgeShelf extends StatefulWidget {
+  const _BadgeShelf({required this.badges});
+
+  final List<ProfileBadge> badges;
+
+  @override
+  State<_BadgeShelf> createState() => _BadgeShelfState();
+}
+
+class _BadgeShelfState extends State<_BadgeShelf> with WidgetsBindingObserver {
+  static const _autoAdvanceDelay = Duration(milliseconds: 2800);
+  static const _slideDuration = Duration(milliseconds: 360);
+  static const _virtualAnchor = 100000;
+
+  late final PageController _pageController;
+  Timer? _autoAdvanceTimer;
+  int _virtualPage = 0;
+  bool _appIsActive = true;
+  int _updateGeneration = 0;
+
+  int get _badgeIndex =>
+      widget.badges.isEmpty ? 0 : _virtualPage % widget.badges.length;
+
+  static int _initialVirtualPage(int badgeCount) {
+    if (badgeCount <= 1) return 0;
+    return _virtualAnchor - (_virtualAnchor % badgeCount);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _appIsActive =
+        WidgetsBinding.instance.lifecycleState == null ||
+        WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
+    _virtualPage = _initialVirtualPage(widget.badges.length);
+    _pageController = PageController(
+      viewportFraction: 0.88,
+      initialPage: _virtualPage,
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _scheduleAutoAdvance();
+  }
+
+  @override
+  void didUpdateWidget(covariant _BadgeShelf oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _cancelAutoAdvance();
+    final generation = ++_updateGeneration;
+    final oldIndex = oldWidget.badges.isEmpty
+        ? 0
+        : _virtualPage % oldWidget.badges.length;
+    final oldKey = oldWidget.badges.isEmpty
+        ? null
+        : oldWidget.badges[oldIndex].key;
+    final sameBadgeOrder =
+        oldWidget.badges.length == widget.badges.length &&
+        List.generate(
+          widget.badges.length,
+          (index) => oldWidget.badges[index].key == widget.badges[index].key,
+        ).every((matches) => matches);
+    if (sameBadgeOrder) {
+      _scheduleAutoAdvance();
+      return;
+    }
+
+    final preservedIndex = oldKey == null
+        ? -1
+        : widget.badges.indexWhere((badge) => badge.key == oldKey);
+    if (widget.badges.length <= 1) {
+      _virtualPage = 0;
+    } else {
+      final logicalIndex = preservedIndex >= 0
+          ? preservedIndex
+          : oldIndex.clamp(0, widget.badges.length - 1);
+      final cycleBase = _virtualPage - (_virtualPage % widget.badges.length);
+      final candidates = <int>[
+        cycleBase + logicalIndex,
+        cycleBase + logicalIndex - widget.badges.length,
+        cycleBase + logicalIndex + widget.badges.length,
+      ].where((page) => page >= 0).toList(growable: false);
+      candidates.sort(
+        (left, right) =>
+            (left - _virtualPage).abs().compareTo((right - _virtualPage).abs()),
+      );
+      _virtualPage = candidates.first;
+      if (_virtualPage < 100) {
+        _virtualPage = _initialVirtualPage(widget.badges.length) + logicalIndex;
+      }
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || generation != _updateGeneration) return;
+      if (_pageController.hasClients && widget.badges.isNotEmpty) {
+        _pageController.jumpToPage(_virtualPage);
+      }
+      _scheduleAutoAdvance();
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _appIsActive = state == AppLifecycleState.resumed;
+    if (_appIsActive) {
+      _scheduleAutoAdvance();
+    } else {
+      _cancelAutoAdvance();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _cancelAutoAdvance();
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  bool get _motionIsReduced {
+    final mediaQuery = MediaQuery.of(context);
+    return mediaQuery.disableAnimations || mediaQuery.accessibleNavigation;
+  }
+
+  bool get _canAutoAdvance {
+    final mediaQuery = MediaQuery.of(context);
+    return mounted &&
+        _appIsActive &&
+        widget.badges.length > 1 &&
+        !mediaQuery.disableAnimations &&
+        !mediaQuery.accessibleNavigation;
+  }
+
+  bool get _isVisible {
+    final renderObject = context.findRenderObject();
+    if (renderObject is! RenderBox ||
+        !renderObject.attached ||
+        !renderObject.hasSize) {
+      return false;
+    }
+    final top = renderObject.localToGlobal(Offset.zero).dy;
+    final bottom = top + renderObject.size.height;
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    return bottom > 0 && top < screenHeight;
+  }
+
+  void _cancelAutoAdvance() {
+    _autoAdvanceTimer?.cancel();
+    _autoAdvanceTimer = null;
+  }
+
+  void _scheduleAutoAdvance() {
+    _cancelAutoAdvance();
+    if (!_canAutoAdvance) return;
+    _autoAdvanceTimer = Timer(_autoAdvanceDelay, () {
+      if (!mounted) return;
+      final route = ModalRoute.of(context);
+      if (!_canAutoAdvance ||
+          !_isVisible ||
+          !TickerMode.valuesOf(context).enabled ||
+          (route != null && !route.isCurrent) ||
+          !_pageController.hasClients ||
+          _pageController.position.isScrollingNotifier.value) {
+        _scheduleAutoAdvance();
+        return;
+      }
+      _goToVirtualPage(_virtualPage + 1);
+    });
+  }
+
+  void _goToVirtualPage(int page) {
+    if (!_pageController.hasClients ||
+        page < 0 ||
+        widget.badges.length <= 1 ||
+        page == _virtualPage) {
+      _scheduleAutoAdvance();
+      return;
+    }
+    _cancelAutoAdvance();
+    if (_motionIsReduced) {
+      _pageController.jumpToPage(page);
+    } else {
+      _pageController.animateToPage(
+        page,
+        duration: _slideDuration,
+        curve: Curves.easeOutCubic,
+      );
+    }
+  }
+
+  void _onPageChanged(int page) {
+    if (page == _virtualPage) return;
+    setState(() => _virtualPage = page);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.badges.isEmpty) {
+      return const _InlineEmptyMessage(
+        icon: Icons.workspace_premium_outlined,
+        message: 'New badges are coming soon.',
+      );
+    }
+    final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
+    final extraHeight = math.min(2.0, math.max(0.0, textScale - 1)) * 180;
+    if (widget.badges.length == 1) {
+      return SizedBox(
+        key: const Key('profile-badges'),
+        height: 420 + extraHeight,
+        child: _BadgeCard(badge: widget.badges.single),
+      );
+    }
+    final currentBadge = widget.badges[_badgeIndex];
+
+    return SizedBox(
+      key: const Key('profile-badges'),
+      height: 420 + extraHeight,
+      child: Stack(
+        children: [
+          Semantics(
+            container: true,
+            explicitChildNodes: true,
+            liveRegion: true,
+            label: _badgeCarouselSemanticLabel(
+              currentBadge,
+              position: _badgeIndex + 1,
+              total: widget.badges.length,
+            ),
+            hint: 'Swipe left or right to explore the endless badge loop.',
+            onIncrease: () => _goToVirtualPage(_virtualPage + 1),
+            onDecrease: () => _goToVirtualPage(_virtualPage - 1),
+            child: ExcludeSemantics(
+              child: NotificationListener<ScrollNotification>(
+                onNotification: (notification) {
+                  if (notification is ScrollStartNotification) {
+                    _cancelAutoAdvance();
+                  } else if (notification is ScrollEndNotification) {
+                    _scheduleAutoAdvance();
+                  }
+                  return false;
+                },
+                child: PageView.builder(
+                  key: const Key('profile-badge-carousel'),
+                  controller: _pageController,
+                  clipBehavior: Clip.none,
+                  allowImplicitScrolling: true,
+                  onPageChanged: _onPageChanged,
+                  itemBuilder: (context, virtualIndex) {
+                    final badge =
+                        widget.badges[virtualIndex % widget.badges.length];
+                    return AnimatedBuilder(
+                      animation: _pageController,
+                      child: Padding(
+                        key: ValueKey('badge-${badge.key}-$virtualIndex'),
+                        padding: const EdgeInsets.fromLTRB(7, 5, 7, 7),
+                        child: _BadgeCard(badge: badge),
+                      ),
+                      builder: (context, child) {
+                        var activePage = _virtualPage.toDouble();
+                        if (_pageController.hasClients &&
+                            _pageController.position.hasContentDimensions) {
+                          activePage =
+                              _pageController.page ?? _virtualPage.toDouble();
+                        }
+                        final distance = (activePage - virtualIndex)
+                            .abs()
+                            .clamp(0.0, 1.0);
+                        return Transform.scale(
+                          scale: 1 - (distance * 0.045),
+                          child: Opacity(
+                            opacity: 1 - (distance * 0.18),
+                            child: child,
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BadgeCard extends StatelessWidget {
+  const _BadgeCard({required this.badge});
+
+  final ProfileBadge badge;
+
+  @override
+  Widget build(BuildContext context) {
+    const ink = Color(0xFF111111);
+    final palette = _badgeArtworkPalette(badge.iconKey);
+    final progressLabel = badge.earned
+        ? 'UNLOCKED'
+        : '${badge.progress} OF ${badge.target} COMPLETE';
+    return Semantics(
+      container: true,
+      excludeSemantics: true,
+      label: badge.earned
+          ? '${badge.title} badge earned. ${badge.description}'
+          : '${badge.title} badge locked. ${badge.progress} of ${badge.target}. ${badge.description}',
+      child: Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFFEFA),
+          borderRadius: BorderRadius.circular(25),
+          boxShadow: [
+            BoxShadow(
+              color: ink.withValues(alpha: 0.12),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        foregroundDecoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(25),
+          border: Border.all(color: ink, width: 3.2),
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              flex: 62,
+              child: Container(
+                width: double.infinity,
+                color: const Color(0xFFFFFEFA),
+                padding: const EdgeInsets.fromLTRB(20, 19, 20, 17),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      _badgeIcon(badge.iconKey),
+                      color: palette.accent,
+                      size: 34,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      badge.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(
+                            color: ink,
+                            fontSize: 26,
+                            height: 0.98,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -1.1,
+                          ),
+                    ),
+                    const SizedBox(height: 13),
+                    Expanded(
+                      child: Text(
+                        badge.description,
+                        maxLines: 4,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: ink,
+                          fontSize: 14.5,
+                          height: 1.35,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            progressLabel,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.labelMedium
+                                ?.copyWith(
+                                  color: ink,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1.45,
+                                ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Icon(
+                          badge.earned
+                              ? Icons.check_circle_rounded
+                              : Icons.arrow_forward_rounded,
+                          color: ink,
+                          size: 21,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    LinearProgressIndicator(
+                      value: badge.completion,
+                      minHeight: 6,
+                      borderRadius: BorderRadius.circular(99),
+                      backgroundColor: ink.withValues(alpha: 0.12),
+                      valueColor: const AlwaysStoppedAnimation(ink),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Container(height: 3.2, color: ink),
+            Expanded(
+              flex: 38,
+              child: _BadgeArtwork(
+                icon: _badgeIcon(badge.iconKey),
+                palette: palette,
+                earned: badge.earned,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BadgeArtwork extends StatelessWidget {
+  const _BadgeArtwork({
+    required this.icon,
+    required this.palette,
+    required this.earned,
+  });
+
+  final IconData icon;
+  final _BadgeArtworkPalette palette;
+  final bool earned;
+
+  @override
+  Widget build(BuildContext context) {
+    const ink = Color(0xFF111111);
+    return ColoredBox(
+      color: palette.background,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          CustomPaint(
+            painter: _BadgeArtworkPainter(
+              accent: palette.accent,
+              secondary: palette.secondary,
+            ),
+          ),
+          Center(
+            child: Transform.rotate(
+              angle: palette.rotation,
+              child: Container(
+                width: 116,
+                height: 116,
+                decoration: BoxDecoration(
+                  color: palette.tile,
+                  shape: palette.isCircular
+                      ? BoxShape.circle
+                      : BoxShape.rectangle,
+                  borderRadius: palette.isCircular
+                      ? null
+                      : BorderRadius.circular(27),
+                  border: Border.all(color: ink, width: 3),
+                  boxShadow: const [
+                    BoxShadow(color: ink, offset: Offset(6, 7)),
+                  ],
+                ),
+                child: Icon(
+                  earned ? icon : Icons.lock_rounded,
+                  color: ink,
+                  size: 62,
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 18,
+            top: 16,
+            child: Icon(Icons.auto_awesome_rounded, color: ink, size: 24),
+          ),
+          Positioned(
+            right: 20,
+            bottom: 18,
+            child: Container(
+              width: 17,
+              height: 17,
+              decoration: BoxDecoration(
+                color: palette.tile,
+                shape: BoxShape.circle,
+                border: Border.all(color: ink, width: 2),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BadgeArtworkPainter extends CustomPainter {
+  const _BadgeArtworkPainter({required this.accent, required this.secondary});
+
+  final Color accent;
+  final Color secondary;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const ink = Color(0xFF111111);
+    final fill = Paint()..style = PaintingStyle.fill;
+    final outline = Paint()
+      ..color = ink
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3;
+
+    final lowerWave = Path()
+      ..moveTo(-8, size.height * 0.72)
+      ..cubicTo(
+        size.width * 0.18,
+        size.height * 0.42,
+        size.width * 0.28,
+        size.height * 1.05,
+        size.width * 0.5,
+        size.height * 0.72,
+      )
+      ..cubicTo(
+        size.width * 0.68,
+        size.height * 0.46,
+        size.width * 0.82,
+        size.height * 0.95,
+        size.width + 8,
+        size.height * 0.62,
+      )
+      ..lineTo(size.width + 8, size.height + 8)
+      ..lineTo(-8, size.height + 8)
+      ..close();
+    fill.color = accent;
+    canvas
+      ..drawPath(lowerWave, fill)
+      ..drawPath(lowerWave, outline);
+
+    final cornerBlob = Path()
+      ..moveTo(-8, -8)
+      ..lineTo(size.width * 0.29, -8)
+      ..cubicTo(
+        size.width * 0.36,
+        size.height * 0.1,
+        size.width * 0.2,
+        size.height * 0.21,
+        size.width * 0.08,
+        size.height * 0.16,
+      )
+      ..cubicTo(
+        size.width * 0.02,
+        size.height * 0.14,
+        0,
+        size.height * 0.25,
+        -8,
+        size.height * 0.28,
+      )
+      ..close();
+    fill.color = secondary;
+    canvas
+      ..drawPath(cornerBlob, fill)
+      ..drawPath(cornerBlob, outline);
+
+    fill.color = const Color(0xFFFFFEFA);
+    for (final offset in [
+      Offset(size.width * 0.18, size.height * 0.54),
+      Offset(size.width * 0.82, size.height * 0.25),
+      Offset(size.width * 0.72, size.height * 0.84),
+    ]) {
+      canvas.drawCircle(offset, 3.5, fill);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _BadgeArtworkPainter oldDelegate) =>
+      accent != oldDelegate.accent || secondary != oldDelegate.secondary;
+}
+
+class _BadgeArtworkPalette {
+  const _BadgeArtworkPalette({
+    required this.background,
+    required this.accent,
+    required this.secondary,
+    required this.tile,
+    required this.rotation,
+    this.isCircular = false,
+  });
+
+  final Color background;
+  final Color accent;
+  final Color secondary;
+  final Color tile;
+  final double rotation;
+  final bool isCircular;
+}
+
+_BadgeArtworkPalette _badgeArtworkPalette(String iconKey) => switch (iconKey) {
+  'star' || 'stars' => const _BadgeArtworkPalette(
+    background: Color(0xFF8E7CFF),
+    accent: Color(0xFFFF95C8),
+    secondary: Color(0xFFFFC928),
+    tile: Color(0xFFFFF3A8),
+    rotation: 0.08,
+    isCircular: true,
+  ),
+  'trophy' => const _BadgeArtworkPalette(
+    background: Color(0xFF00C98B),
+    accent: Color(0xFFFF7047),
+    secondary: Color(0xFFFFD36A),
+    tile: Color(0xFFFFF1D2),
+    rotation: -0.08,
+  ),
+  'compass' => const _BadgeArtworkPalette(
+    background: Color(0xFF62C8FF),
+    accent: Color(0xFFFFC928),
+    secondary: Color(0xFFFF7A59),
+    tile: Color(0xFFF6E9FF),
+    rotation: 0.06,
+    isCircular: true,
+  ),
+  'crown' => const _BadgeArtworkPalette(
+    background: Color(0xFFFF91B8),
+    accent: Color(0xFF806BEB),
+    secondary: Color(0xFFFFCE2F),
+    tile: Color(0xFFBFF6DD),
+    rotation: -0.07,
+  ),
+  _ => const _BadgeArtworkPalette(
+    background: Color(0xFFFFC928),
+    accent: Color(0xFFFF754B),
+    secondary: Color(0xFF00B887),
+    tile: Color(0xFFFFF1D2),
+    rotation: -0.07,
+    isCircular: true,
+  ),
+};
+
+String _badgeCarouselSemanticLabel(
+  ProfileBadge badge, {
+  required int position,
+  required int total,
+}) {
+  final detail = badge.earned
+      ? '${badge.title} badge earned. ${badge.description}'
+      : '${badge.title} badge locked. ${badge.progress} of ${badge.target}. ${badge.description}';
+  return 'Showing badge $position of $total. $detail';
+}
+
+class _ActivityCard extends StatelessWidget {
+  const _ActivityCard({
+    required this.streak,
+    required this.weeks,
+    required this.lastActivityAt,
+  });
+
+  final ProfileActivityStreak streak;
+  final List<WeeklyProfileActivity> weeks;
+  final DateTime? lastActivityAt;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final hasActivity = weeks.any((week) => week.activities > 0);
+    return Container(
+      key: const Key('profile-weekly-activity'),
+      padding: const EdgeInsets.fromLTRB(18, 19, 18, 18),
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.055)
+            : Colors.white.withValues(alpha: 0.84),
+        borderRadius: BorderRadius.circular(27),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.08)
+              : const Color(0xFF2D7D6F).withValues(alpha: 0.12),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Quest activity',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Stories and games over the last five weeks',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: _mutedText(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              _StreakPill(days: streak.currentDays),
+            ],
+          ),
+          const SizedBox(height: 20),
+          if (weeks.isEmpty)
+            const _InlineEmptyMessage(
+              icon: Icons.bar_chart_rounded,
+              message: 'Activity will appear after the first story or game.',
+            )
+          else
+            _WeeklyChart(weeks: weeks),
+          const SizedBox(height: 13),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
+              final shouldStack =
+                  constraints.maxWidth < 300 || textScale > 1.35;
+              final lastActivity = Row(
+                children: [
+                  Icon(
+                    hasActivity
+                        ? Icons.bolt_rounded
+                        : Icons.sports_esports_outlined,
+                    color: hasActivity
+                        ? const Color(0xFFE76E3F)
+                        : _mutedText(context),
+                    size: 18,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      _lastActivityLabel(lastActivityAt),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: _mutedText(context),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+              final best = Text(
+                'Best: ${streak.longestDays} ${streak.longestDays == 1 ? 'day' : 'days'}',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: _mutedText(context),
+                  fontWeight: FontWeight.w700,
+                ),
+              );
+
+              if (shouldStack) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [lastActivity, const SizedBox(height: 6), best],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(child: lastActivity),
+                  const SizedBox(width: 8),
+                  best,
+                ],
+              );
+            },
+          ),
+          if (!hasActivity && weeks.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              'Complete a story or game round and this chart will spring to life!',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: const Color(0xFF2D7D6F),
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _WeeklyChart extends StatelessWidget {
+  const _WeeklyChart({required this.weeks});
+
+  final List<WeeklyProfileActivity> weeks;
+
+  @override
+  Widget build(BuildContext context) {
+    final maximum = math.max(
+      1,
+      weeks.fold<int>(0, (value, week) => math.max(value, week.activities)),
+    );
+    const colors = [
+      Color(0xFF46A994),
+      Color(0xFF7185D9),
+      Color(0xFF9A78D7),
+      Color(0xFFE77772),
+      Color(0xFFF0B72F),
+    ];
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        for (var index = 0; index < weeks.length; index++) ...[
+          if (index > 0) const SizedBox(width: 7),
+          Expanded(
+            child: _ActivityBar(
+              week: weeks[index],
+              maximum: maximum,
+              color: colors[index % colors.length],
+              delay: index * 80,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _ActivityBar extends StatelessWidget {
+  const _ActivityBar({
+    required this.week,
+    required this.maximum,
+    required this.color,
+    required this.delay,
+  });
+
+  final WeeklyProfileActivity week;
+  final int maximum;
+  final Color color;
+  final int delay;
+
+  @override
+  Widget build(BuildContext context) {
+    final targetHeight = week.activities == 0
+        ? 7.0
+        : math.max(18.0, week.activities / maximum * 94);
+    return Semantics(
+      container: true,
+      excludeSemantics: true,
+      label: _weeklyActivitySemanticLabel(week),
+      child: Column(
+        children: [
+          Text(
+            '${week.activities}',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: _mutedText(context),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 5),
+          SizedBox(
+            height: 96,
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: targetHeight),
+                duration: Duration(milliseconds: 620 + delay),
+                curve: Curves.easeOutBack,
+                builder: (context, height, _) => Container(
+                  width: 24,
+                  height: height,
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 7),
+          Text(
+            week.label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: _mutedText(context),
+              fontSize: 9.5,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _weeklyActivitySemanticLabel(WeeklyProfileActivity week) {
+  final activityLabel = week.activities == 1 ? 'activity' : 'activities';
+  final attemptLabel = week.attempts == 1 ? 'attempt' : 'attempts';
+  final completionLabel = week.storyCompletions == 1
+      ? 'completion'
+      : 'completions';
+  return '${week.label}: ${week.activities} learning $activityLabel; '
+      '${week.attempts} game $attemptLabel and '
+      '${week.storyCompletions} story $completionLabel';
+}
+
+class _StreakPill extends StatelessWidget {
+  const _StreakPill({required this.days});
+
+  final int days;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE76E3F).withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(99),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.local_fire_department_rounded,
+            color: Color(0xFFE76E3F),
+            size: 18,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            days == 0
+                ? 'Start a streak'
+                : '$days ${days == 1 ? 'day' : 'days'}',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: const Color(0xFFE76E3F),
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileLoadingState extends StatelessWidget {
+  const _ProfileLoadingState();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      key: const Key('profile-loading'),
+      height: 510,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox.square(
+              dimension: 40,
+              child: CircularProgressIndicator(
+                strokeWidth: 3,
+                color: Color(0xFF2D7D6F),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Gathering your latest adventure…',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: _mutedText(context),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileErrorState extends StatelessWidget {
+  const _ProfileErrorState({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return _StateCard(
+      key: const Key('profile-error'),
+      icon: Icons.cloud_off_rounded,
+      iconColor: const Color(0xFFE77772),
+      title: 'Progress took a little detour',
+      message: message,
+      action: FilledButton.icon(
+        key: const Key('profile-retry'),
+        onPressed: onRetry,
+        icon: const Icon(Icons.refresh_rounded),
+        label: const Text('Try again'),
+      ),
+    );
+  }
+}
+
+class _ProfileSignedOutState extends StatelessWidget {
+  const _ProfileSignedOutState({required this.onSignIn});
+
+  final VoidCallback onSignIn;
+
+  @override
+  Widget build(BuildContext context) {
+    return _StateCard(
+      key: const Key('profile-signed-out'),
+      icon: Icons.lock_person_rounded,
+      iconColor: const Color(0xFF8B68C7),
+      title: 'Parent sign-in needed',
+      message:
+          'Sign in to safely load the child profiles and progress saved to your family account.',
+      action: FilledButton.icon(
+        onPressed: onSignIn,
+        icon: const Icon(Icons.login_rounded),
+        label: const Text('Sign in'),
+      ),
+    );
+  }
+}
+
+class _NoActiveProfileState extends StatelessWidget {
+  const _NoActiveProfileState({
+    required this.hasProfiles,
+    required this.isOpening,
+    required this.onOpen,
+  });
+
+  final bool hasProfiles;
+  final bool isOpening;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const Key('profile-no-selection'),
+      padding: const EdgeInsets.fromLTRB(22, 34, 22, 30),
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? Colors.white.withValues(alpha: 0.055)
+            : Colors.white.withValues(alpha: 0.84),
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: Column(
+        children: [
+          const SizedBox(
+            height: 104,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Positioned(
+                  left: 24,
+                  child: KidAvatarBadge(avatarKey: 'dove', size: 72),
+                ),
+                Positioned(
+                  right: 24,
+                  child: KidAvatarBadge(avatarKey: 'rainbow', size: 72),
+                ),
+                KidAvatarBadge(avatarKey: 'lion', size: 98),
+              ],
+            ),
+          ),
+          const SizedBox(height: 22),
+          Text(
+            hasProfiles ? 'Choose your explorer' : 'Meet your explorer',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontSize: 25,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 9),
+          Text(
+            hasProfiles
+                ? 'Pick a child profile to see their own levels, stars, badges, and streaks.'
+                : 'Create a child profile so every game achievement has a safe place to grow.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: _mutedText(context),
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 22),
+          FilledButton.icon(
+            key: const Key('profile-choose'),
+            onPressed: isOpening ? null : onOpen,
+            icon: isOpening
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Icon(
+                    hasProfiles
+                        ? Icons.switch_account_rounded
+                        : Icons.person_add_alt_1_rounded,
+                  ),
+            label: Text(hasProfiles ? 'Choose a profile' : 'Create a profile'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StateCard extends StatelessWidget {
+  const _StateCard({
+    super.key,
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.message,
+    required this.action,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String message;
+  final Widget action;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 430),
+      padding: const EdgeInsets.all(28),
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? Colors.white.withValues(alpha: 0.055)
+            : Colors.white.withValues(alpha: 0.84),
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.13),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: iconColor, size: 35),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 9),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: _mutedText(context),
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 22),
+          action,
+        ],
+      ),
+    );
+  }
+}
+
+class _InlineEmptyMessage extends StatelessWidget {
+  const _InlineEmptyMessage({required this.icon, required this.message});
+
+  final IconData icon;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Column(
+          children: [
+            Icon(icon, color: _mutedText(context), size: 28),
+            const SizedBox(height: 7),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: _mutedText(context)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EditProfileSheet extends StatefulWidget {
+  const _EditProfileSheet({required this.profile, required this.onSave});
+
+  final KidProfile profile;
+  final Future<String?> Function(String displayName, String avatarKey) onSave;
+
+  @override
+  State<_EditProfileSheet> createState() => _EditProfileSheetState();
+}
+
+class _EditProfileSheetState extends State<_EditProfileSheet> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _nameController;
+  late String _avatarKey;
+  bool _isSaving = false;
+  String? _errorMessage;
+
+  List<KidAvatarOption> get _avatarOptions {
+    final currentIsCharacter = kidProfileCharacterOptions.any(
+      (option) => option.key == widget.profile.avatarKey,
+    );
+    if (currentIsCharacter) return kidProfileCharacterOptions;
+    return [
+      ...kidAvatarOptions.where(
+        (option) => option.key == widget.profile.avatarKey,
+      ),
+      ...kidProfileCharacterOptions,
+    ];
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.profile.displayName);
+    _avatarKey = widget.profile.avatarKey;
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (_isSaving || !_formKey.currentState!.validate()) return;
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _isSaving = true;
+      _errorMessage = null;
+    });
+    final error = await widget.onSave(_nameController.text, _avatarKey);
+    if (!mounted) return;
+    if (error == null) {
+      Navigator.of(context).pop(true);
+      return;
+    }
+    setState(() {
+      _isSaving = false;
+      _errorMessage = error;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF171D1C) : const Color(0xFFFFFCF6),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+      ),
+      child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(22, 12, 22, 24 + bottomInset),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 42,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: _mutedText(context).withValues(alpha: 0.28),
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Make it yours',
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(
+                                fontSize: 25,
+                                fontWeight: FontWeight.w800,
+                              ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          'Update the name or choose a character.',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: _mutedText(context)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Close',
+                    onPressed: _isSaving
+                        ? null
+                        : () => Navigator.of(context).pop(false),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 22),
+              TextFormField(
+                key: const Key('profile-name-field'),
+                controller: _nameController,
+                maxLength: 40,
+                textCapitalization: TextCapitalization.words,
+                textInputAction: TextInputAction.done,
+                onFieldSubmitted: (_) => _save(),
+                decoration: InputDecoration(
+                  labelText: 'Profile name',
+                  prefixIcon: const Icon(Icons.badge_outlined),
+                  filled: true,
+                  fillColor: isDark
+                      ? Colors.white.withValues(alpha: 0.055)
+                      : Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(17),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(17),
+                    borderSide: BorderSide(
+                      color: _mutedText(context).withValues(alpha: 0.15),
+                    ),
+                  ),
+                ),
+                validator: (value) {
+                  final normalized =
+                      value?.trim().split(RegExp(r'\s+')).join(' ') ?? '';
+                  if (normalized.isEmpty) return 'Enter a profile name.';
+                  if (normalized.length > 40) {
+                    return 'Keep the name to 40 characters or fewer.';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 15),
+              Text(
+                'Choose a character',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 11),
+              SizedBox(
+                height:
+                    126 +
+                    math.min(
+                          2.0,
+                          math.max(
+                            0.0,
+                            MediaQuery.textScalerOf(context).scale(14) / 14 - 1,
+                          ),
+                        ) *
+                        20,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _avatarOptions.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 10),
+                  itemBuilder: (context, index) {
+                    final option = _avatarOptions[index];
+                    final selected = option.key == _avatarKey;
+                    return _AvatarChoice(
+                      option: option,
+                      selected: selected,
+                      onTap: _isSaving
+                          ? null
+                          : () => setState(() => _avatarKey = option.key),
+                    );
+                  },
+                ),
+              ),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 180),
+                child: _errorMessage == null
+                    ? const SizedBox.shrink()
+                    : Padding(
+                        key: ValueKey(_errorMessage),
+                        padding: const EdgeInsets.only(top: 13),
+                        child: Text(
+                          _errorMessage!,
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(context).colorScheme.error,
+                                fontWeight: FontWeight.w700,
+                              ),
+                        ),
+                      ),
+              ),
+              const SizedBox(height: 20),
+              FilledButton.icon(
+                key: const Key('profile-save'),
+                onPressed: _isSaving ? null : _save,
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(55),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(17),
+                  ),
+                ),
+                icon: _isSaving
+                    ? const SizedBox.square(
+                        dimension: 19,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.auto_awesome_rounded),
+                label: Text(_isSaving ? 'Saving…' : 'Save changes'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AvatarChoice extends StatelessWidget {
+  const _AvatarChoice({
+    required this.option,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final KidAvatarOption option;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      container: true,
+      button: true,
+      selected: selected,
+      excludeSemantics: true,
+      label: '${option.label}, ${option.tagline}',
+      child: InkWell(
+        key: ValueKey('profile-avatar-${option.key}'),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          width: 96,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
+          decoration: BoxDecoration(
+            color: selected
+                ? option.color.withValues(alpha: 0.14)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: selected
+                  ? option.color
+                  : _mutedText(context).withValues(alpha: 0.14),
+              width: selected ? 2 : 1,
+            ),
+          ),
+          child: Column(
+            children: [
+              KidAvatarBadge(avatarKey: option.key, size: 67),
+              const SizedBox(height: 6),
+              Text(
+                option.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: selected ? option.color : _primaryText(context),
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileBackdrop extends StatelessWidget {
+  const _ProfileBackdrop();
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return IgnorePointer(
+      child: Stack(
+        children: [
+          Positioned(
+            top: 110,
+            right: -115,
+            child: Container(
+              width: 250,
+              height: 250,
+              decoration: BoxDecoration(
+                color: const Color(
+                  0xFF9A78D7,
+                ).withValues(alpha: isDark ? 0.07 : 0.09),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Positioned(
+            left: -120,
+            bottom: 175,
+            child: Container(
+              width: 245,
+              height: 245,
+              decoration: BoxDecoration(
+                color: const Color(
+                  0xFF46A994,
+                ).withValues(alpha: isDark ? 0.06 : 0.08),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LiveStat {
+  const _LiveStat({
+    required this.value,
+    required this.label,
+    required this.icon,
+    required this.color,
+  });
+
+  final String value;
+  final String label;
+  final IconData icon;
+  final Color color;
+}
+
+IconData _badgeIcon(String iconKey) => switch (iconKey) {
+  'play-spark' => Icons.rocket_launch_rounded,
+  'star' => Icons.star_rounded,
+  'trophy' => Icons.emoji_events_rounded,
+  'compass' => Icons.explore_rounded,
+  'crown' => Icons.workspace_premium_rounded,
+  _ => Icons.auto_awesome_rounded,
+};
+
+String _lastActivityLabel(DateTime? value) {
+  if (value == null) return 'No game activity yet';
+  final local = value.toLocal();
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final activityDay = DateTime(local.year, local.month, local.day);
+  final difference = today.difference(activityDay).inDays;
+  if (difference == 0) return 'Played today';
+  if (difference == 1) return 'Played yesterday';
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  return 'Last played ${months[local.month - 1]} ${local.day}';
+}
+
+Color _primaryText(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark
+    ? const Color(0xFFF8F3EF)
+    : const Color(0xFF27263B);
+
+Color _mutedText(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark
+    ? const Color(0xFFB9B5C5)
+    : const Color(0xFF777483);

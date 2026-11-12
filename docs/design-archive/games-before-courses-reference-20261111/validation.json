@@ -1,0 +1,55 @@
+{
+  "source_hashes": {
+    "Frontend/mobile/lib/features/games/presentation/games_screen.dart": "b461631bfec811b4da593a7d656b3c7b447747ccb965f18942dce90fb3e3bf6d",
+    "Frontend/mobile/lib/features/games/presentation/games_course_widgets.dart": "38f5968380c18d2fb1815dc83311a1df310531cde8f5098d1dbe0c91fcb9c3d9"
+  },
+  "business_methods_unchanged_from_archive": {
+    "load": true,
+    "visible_games": true,
+    "open": true,
+    "choose_profile": true,
+    "clear_filters": true,
+    "choose_category": true
+  },
+  "archive": "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/docs/design-archive/games-before-courses-reference-20261111/games_screen.dart",
+  "presentation": "Orange controller header, actual catalogue game/level chips, rounded-top white sheet, inline category tabs, optional oval search, single featured-first compact dark/lavender cards.",
+  "interactions": "Original data load/auth/error/retired+paused filtering/search/category/detail-return+progress/success-audio methods retained exactly. Original routes/native navigation unchanged.",
+  "tests_owner": "streak_fire_preview; final22passed",
+  "capture": {
+    "path": "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/output/games-courses-reference-20261111/render/games-courses-layout.png",
+    "status": "rendered and visually inspected",
+    "data_note": "Actual production GamesScreen/fonts/cover assets rendered with3existing canonical catalogue fixtures; not personal phone/backend counts or progress.",
+    "test_result": "passed without Flutter exceptions",
+    "production_edits_for_capture": false
+  },
+  "tests": {
+    "status": "passed",
+    "games_behavior_tests": 21,
+    "scoped_analysis": "No issues found",
+    "validated": [
+      "actual catalogue current-child IDs and progress",
+      "pending catalogue/no selected child/expired auth",
+      "same-child detail return refresh without reward writes",
+      "search and clear/reset",
+      "inline tabs and category menu share live filter",
+      "retired and paused entries excluded before hero/search/categories/counts",
+      "correct retained game covers and detail routes",
+      "accessible card tap opens real detail",
+      "retry/refresh and retained stale catalogue",
+      "compact320px2.2x text in light/dark settings"
+    ],
+    "source_fixes_identified": [
+      "VoiceOver card action now explicitly forwards onTap",
+      "summary chips wrap large text without overflow"
+    ],
+    "files": {
+      "Frontend/mobile/lib/features/games/presentation/games_screen.dart": "b461631bfec811b4da593a7d656b3c7b447747ccb965f18942dce90fb3e3bf6d",
+      "Frontend/mobile/lib/features/games/presentation/games_course_widgets.dart": "38f5968380c18d2fb1815dc83311a1df310531cde8f5098d1dbe0c91fcb9c3d9",
+      "Frontend/mobile/test/game_screen_test.dart": "d6985ac41617853a0db3817d904227093cd5e2e304937a06abd79767838979c5",
+      "Frontend/mobile/test/widget_test.dart": "c6a25b93559694754d85cc13d1e4cb916f5c7ae5b989db9e73a6b3436d2658d7"
+    },
+    "app_shell_tests": 1,
+    "total_passed": 22
+  },
+  "source_state": "frozen"
+}

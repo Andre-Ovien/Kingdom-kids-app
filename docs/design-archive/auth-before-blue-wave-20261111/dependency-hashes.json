@@ -1,0 +1,12 @@
+{
+  "lib/app/router.dart": "ecca30df120824649c32f57571753654ddf7e6f1fe615f060f4668232133321f",
+  "lib/core/constants/app_constants.dart": "980904952c15151c858f80730744a2bfa3014691f5d580c733df23363f91f416",
+  "lib/core/errors/app_exception.dart": "d41c4e39b2ef5265cfe3495253145a34ace3e20f019abdfada3ef8cc3301c5cf",
+  "lib/shared/audio/app_audio_scope.dart": "4eb389ba24a9c4587a005f479b8cafba2d4ee635c6720d02f986363129da716d",
+  "lib/shared/audio/app_sound_cue.dart": "256cd9a12e11cc3709861fed7f3f3f847c5c2f7caaa3a65402ebfb9d87fc9f8d",
+  "lib/features/auth/data/auth_repository.dart": "07908145ba4be3ad389455b2a9a18630eeeab1b139b74b73d6291be63fbc1390",
+  "lib/features/auth/data/auth_session_store.dart": "a9fa55703ea1d72e18229890d957736a87d0f17bd5eef4874b877a2de78b6a49",
+  "lib/features/auth/domain/auth_requests.dart": "51bd69e19517d62a08ba47ba21e276501e21ca3bb091f83d35d94acd99e54ecc",
+  "lib/features/auth/domain/auth_session.dart": "703bdf7ecb5330524f6970609666efe921280bc0e104f94bb3dbff96dae7b706",
+  "lib/features/auth/domain/email_verification.dart": "fe700b419c4c6c47185f41a3fecd40c417448612ea40094c8ee68488a3016b71"
+}

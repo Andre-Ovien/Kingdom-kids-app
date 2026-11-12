@@ -1,0 +1,24 @@
+{
+  "archived_at": "2026-11-11T13:41:00.561935+01:00",
+  "variant": "Before blue wave: compact purple/pink eye mascot auth",
+  "source_exactness": "BYTE-FOR-BYTE VERIFIED against the last installed iPhone build source hash",
+  "auth_screen_sha256": "0a1b8ee103265bb606818835114ad3ce85de89f5ae644773f3e9c4187c366ad5",
+  "device_build_proof": "installed-build-source-provenance.json",
+  "recovery_method": "Complete captured pre-edit source reads plus 59 unchanged Git lines, replayed recorded compact-layout edits in an isolated directory and Dart-formatted. Final output matches device build source SHA256 exactly.",
+  "source_transcript": "Local Codex compact_create_account session,2026-11-11; raw transcript not copied into repository.",
+  "test_exactness": "auth_screen_test recovered from captured reads plus 44 unchanged Git lines; not independently hash-attested by device provenance. auth_compact_layout_test unchanged by blue-wave task, snapshotted current file.",
+  "active_source_changed": false,
+  "binary_rollback": "output/release-review-20261111/device/auth-before-blue-wave/Runner.app",
+  "public_api_dependencies": {
+    "lib/app/router.dart": "ecca30df120824649c32f57571753654ddf7e6f1fe615f060f4668232133321f",
+    "lib/core/constants/app_constants.dart": "980904952c15151c858f80730744a2bfa3014691f5d580c733df23363f91f416",
+    "lib/core/errors/app_exception.dart": "d41c4e39b2ef5265cfe3495253145a34ace3e20f019abdfada3ef8cc3301c5cf",
+    "lib/shared/audio/app_audio_scope.dart": "4eb389ba24a9c4587a005f479b8cafba2d4ee635c6720d02f986363129da716d",
+    "lib/shared/audio/app_sound_cue.dart": "256cd9a12e11cc3709861fed7f3f3f847c5c2f7caaa3a65402ebfb9d87fc9f8d",
+    "lib/features/auth/data/auth_repository.dart": "07908145ba4be3ad389455b2a9a18630eeeab1b139b74b73d6291be63fbc1390",
+    "lib/features/auth/data/auth_session_store.dart": "a9fa55703ea1d72e18229890d957736a87d0f17bd5eef4874b877a2de78b6a49",
+    "lib/features/auth/domain/auth_requests.dart": "51bd69e19517d62a08ba47ba21e276501e21ca3bb091f83d35d94acd99e54ecc",
+    "lib/features/auth/domain/auth_session.dart": "703bdf7ecb5330524f6970609666efe921280bc0e104f94bb3dbff96dae7b706",
+    "lib/features/auth/domain/email_verification.dart": "fe700b419c4c6c47185f41a3fecd40c417448612ea40094c8ee68488a3016b71"
+  }
+}

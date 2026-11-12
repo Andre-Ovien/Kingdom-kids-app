@@ -1,0 +1,226 @@
+{
+  "1": {
+    "commands": [
+      {
+        "op": "foundation",
+        "house_id": "house-a",
+        "material": "rock"
+      },
+      {
+        "op": "place",
+        "house_id": "house-a",
+        "part": "back-wall"
+      },
+      {
+        "op": "place",
+        "house_id": "house-a",
+        "part": "left-wall"
+      },
+      {
+        "op": "place",
+        "house_id": "house-a",
+        "part": "right-wall"
+      },
+      {
+        "op": "place",
+        "house_id": "house-a",
+        "part": "front-wall"
+      },
+      {
+        "op": "place",
+        "house_id": "house-a",
+        "part": "roof"
+      },
+      {
+        "op": "foundation",
+        "house_id": "house-b",
+        "material": "sand"
+      },
+      {
+        "op": "place",
+        "house_id": "house-b",
+        "part": "back-wall"
+      },
+      {
+        "op": "place",
+        "house_id": "house-b",
+        "part": "left-wall"
+      },
+      {
+        "op": "place",
+        "house_id": "house-b",
+        "part": "right-wall"
+      },
+      {
+        "op": "place",
+        "house_id": "house-b",
+        "part": "front-wall"
+      },
+      {
+        "op": "place",
+        "house_id": "house-b",
+        "part": "roof"
+      },
+      {
+        "op": "storm"
+      }
+    ],
+    "elapsed_seconds": 90
+  },
+  "2": {
+    "commands": [
+      {
+        "op": "foundation",
+        "house_id": "house-a",
+        "material": "rock"
+      },
+      {
+        "op": "place",
+        "house_id": "house-a",
+        "part": "back-wall"
+      },
+      {
+        "op": "place",
+        "house_id": "house-a",
+        "part": "left-wall"
+      },
+      {
+        "op": "place",
+        "house_id": "house-a",
+        "part": "right-wall"
+      },
+      {
+        "op": "place",
+        "house_id": "house-a",
+        "part": "front-wall"
+      },
+      {
+        "op": "place",
+        "house_id": "house-a",
+        "part": "roof"
+      },
+      {
+        "op": "place",
+        "house_id": "house-a",
+        "part": "brace"
+      },
+      {
+        "op": "foundation",
+        "house_id": "house-b",
+        "material": "sand"
+      },
+      {
+        "op": "place",
+        "house_id": "house-b",
+        "part": "back-wall"
+      },
+      {
+        "op": "place",
+        "house_id": "house-b",
+        "part": "left-wall"
+      },
+      {
+        "op": "place",
+        "house_id": "house-b",
+        "part": "right-wall"
+      },
+      {
+        "op": "place",
+        "house_id": "house-b",
+        "part": "front-wall"
+      },
+      {
+        "op": "place",
+        "house_id": "house-b",
+        "part": "roof"
+      },
+      {
+        "op": "place",
+        "house_id": "house-b",
+        "part": "brace"
+      },
+      {
+        "op": "storm"
+      }
+    ],
+    "elapsed_seconds": 90
+  },
+  "3": {
+    "commands": [
+      {
+        "op": "foundation",
+        "house_id": "house-a",
+        "material": "rock"
+      },
+      {
+        "op": "place",
+        "house_id": "house-a",
+        "part": "back-wall"
+      },
+      {
+        "op": "place",
+        "house_id": "house-a",
+        "part": "left-wall"
+      },
+      {
+        "op": "place",
+        "house_id": "house-a",
+        "part": "right-wall"
+      },
+      {
+        "op": "place",
+        "house_id": "house-a",
+        "part": "front-wall"
+      },
+      {
+        "op": "place",
+        "house_id": "house-a",
+        "part": "roof"
+      },
+      {
+        "op": "place",
+        "house_id": "house-a",
+        "part": "brace"
+      },
+      {
+        "op": "foundation",
+        "house_id": "house-b",
+        "material": "sand"
+      },
+      {
+        "op": "place",
+        "house_id": "house-b",
+        "part": "back-wall"
+      },
+      {
+        "op": "place",
+        "house_id": "house-b",
+        "part": "left-wall"
+      },
+      {
+        "op": "place",
+        "house_id": "house-b",
+        "part": "right-wall"
+      },
+      {
+        "op": "place",
+        "house_id": "house-b",
+        "part": "front-wall"
+      },
+      {
+        "op": "place",
+        "house_id": "house-b",
+        "part": "roof"
+      },
+      {
+        "op": "place",
+        "house_id": "house-b",
+        "part": "brace"
+      },
+      {
+        "op": "storm"
+      }
+    ],
+    "elapsed_seconds": 90
+  }
+}

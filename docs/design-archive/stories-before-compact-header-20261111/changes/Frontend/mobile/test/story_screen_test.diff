@@ -1,0 +1,48 @@
+--- before/Frontend/mobile/test/story_screen_test.dart
++++ Frontend/mobile/test/story_screen_test.dart
+@@ -302,7 +302,7 @@
+     expect(repository.listCalls, 2);
+   });
+ 
+-  testWidgets('library story-world chips filter the backend catalogue', (
++  testWidgets('library story-world filter menu filters the backend catalogue', (
+     tester,
+   ) async {
+     final repository = _FakeStoryRepository(
+@@ -322,25 +322,22 @@
+     );
+     await tester.pumpAndSettle();
+ 
+-    expect(find.byKey(const Key('story-category-rail')), findsOneWidget);
+-    expect(find.byKey(const Key('story-category-Mercy')), findsOneWidget);
+-
+-    await tester.tap(find.byKey(const Key('story-category-Mercy')));
++    expect(find.byKey(const Key('story-category-rail')), findsNothing);
++
++    await tester.tap(find.byKey(const Key('story-filter-button')));
++    await tester.pumpAndSettle();
++    await tester.tap(find.widgetWithText(ListTile, 'Mercy'));
+     await tester.pumpAndSettle();
+ 
+     expect(find.text('David & Goliath'), findsNothing);
+     expect(find.text('Jonah and the Big Fish'), findsOneWidget);
+     expect(
+-      tester.getSemantics(find.byKey(const Key('story-category-Mercy'))),
+-      matchesSemantics(
+-        label: 'Mercy stories',
+-        isButton: true,
+-        hasSelectedState: true,
+-        isSelected: true,
+-        hasTapAction: true,
+-      ),
+-    );
+-    await tester.tap(find.byKey(const Key('story-category-All')));
++      find.bySemanticsLabel(RegExp(r'Filter story worlds\. Mercy selected')),
++      findsWidgets,
++    );
++    await tester.tap(find.byKey(const Key('story-filter-button')));
++    await tester.pumpAndSettle();
++    await tester.tap(find.widgetWithText(ListTile, 'All'));
+     await tester.pumpAndSettle();
+     expect(find.text('David & Goliath'), findsOneWidget);
+     expect(find.text('Jonah and the Big Fish'), findsOneWidget);

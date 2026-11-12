@@ -1,0 +1,163 @@
+{
+  "creator": "Wildfire Games / 0 A.D. art contributors",
+  "primary_repo": "https://github.com/0ad/0ad",
+  "primary_website": "https://play0ad.com/",
+  "commit_sha": "61a3b9507d974084e6badb88a0826bd89a6d5b8b",
+  "verified_date": "2026-10-13",
+  "license": "Creative Commons Attribution-ShareAlike 3.0",
+  "license_source": "https://github.com/0ad/0ad/blob/61a3b9507d974084e6badb88a0826bd89a6d5b8b/binaries/data/mods/public/art/LICENSE.txt",
+  "required_credit": "Wildfire Games \u2014 https://www.wildfiregames.com/ \u2014 CC BY-SA 3.0 https://creativecommons.org/licenses/by-sa/3.0/",
+  "license_scope": "Art files only; no game engine or code acquired. Redistributed modified art must retain CC BY-SA attribution and license. Not installed in Kingdom Kids.",
+  "ai_origin": false,
+  "status": "Unmodified source candidates; native visible Blender Collada import, animation transfer, and art review unverified.",
+  "files": [
+    {
+      "path": "LICENSE.txt",
+      "bytes": 1426,
+      "sha256": "ef98babd771c206032e005f3d440a1e610df409d9a9191f03e64deaa4abefbd9",
+      "url": "https://raw.githubusercontent.com/0ad/0ad/61a3b9507d974084e6badb88a0826bd89a6d5b8b/binaries/data/mods/public/art/LICENSE.txt"
+    },
+    {
+      "path": "actors/fauna/camel.xml",
+      "bytes": 1207,
+      "sha256": "7dbff3511888607a8abf73efda539beb776e25cda8cd911c3fcaa24837c27ccf",
+      "url": "https://raw.githubusercontent.com/0ad/0ad/61a3b9507d974084e6badb88a0826bd89a6d5b8b/binaries/data/mods/public/art/actors/fauna/camel.xml"
+    },
+    {
+      "path": "actors/fauna/lion.xml",
+      "bytes": 1969,
+      "sha256": "3e5089f05aef173bcb49422ba83548b3cc6a82cb90c5f972ac990e0af2131493",
+      "url": "https://raw.githubusercontent.com/0ad/0ad/61a3b9507d974084e6badb88a0826bd89a6d5b8b/binaries/data/mods/public/art/actors/fauna/lion.xml"
+    },
+    {
+      "path": "actors/fauna/giraffe_adult.xml",
+      "bytes": 2368,
+      "sha256": "a646237a3099378a70a454063a2de087ca705e19b670bd45ce9d85244f9bdb2c",
+      "url": "https://raw.githubusercontent.com/0ad/0ad/61a3b9507d974084e6badb88a0826bd89a6d5b8b/binaries/data/mods/public/art/actors/fauna/giraffe_adult.xml"
+    },
+    {
+      "path": "variants/quadraped/base_camel_fauna.xml",
+      "bytes": 888,
+      "sha256": "26c0b31777794d8647af19c8a1b5d96f9be2e6120cdf0865018d47071b15c93d",
+      "url": "https://raw.githubusercontent.com/0ad/0ad/61a3b9507d974084e6badb88a0826bd89a6d5b8b/binaries/data/mods/public/art/variants/quadraped/base_camel_fauna.xml"
+    },
+    {
+      "path": "meshes/skeletal/camel.dae",
+      "bytes": 419519,
+      "sha256": "2aacdc2af843b6168896b6a520275d33185c5588ce40a83225bbec9cb31b70a0",
+      "url": "https://raw.githubusercontent.com/0ad/0ad/61a3b9507d974084e6badb88a0826bd89a6d5b8b/binaries/data/mods/public/art/meshes/skeletal/camel.dae"
+    },
+    {
+      "path": "meshes/skeletal/animal_lion.dae",
+      "bytes": 283689,
+      "sha256": "fe929b6e9e975ad27343c8eb3b7aef6be4c7817e1cd866041a1de36039ef0b97",
+      "url": "https://raw.githubusercontent.com/0ad/0ad/61a3b9507d974084e6badb88a0826bd89a6d5b8b/binaries/data/mods/public/art/meshes/skeletal/animal_lion.dae"
+    },
+    {
+      "path": "meshes/skeletal/giraffe_adult.dae",
+      "bytes": 243784,
+      "sha256": "4ab31c9614aa6dce8d561478d5f5f253de89ef9469cd5724824b9a59dceb3227",
+      "url": "https://raw.githubusercontent.com/0ad/0ad/61a3b9507d974084e6badb88a0826bd89a6d5b8b/binaries/data/mods/public/art/meshes/skeletal/giraffe_adult.dae"
+    },
+    {
+      "path": "animation/quadraped/camel_walk.dae",
+      "bytes": 948185,
+      "sha256": "0a305b86f99470a8d9dd4886edf9fd10f8a8858f2c8880162dc36205a59288de",
+      "url": "https://raw.githubusercontent.com/0ad/0ad/61a3b9507d974084e6badb88a0826bd89a6d5b8b/binaries/data/mods/public/art/animation/quadraped/camel_walk.dae"
+    },
+    {
+      "path": "animation/quadraped/lion_walk.dae",
+      "bytes": 514527,
+      "sha256": "3a29e1ca25f80719786e47172914d406f6c82ffd5c01b3d161a0844096fb3c58",
+      "url": "https://raw.githubusercontent.com/0ad/0ad/61a3b9507d974084e6badb88a0826bd89a6d5b8b/binaries/data/mods/public/art/animation/quadraped/lion_walk.dae"
+    },
+    {
+      "path": "animation/quadraped/giraffe_adult_walk.dae",
+      "bytes": 574480,
+      "sha256": "c28ff5f0baff23930a00f86ee87fe5398aae8fed85a622e33a8cfac7b1b4ce3f",
+      "url": "https://raw.githubusercontent.com/0ad/0ad/61a3b9507d974084e6badb88a0826bd89a6d5b8b/binaries/data/mods/public/art/animation/quadraped/giraffe_adult_walk.dae"
+    },
+    {
+      "path": "animation/quadraped/camel_idle_01.dae",
+      "bytes": 1189139,
+      "sha256": "f00348cebdb1858fa05bd44af1965a5c3ed58ec4f5c2dda552dd12515df15864",
+      "url": "https://raw.githubusercontent.com/0ad/0ad/61a3b9507d974084e6badb88a0826bd89a6d5b8b/binaries/data/mods/public/art/animation/quadraped/camel_idle_01.dae"
+    },
+    {
+      "path": "animation/quadraped/lion_idle_01.dae",
+      "bytes": 470073,
+      "sha256": "94148188a7ac9a780e374ff65a48304404a03f15405d266bcc9b1e83e02d59e0",
+      "url": "https://raw.githubusercontent.com/0ad/0ad/61a3b9507d974084e6badb88a0826bd89a6d5b8b/binaries/data/mods/public/art/animation/quadraped/lion_idle_01.dae"
+    },
+    {
+      "path": "animation/quadraped/giraffe_adult_idle_01.dae",
+      "bytes": 382612,
+      "sha256": "2393995dcf0c61d4405fc7c62ea3857a53c2911921fad48439c8428dd55a7324",
+      "url": "https://raw.githubusercontent.com/0ad/0ad/61a3b9507d974084e6badb88a0826bd89a6d5b8b/binaries/data/mods/public/art/animation/quadraped/giraffe_adult_idle_01.dae"
+    },
+    {
+      "path": "textures/skins/skeletal/animal_camel_a.png",
+      "bytes": 362460,
+      "sha256": "3c3cdc9aa33cf4de033132550428291d81adf7af08d182730c0d620a79a6ff15",
+      "url": "https://raw.githubusercontent.com/0ad/0ad/61a3b9507d974084e6badb88a0826bd89a6d5b8b/binaries/data/mods/public/art/textures/skins/skeletal/animal_camel_a.png"
+    },
+    {
+      "path": "textures/skins/skeletal/animal_camel_b.png",
+      "bytes": 411646,
+      "sha256": "aa07ff30cc0d55855320dd6ab67f4619df4e6b4ca1a6948b869c39c67dab86db",
+      "url": "https://raw.githubusercontent.com/0ad/0ad/61a3b9507d974084e6badb88a0826bd89a6d5b8b/binaries/data/mods/public/art/textures/skins/skeletal/animal_camel_b.png"
+    },
+    {
+      "path": "textures/skins/skeletal/animal_camel_c.png",
+      "bytes": 331861,
+      "sha256": "bb63749636d4a0c31a752209bd0fbbd322a4d1ff292d3b6a4495820c0d01cdbb",
+      "url": "https://raw.githubusercontent.com/0ad/0ad/61a3b9507d974084e6badb88a0826bd89a6d5b8b/binaries/data/mods/public/art/textures/skins/skeletal/animal_camel_c.png"
+    },
+    {
+      "path": "textures/skins/skeletal/animal_lion.png",
+      "bytes": 118265,
+      "sha256": "98516012400a7bd88e9e46aacb6330be619783aaca0485a6049224b098e67eb4",
+      "url": "https://raw.githubusercontent.com/0ad/0ad/61a3b9507d974084e6badb88a0826bd89a6d5b8b/binaries/data/mods/public/art/textures/skins/skeletal/animal_lion.png"
+    },
+    {
+      "path": "textures/skins/skeletal/animal_giraffe.png",
+      "bytes": 348900,
+      "sha256": "3a724f3aa5acd67731e2e2442a5681b4c33f7c992382207067638be04a496c52",
+      "url": "https://raw.githubusercontent.com/0ad/0ad/61a3b9507d974084e6badb88a0826bd89a6d5b8b/binaries/data/mods/public/art/textures/skins/skeletal/animal_giraffe.png"
+    },
+    {
+      "path": "textures/skins/skeletal/animal_giraffeb.png",
+      "bytes": 499406,
+      "sha256": "196724eefcb5537fea48ebb4405b446e576d919ebd017deb71b58111663ad724",
+      "url": "https://raw.githubusercontent.com/0ad/0ad/61a3b9507d974084e6badb88a0826bd89a6d5b8b/binaries/data/mods/public/art/textures/skins/skeletal/animal_giraffeb.png"
+    }
+  ],
+  "native_import_documentation": "https://docs.blender.org/manual/en/4.5/files/import_export/collada.html",
+  "animation_audit": {
+    "camel_walk": {
+      "complete_mesh_skin_scene": true,
+      "skinned_joints": 48,
+      "animated_nodes": 94,
+      "samples": 41,
+      "duration_seconds": 1.333333,
+      "endpoint_matrix_max_error": 0
+    },
+    "lion_walk": {
+      "complete_mesh_skin_scene": true,
+      "skinned_joints": 27,
+      "animated_nodes": 30,
+      "samples": 101,
+      "duration_seconds": 3.33333,
+      "endpoint_matrix_max_error": 0
+    },
+    "giraffe_adult_walk": {
+      "complete_mesh_skin_scene": true,
+      "skinned_joints": 31,
+      "animated_nodes": 35,
+      "samples": 101,
+      "duration_seconds": 3.33333,
+      "endpoint_matrix_max_error": 0.011968,
+      "loop_note": "Small right rear foot transform mismatch; native first-to-last pose correction and visual checking needed."
+    }
+  }
+}

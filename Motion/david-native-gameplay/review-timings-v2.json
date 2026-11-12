@@ -1,0 +1,18 @@
+{
+  "fps": 60,
+  "native_rendered_frames": 444,
+  "duration_seconds": 7.4,
+  "source": "Actual GamePlayScreen real gesture, continuous native UV mesh, fixture-only repository, no network writes",
+  "release_seconds": 1.8333333333333333,
+  "impact_seconds": 2.683333333333333,
+  "body_contact_seconds": 3.5000333333333318,
+  "body_contact_action_ms": 1666.6999999999982,
+  "completion_seconds": 5.883333333333334,
+  "audio": "Bundled app WAV files mixed at native painter cue triggers; host capture disables native audio plugin",
+  "native_levels_qa": [
+    1,
+    2,
+    3
+  ],
+  "errors": []
+}

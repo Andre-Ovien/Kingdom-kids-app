@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "directions": 8,
+  "frames": 9,
+  "cell": 224,
+  "foot_anchor": [
+    112,
+    154
+  ],
+  "species": {
+    "tortoise": {
+      "frames": "frames/tortoise",
+      "frame_count": 72,
+      "foot_anchor": [
+        112.0,
+        148.441
+      ]
+    },
+    "elephant": {
+      "frames": "frames/elephant",
+      "frame_count": 72,
+      "foot_anchor": [
+        112.0,
+        143.822
+      ]
+    },
+    "goat": {
+      "frames": "frames/goat",
+      "frame_count": 72,
+      "foot_anchor": [
+        112.0,
+        148.441
+      ]
+    },
+    "rabbit": {
+      "frames": "frames/rabbit",
+      "frame_count": 72,
+      "foot_anchor": [
+        112.0,
+        148.441
+      ]
+    }
+  },
+  "gate": {
+    "foot_anchor": [
+      112.0,
+      135.548
+    ]
+  }
+}

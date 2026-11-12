@@ -1,0 +1,27 @@
+{
+  "recorded_at": "2026-11-11T11:50:10.701722+00:00",
+  "entrypoint": "tool/replay_onboarding.dart",
+  "source_hashes": {
+    "lib/main.dart": "4426c35ee41e14307532a8feacd9ecd7e37064e06ead19ab1bb56d3edf687178",
+    "lib/features/onboarding/presentation/onboarding_screen.dart": "4416a741509a85c77db0e9a454274c0066806ff6c174cd7ed18c72d2ca2bd455",
+    "lib/features/onboarding/presentation/family_onboarding_page.dart": "ec24bd1a24cd3b16fa0ac85a83d1d219d8612bae5efbc21da40453f5848459a6",
+    "lib/features/onboarding/presentation/photographic_onboarding_pages.dart": "e15be24e1ffe646ed7bb3bb095b6539e3edd077046eedbd72b76557500c75c0c",
+    "lib/features/onboarding/presentation/onboarding_navigation.dart": "bff1187d31aefb01109a4c1095f32e0058347061d7d908d7287906af66ca1543",
+    "lib/features/auth/presentation/auth_screen.dart": "0a1b8ee103265bb606818835114ad3ce85de89f5ae644773f3e9c4187c366ad5",
+    "tool/replay_onboarding.dart": "a49af753f4dfe2f85a7473edad58f654f40b5a0e3de1839823a5e0d49d96e737",
+    "pubspec.yaml": "bdb7513714151268d956b6ce1ef0f9dedea15272d701f729c2afcf475c9f004d"
+  },
+  "approved_v7_asset": {
+    "path": "assets/images/onboarding/photos/second-screen-expanded-scene-v7.png",
+    "sha256": "ce7c4d556ddd966bb3b545c1a3368e854e8bd4bef994b792a1efb59f9ec0cbf2"
+  },
+  "family_assets": {
+    "assets/images/onboarding/family-20261111/portrait-1.png": "5a4803a6cf5af3ac1e70cde4a5a9e02ec098f1f37abd286fc9ad49adf484d37b",
+    "assets/images/onboarding/family-20261111/portrait-2.png": "0040000b9aeffe95ad96baa4ea8904fec52cb7dfea8bb9f0acb830088184590e",
+    "assets/images/onboarding/family-20261111/portrait-3.png": "953df54e58d12339583ba473841134b3c364921075e4c7b10637de33fa2afb77",
+    "assets/images/onboarding/family-20261111/portrait-4.png": "3cbe988a4e47c5f25becb8c6b956ff7fb0b09c36e0212be099e843d3ae103b3c",
+    "assets/images/onboarding/family-20261111/portrait-5.png": "0fb02ccb95c2e935019b58638602dc9f35920462f4190726b65605646428f3b5",
+    "assets/images/onboarding/family-20261111/portrait-6.png": "e44e876646daac77d5ae7153c6aba6b5fe6f2ac279df10c82ec05f36183c770f"
+  },
+  "replay": "Deterministic non-release review target injects onboarding after real splash; release calls production.main(); no stored data modified."
+}

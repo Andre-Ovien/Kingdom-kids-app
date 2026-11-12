@@ -1,0 +1,158 @@
+{
+  "schema_version": 1,
+  "scope": "Metadata-only source-publication snapshot; not staged/committed by this agent.",
+  "destination": {
+    "identity": "Andre-Ovien",
+    "repository": "Andre-Ovien/Kingdom-kids-app",
+    "visibility": "PRIVATE",
+    "verification": "Root independently verified org-origin redirect and Render selection resolve to same repository ID; no account action by this agent."
+  },
+  "root_gitignore_sha256": "27afb73be270ce263c7748d74ce8c90d53869f5202b7c8ccdc9a02c1dbc18dc2",
+  "typed_default_feature_flags": {
+    "CLOUDINARY_PRIVATE_DELIVERY_ENABLED": false,
+    "PAID_CONTENT_ENFORCEMENT_ENABLED": false,
+    "PARENT_CHECKOUT_SANDBOX_ENABLED": false,
+    "PARENT_CONTENT_ACCESS_STATUS_ENABLED": false,
+    "SQUARE_SANDBOX_CANCELLATION_ENABLED": false,
+    "SQUARE_SANDBOX_CHECKOUT_ENABLED": false,
+    "SQUARE_SANDBOX_ENABLED": false,
+    "SQUARE_SANDBOX_HTTP_TRANSPORT_ENABLED": false,
+    "SQUARE_SANDBOX_RECONCILIATION_ENABLED": false,
+    "SQUARE_SANDBOX_TERM_BILLING_ENABLED": false,
+    "SQUARE_SANDBOX_TERM_RECONCILIATION_ENABLED": false
+  },
+  "tracked_sensitive_path_findings": [],
+  "text_secret_scan_owner": "Root; this preparation never reads/prints secret values.",
+  "retained_canonical_mobile_assets": {
+    "files": 209,
+    "bytes": 183801822,
+    "ignored_legitimate_assets": 0
+  },
+  "ignored_tool_mount_symlinks": 13,
+  "policy": "Keep all canonical authoring/code/app assets, licences and restore notes; exclude generated dependencies/builds/evidence, local private originals, credentials, DB/cache/backups and preview mounts.",
+  "notes": [
+    "No source candidate exceeds100MiB. Canonical Blender source above50MiB can cause a GitHub warning; LFS not configured.",
+    "Counts include this manifest and docs/release/git-publication.md. Future owner edits/staging are authoritative.",
+    "No Git index/commit/branch/push operation, local deletion, provider call or runtime activation by this agent."
+  ],
+  "commit_groups": [
+    "Backend+source hygiene/deployment docs first",
+    "Mobile source/platforms/approved assets+lockfiles",
+    "Website source/public assets+lockfile",
+    "Motion authored sources/licences/provenance and design restore notes"
+  ],
+  "candidates": {
+    "files": 4779,
+    "bytes": 991719097,
+    "maximum_file": {
+      "path": "Motion/red-sea-blender-v1/red-sea-characters.blend",
+      "bytes": 56441100
+    },
+    "by_top_level": {
+      ".gitignore": {
+        "files": 1,
+        "bytes": 2149
+      },
+      "Backend": {
+        "files": 288,
+        "bytes": 2946873
+      },
+      "Frontend": {
+        "files": 835,
+        "bytes": 240002302
+      },
+      "LICENSE": {
+        "files": 1,
+        "bytes": 1069
+      },
+      "Motion": {
+        "files": 3431,
+        "bytes": 745154646
+      },
+      "docs": {
+        "files": 216,
+        "bytes": 3538370
+      },
+      "release-readiness-2026-10-03.txt": {
+        "files": 1,
+        "bytes": 9726
+      },
+      "tools": {
+        "files": 6,
+        "bytes": 63962
+      }
+    },
+    "file_types": {
+      "(none)": 43,
+      ".example": 5,
+      ".py": 1136,
+      ".json": 534,
+      ".css": 8,
+      ".js": 9,
+      ".html": 18,
+      ".mjs": 31,
+      ".md": 165,
+      ".txt": 73,
+      ".yaml": 5,
+      ".kts": 3,
+      ".pro": 1,
+      ".xml": 22,
+      ".kt": 1,
+      ".png": 646,
+      ".properties": 2,
+      ".jar": 1,
+      ".bat": 1,
+      ".wav": 13,
+      ".ttf": 3,
+      ".glb": 30,
+      ".jpg": 49,
+      ".webp": 77,
+      ".jpeg": 6,
+      ".mp4": 14,
+      ".plist": 10,
+      ".xcconfig": 8,
+      ".lock": 3,
+      ".pbxproj": 4,
+      ".xcworkspacedata": 3,
+      ".xcsettings": 2,
+      ".xcscheme": 2,
+      ".swift": 8,
+      ".storyboard": 2,
+      ".xcprivacy": 2,
+      ".h": 8,
+      ".dart": 377,
+      ".cc": 4,
+      ".cmake": 2,
+      ".xib": 1,
+      ".entitlements": 2,
+      ".sh": 1,
+      ".rc": 1,
+      ".cpp": 4,
+      ".ico": 1,
+      ".manifest": 1,
+      ".svg": 1,
+      ".ts": 4,
+      ".astro": 5,
+      ".blend": 46,
+      ".fbx": 8,
+      ".zip": 6,
+      ".mtl": 7,
+      ".obj": 19,
+      ".dae": 9,
+      ".gif": 3,
+      ".woff2": 1,
+      ".tsx": 2,
+      ".mhmat": 15,
+      ".mhclo": 8,
+      ".thumb": 12,
+      ".bash": 2,
+      ".csv": 2,
+      ".toml": 1,
+      ".gz": 1273,
+      ".mirror": 1,
+      ".target": 1,
+      ".mhm": 1,
+      ".diff": 10
+    }
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "creator": "AnimalAnimator.com / Arthur / serpentacademy",
+  "primary_repo": "https://github.com/serpentacademy/Free-3D-AI-Animated-Giraffe",
+  "commit_sha": "c40305c2f12a09efbda4944587df606cc01f6cc8",
+  "verified_date": "2026-10-13",
+  "license_text_verbatim": "This asset is free to use in both personal and commercial projects. Attribution to AnimalAnimator.com is appreciated but not required.",
+  "license_source": "https://github.com/serpentacademy/Free-3D-AI-Animated-Giraffe/blob/c40305c2f12a09efbda4944587df606cc01f6cc8/README.md",
+  "ai_origin": true,
+  "scope": "Unmodified artist texture files and backup native scene acquired to repair the original source export through visible Blender GUI, not edited or installed.",
+  "files": [
+    {
+      "filename": "giraffe_d.png",
+      "bytes": 867683,
+      "sha256": "edb03ba602f611a2386eea9a6fcd654ac7662e1a09a57662aacda96111cb06d6",
+      "url": "https://raw.githubusercontent.com/serpentacademy/Free-3D-AI-Animated-Giraffe/c40305c2f12a09efbda4944587df606cc01f6cc8/giraffe_d.png",
+      "dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "filename": "giraffe_n.png",
+      "bytes": 2477416,
+      "sha256": "50542646919328760ff7d3a4c76279af3b026ad30394b9cde452009c30c8f4c4",
+      "url": "https://raw.githubusercontent.com/serpentacademy/Free-3D-AI-Animated-Giraffe/c40305c2f12a09efbda4944587df606cc01f6cc8/giraffe_n.png",
+      "dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "filename": "giraffe.blend1",
+      "bytes": 4152525,
+      "sha256": "51d71ff7c27e01e512c5ec241ebb636c3627dbbb9feb73893ccb7a275235da8c",
+      "url": "https://raw.githubusercontent.com/serpentacademy/Free-3D-AI-Animated-Giraffe/c40305c2f12a09efbda4944587df606cc01f6cc8/giraffe.blend1",
+      "blend_header": "BLENDER17-01v050"
+    }
+  ]
+}

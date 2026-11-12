@@ -1,0 +1,165 @@
+{
+  "mode": "story",
+  "characters": [
+    "kai",
+    "nia",
+    "zuri"
+  ],
+  "stories": [
+    {
+      "slug": "good-samaritan",
+      "segments": [
+        {
+          "text": "Someone asked Jesus who counted as a neighbor. Jesus answered with a story about a man traveling from Jerusalem to Jericho. Along the road, robbers hurt the man and left him needing help.",
+          "start_offset": 0,
+          "end_offset": 187
+        },
+        {
+          "text": "A priest came down the road. He saw the man, but walked past on the other side. Later, a Levite came along. He also saw the man and passed by. The traveler was still alone.",
+          "start_offset": 189,
+          "end_offset": 361
+        },
+        {
+          "text": "Then a Samaritan arrived. Many people in those days did not get along with Samaritans. Yet this traveler did not let differences stop him from caring. He saw someone in trouble and chose to help.",
+          "start_offset": 363,
+          "end_offset": 558
+        },
+        {
+          "text": "The Samaritan gently cleaned and bandaged the man\u2019s wounds. He helped him onto his own animal and brought him to an inn, where he could rest. The next day, he paid the innkeeper to continue caring for him.",
+          "start_offset": 560,
+          "end_offset": 765
+        },
+        {
+          "text": "Jesus asked which traveler had acted like a neighbor. The answer was the one who showed mercy. We can practice that kindness too. When someone is hurt or lonely, we can find a trusted grown-up, offer gentle help, and include them. A caring neighbor does more than notice. A caring neighbor takes a helpful step.",
+          "start_offset": 767,
+          "end_offset": 1078
+        }
+      ]
+    },
+    {
+      "slug": "joseph-colorful-coat",
+      "segments": [
+        {
+          "text": "Joseph belonged to a large family. His father, Jacob, gave him a special colorful coat. Joseph also had dreams that surprised his brothers. Instead of sharing his happiness, his brothers grew jealous.",
+          "start_offset": 0,
+          "end_offset": 200
+        },
+        {
+          "text": "Their jealousy led them to make a terrible choice. They took Joseph away from home and sold him to travelers going to Egypt. Joseph lost his coat and the comfort of his family, but God did not leave him.",
+          "start_offset": 202,
+          "end_offset": 405
+        },
+        {
+          "text": "Life in Egypt was difficult. Joseph worked faithfully, even when others treated him unfairly. Over time, God helped him understand dreams. When the ruler of Egypt needed help, Joseph explained that years of plenty would be followed by years when food was scarce.",
+          "start_offset": 407,
+          "end_offset": 669
+        },
+        {
+          "text": "Joseph helped store grain so people would have food later. When the hungry years arrived, his brothers came to Egypt for grain. They did not recognize the brother they had hurt so long ago.",
+          "start_offset": 671,
+          "end_offset": 860
+        },
+        {
+          "text": "At last, Joseph told them who he was. He cried, welcomed them, and helped his family. Their wrong choice was still wrong, but Joseph chose forgiveness instead of revenge. His story reminds us to notice jealousy, ask for help, and choose kindness. God can bring hope even after a painful beginning.",
+          "start_offset": 862,
+          "end_offset": 1159
+        }
+      ]
+    },
+    {
+      "slug": "lost-sheep",
+      "segments": [
+        {
+          "text": "Jesus welcomed people who wanted to listen and learn. Some people wondered why he cared about those who had made mistakes. Jesus told them a story about a shepherd and his one hundred sheep.",
+          "start_offset": 0,
+          "end_offset": 190
+        },
+        {
+          "text": "The shepherd knew his flock. As he watched the sheep, he noticed that one was missing. Ninety-nine sheep were still together, but the missing sheep mattered too. The shepherd went to look for it.",
+          "start_offset": 192,
+          "end_offset": 387
+        },
+        {
+          "text": "He did not decide that one small sheep was unimportant. He kept searching until he found it. Imagine the relief of hearing a familiar voice after feeling lost and alone. The sheep had been found!",
+          "start_offset": 389,
+          "end_offset": 584
+        },
+        {
+          "text": "With joy, the shepherd lifted the sheep onto his shoulders and carried it home. He called his friends and neighbors to celebrate with him. His happiness was too big to keep to himself.",
+          "start_offset": 586,
+          "end_offset": 770
+        },
+        {
+          "text": "Jesus explained that heaven rejoices when someone turns back to God. We can always ask for help, tell the truth about our mistakes, and begin again. God cares for each person. When someone feels left out, we can welcome them with the same patient kindness.",
+          "start_offset": 772,
+          "end_offset": 1028
+        }
+      ]
+    },
+    {
+      "slug": "ruth-and-naomi",
+      "segments": [
+        {
+          "text": "Naomi had lost people she loved and was returning to Bethlehem. Her daughter-in-law Ruth could have stayed in her own country, Moab. Instead, Ruth chose to stay beside Naomi and share her journey.",
+          "start_offset": 0,
+          "end_offset": 196
+        },
+        {
+          "text": "Ruth promised to make Naomi\u2019s people her people and to trust Naomi\u2019s God. Together, they reached Bethlehem at the beginning of the barley harvest. They needed food, so Ruth looked for a way to help.",
+          "start_offset": 198,
+          "end_offset": 396
+        },
+        {
+          "text": "She went into the fields to gather grain that the harvesters left behind. This was called gleaning. Ruth bent down, picked up the grain, and kept working. Little handfuls slowly became enough to take home.",
+          "start_offset": 398,
+          "end_offset": 603
+        },
+        {
+          "text": "The field belonged to Boaz, a relative of Naomi\u2019s family. He heard about Ruth\u2019s faithful care. Boaz made sure she could work safely, offered water and food, and asked the workers to leave extra grain for her.",
+          "start_offset": 605,
+          "end_offset": 813
+        },
+        {
+          "text": "That evening, Ruth brought grain and leftover food back to Naomi. Naomi was encouraged by the kindness they had received. Ruth continued gathering through the harvest. Her love was more than a promise: it became patient, useful work. We can care for our families through small helpful actions, and welcome people who are starting again in a new place.",
+          "start_offset": 815,
+          "end_offset": 1166
+        }
+      ]
+    },
+    {
+      "slug": "walls-of-jericho",
+      "segments": [
+        {
+          "text": "Joshua led God\u2019s people toward Jericho, a city with strong walls and tightly closed gates. The people could not simply walk through. God gave Joshua instructions that required trust, patience, and careful listening.",
+          "start_offset": 0,
+          "end_offset": 215
+        },
+        {
+          "text": "For six days, the people marched around the city once each day. Priests carried the ark of the covenant, a reminder of God\u2019s presence, and seven priests carried trumpets. The people waited quietly for Joshua\u2019s signal.",
+          "start_offset": 217,
+          "end_offset": 434
+        },
+        {
+          "text": "Each day, they returned to camp. They had followed the instructions, but the walls were still standing. Waiting can feel difficult when we want something to happen right away. The people kept taking the next faithful step.",
+          "start_offset": 436,
+          "end_offset": 658
+        },
+        {
+          "text": "On the seventh day, they marched around Jericho seven times. Then the trumpets sounded and Joshua gave the signal. The people shouted, and the walls fell. God had opened the way as he had promised.",
+          "start_offset": 660,
+          "end_offset": 857
+        },
+        {
+          "text": "Rahab and her family were brought to safety, just as the spies had promised when she helped them. This story reminds us that trust includes listening and keeping our promises. We can practice patience, work together, and ask God for courage while we wait. One obedient step can prepare us for the next.",
+          "start_offset": 859,
+          "end_offset": 1161
+        }
+      ]
+    }
+  ],
+  "descriptions": {
+    "kai": "An original animated child character, approximately nine years old, speaking clear natural English. The voice has the small, light resonance and youthful timbre of a child, with relaxed breath and fluid expressive phrasing. Warm, intelligible story narration for children. Natural pauses and sincere curiosity. Moderate speaking pace. A young boy with a bright gentle upper register, rounded vowels and a warm smile in his voice. Friendly, curious and quietly brave. His youthful voice sounds effortless, with clear soft consonants and engaging storytelling expression.",
+    "nia": "An original animated child character, approximately nine years old, speaking clear natural English. The voice has the small, light resonance and youthful timbre of a child, with relaxed breath and fluid expressive phrasing. Warm, intelligible story narration for children. Natural pauses and sincere curiosity. Moderate speaking pace. A young girl with a soft clear voice and smooth, delicate resonance. Thoughtful, reassuring and gently curious. Her youthful voice has a calm flowing cadence and tender expression, with crisp words and quiet confidence.",
+    "zuri": "An original animated child character, approximately nine years old, speaking clear natural English. The voice has the small, light resonance and youthful timbre of a child, with relaxed breath and fluid expressive phrasing. Warm, intelligible story narration for children. Natural pauses and sincere curiosity. Moderate speaking pace. A young girl with a bright rounded voice and lively melodic inflection. Joyful, playful and full of wonder. Her youthful voice has cheerful expressive energy and clear, easy articulation, becoming reassuring when the story turns serious."
+  }
+}

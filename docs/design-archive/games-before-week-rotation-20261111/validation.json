@@ -1,0 +1,60 @@
+{
+  "state": "Final source frozen and verified; ready for root build/install.",
+  "source_hashes": {
+    "games_screen.dart": "9315efaf5f9b6571052676c6675c77aafb90032d3f649a8dc146854438aa3c9f",
+    "games_course_widgets.dart": "5da927f079e5b3317c94f7bada8f3b230bb1aeade080f4022201d03c08412671",
+    "games_week_carousel.dart": "c6292efa1571c3c3243ba5b5afdca2a5e453a06e74fac0b9a4b125c83c0c6d8f"
+  },
+  "preserved_exactly": {
+    "load": true,
+    "visible_games": true,
+    "open": true,
+    "choose_profile": true,
+    "clear_filters": true,
+    "choose_category": true,
+    "static_cards_and_rings": true
+  },
+  "rotation": "Plural Games of the Week; at most5unique genuine active games supplied by unchanged availability-filtered catalogue. Flagged games first then backend order. Seven-second single AnimationController drives pill stroke, advance, and350mscover/titleglide. No Timer.",
+  "interaction": "Play disabled duringmixedframes/loading; captured slug revalidated against currently visible/current-owner model before opening. Pointer/scrolling/hidden/route/background/motion/accessibility guards. Same IDs do not reset clock on rebuild; changed owner resets even same pool.",
+  "preload": "Resize-bucket-matched local precache and offstage shared-media/cover preloads, muted image-loading tickers, stale generation/disposal guard.",
+  "scope": "Only Games presentation sources changed; original card/ring code preserved byte-for-byte.",
+  "verification": {
+    "status": "passed",
+    "new_rotation_tests": 10,
+    "preserved_games_tests": 24,
+    "related_route_audio_regressions": 3,
+    "total_tests": 37,
+    "scoped_analysis": "No issues found",
+    "clock_seconds": 7,
+    "transition_milliseconds": 350,
+    "pool": "Five unique genuine available catalogue games; all flagged entries first, then catalogue order. Fewer games stay honest. No invented weekly rotation API.",
+    "checks": [
+      "half and near-full single-clock pill stroke",
+      "full closed pill RRect perimeter rather than spinner/circle",
+      "actual intermediate painted cover and title glide",
+      "correct current Play target for all five games and forward wrap",
+      "Play disabled during ambiguous transition",
+      "parent rebuild retains clock progress",
+      "pointer/inactive/covered route/background/hidden-scrolling pause",
+      "Reduce Motion and accessibility static with manual next+Play",
+      "zero/one unique game static",
+      "pool and child scope replacement retires old transition",
+      "actual GamesScreen child refresh gates stale Play and passes new child to detail",
+      "clock/scroll/listener disposal",
+      "all prior catalogue/filter/search/retired/paused/auth/loading/error/a11y/geometry/return-progress checks"
+    ],
+    "files": {
+      "Frontend/mobile/lib/features/games/presentation/games_screen.dart": "9315efaf5f9b6571052676c6675c77aafb90032d3f649a8dc146854438aa3c9f",
+      "Frontend/mobile/lib/features/games/presentation/games_course_widgets.dart": "5da927f079e5b3317c94f7bada8f3b230bb1aeade080f4022201d03c08412671",
+      "Frontend/mobile/lib/features/games/presentation/games_week_carousel.dart": "c6292efa1571c3c3243ba5b5afdca2a5e453a06e74fac0b9a4b125c83c0c6d8f",
+      "Frontend/mobile/test/games_week_rotation_test.dart": "6c6c474f9f9ab956fa90acfbe889873c5d7ca4eda6eefa328fc0ec0cbf737d53",
+      "Frontend/mobile/test/game_screen_test.dart": "67dfecdf536bfe331df4d58c213c66deee4798748356346767e1a5e69a8c270a",
+      "Frontend/mobile/test/widget_test.dart": "95a21cc9fcd18359675424c271d32d1365e10c6899a5863aa5ac5c1a5a9c9939",
+      "Frontend/mobile/test/app_audio_ui_feedback_test.dart": "937970083ab7985d25ba5c491736e17492b29701c31eebcb00318854c10f0c2b"
+    },
+    "test_fixture_note": "Only non-motion GamesScreen data/layout/feedback fixtures disable animations; gameplay routes remain unchanged. Dedicated rotation tests pump actual100ms frames.",
+    "production_changes_by_test_owner": [],
+    "phone_actions": []
+  },
+  "flutter_lock": "released to root"
+}

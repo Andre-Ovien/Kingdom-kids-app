@@ -1,0 +1,443 @@
+{
+  "1": {
+    "mode": "living_world",
+    "world": {
+      "rows": 4,
+      "columns": 5,
+      "days": [
+        1,
+        2,
+        3
+      ],
+      "river_start": 0,
+      "river_end": 15,
+      "pieces": [
+        {
+          "id": "light-1",
+          "kind": "light",
+          "day": 1,
+          "label": "Light"
+        },
+        {
+          "id": "cloud-1",
+          "kind": "cloud",
+          "day": 2,
+          "label": "Cloud"
+        },
+        {
+          "id": "water-1",
+          "kind": "water",
+          "day": 3,
+          "label": "Water 1"
+        },
+        {
+          "id": "water-2",
+          "kind": "water",
+          "day": 3,
+          "label": "Water 2"
+        },
+        {
+          "id": "water-3",
+          "kind": "water",
+          "day": 3,
+          "label": "Water 3"
+        },
+        {
+          "id": "water-4",
+          "kind": "water",
+          "day": 3,
+          "label": "Water 4"
+        },
+        {
+          "id": "water-5",
+          "kind": "water",
+          "day": 3,
+          "label": "Water 5"
+        },
+        {
+          "id": "water-6",
+          "kind": "water",
+          "day": 3,
+          "label": "Water 6"
+        },
+        {
+          "id": "land-1",
+          "kind": "land",
+          "day": 3,
+          "label": "Land 1"
+        },
+        {
+          "id": "land-2",
+          "kind": "land",
+          "day": 3,
+          "label": "Land 2"
+        },
+        {
+          "id": "land-3",
+          "kind": "land",
+          "day": 3,
+          "label": "Land 3"
+        },
+        {
+          "id": "land-4",
+          "kind": "land",
+          "day": 3,
+          "label": "Land 4"
+        },
+        {
+          "id": "land-5",
+          "kind": "land",
+          "day": 3,
+          "label": "Land 5"
+        },
+        {
+          "id": "land-6",
+          "kind": "land",
+          "day": 3,
+          "label": "Land 6"
+        },
+        {
+          "id": "land-7",
+          "kind": "land",
+          "day": 3,
+          "label": "Land 7"
+        },
+        {
+          "id": "land-8",
+          "kind": "land",
+          "day": 3,
+          "label": "Land 8"
+        },
+        {
+          "id": "forest-1",
+          "kind": "forest",
+          "day": 3,
+          "label": "Forest 1"
+        },
+        {
+          "id": "forest-2",
+          "kind": "forest",
+          "day": 3,
+          "label": "Forest 2"
+        }
+      ],
+      "target_moves": 26
+    }
+  },
+  "2": {
+    "mode": "living_world",
+    "world": {
+      "rows": 4,
+      "columns": 5,
+      "days": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "river_start": 0,
+      "river_end": 15,
+      "pieces": [
+        {
+          "id": "light-1",
+          "kind": "light",
+          "day": 1,
+          "label": "Light"
+        },
+        {
+          "id": "cloud-1",
+          "kind": "cloud",
+          "day": 2,
+          "label": "Cloud"
+        },
+        {
+          "id": "water-1",
+          "kind": "water",
+          "day": 3,
+          "label": "Water 1"
+        },
+        {
+          "id": "water-2",
+          "kind": "water",
+          "day": 3,
+          "label": "Water 2"
+        },
+        {
+          "id": "water-3",
+          "kind": "water",
+          "day": 3,
+          "label": "Water 3"
+        },
+        {
+          "id": "water-4",
+          "kind": "water",
+          "day": 3,
+          "label": "Water 4"
+        },
+        {
+          "id": "water-5",
+          "kind": "water",
+          "day": 3,
+          "label": "Water 5"
+        },
+        {
+          "id": "water-6",
+          "kind": "water",
+          "day": 3,
+          "label": "Water 6"
+        },
+        {
+          "id": "land-1",
+          "kind": "land",
+          "day": 3,
+          "label": "Land 1"
+        },
+        {
+          "id": "land-2",
+          "kind": "land",
+          "day": 3,
+          "label": "Land 2"
+        },
+        {
+          "id": "land-3",
+          "kind": "land",
+          "day": 3,
+          "label": "Land 3"
+        },
+        {
+          "id": "land-4",
+          "kind": "land",
+          "day": 3,
+          "label": "Land 4"
+        },
+        {
+          "id": "land-5",
+          "kind": "land",
+          "day": 3,
+          "label": "Land 5"
+        },
+        {
+          "id": "land-6",
+          "kind": "land",
+          "day": 3,
+          "label": "Land 6"
+        },
+        {
+          "id": "land-7",
+          "kind": "land",
+          "day": 3,
+          "label": "Land 7"
+        },
+        {
+          "id": "land-8",
+          "kind": "land",
+          "day": 3,
+          "label": "Land 8"
+        },
+        {
+          "id": "forest-1",
+          "kind": "forest",
+          "day": 3,
+          "label": "Forest 1"
+        },
+        {
+          "id": "forest-2",
+          "kind": "forest",
+          "day": 3,
+          "label": "Forest 2"
+        },
+        {
+          "id": "sun-1",
+          "kind": "sun",
+          "day": 4,
+          "label": "Sun"
+        },
+        {
+          "id": "moon-1",
+          "kind": "moon",
+          "day": 4,
+          "label": "Moon"
+        },
+        {
+          "id": "fish-1",
+          "kind": "fish",
+          "day": 5,
+          "label": "Fish"
+        },
+        {
+          "id": "bird-1",
+          "kind": "bird",
+          "day": 5,
+          "label": "Bird"
+        }
+      ],
+      "target_moves": 30
+    }
+  },
+  "3": {
+    "mode": "living_world",
+    "world": {
+      "rows": 4,
+      "columns": 5,
+      "days": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "river_start": 0,
+      "river_end": 15,
+      "pieces": [
+        {
+          "id": "light-1",
+          "kind": "light",
+          "day": 1,
+          "label": "Light"
+        },
+        {
+          "id": "cloud-1",
+          "kind": "cloud",
+          "day": 2,
+          "label": "Cloud"
+        },
+        {
+          "id": "water-1",
+          "kind": "water",
+          "day": 3,
+          "label": "Water 1"
+        },
+        {
+          "id": "water-2",
+          "kind": "water",
+          "day": 3,
+          "label": "Water 2"
+        },
+        {
+          "id": "water-3",
+          "kind": "water",
+          "day": 3,
+          "label": "Water 3"
+        },
+        {
+          "id": "water-4",
+          "kind": "water",
+          "day": 3,
+          "label": "Water 4"
+        },
+        {
+          "id": "water-5",
+          "kind": "water",
+          "day": 3,
+          "label": "Water 5"
+        },
+        {
+          "id": "water-6",
+          "kind": "water",
+          "day": 3,
+          "label": "Water 6"
+        },
+        {
+          "id": "land-1",
+          "kind": "land",
+          "day": 3,
+          "label": "Land 1"
+        },
+        {
+          "id": "land-2",
+          "kind": "land",
+          "day": 3,
+          "label": "Land 2"
+        },
+        {
+          "id": "land-3",
+          "kind": "land",
+          "day": 3,
+          "label": "Land 3"
+        },
+        {
+          "id": "land-4",
+          "kind": "land",
+          "day": 3,
+          "label": "Land 4"
+        },
+        {
+          "id": "land-5",
+          "kind": "land",
+          "day": 3,
+          "label": "Land 5"
+        },
+        {
+          "id": "land-6",
+          "kind": "land",
+          "day": 3,
+          "label": "Land 6"
+        },
+        {
+          "id": "land-7",
+          "kind": "land",
+          "day": 3,
+          "label": "Land 7"
+        },
+        {
+          "id": "land-8",
+          "kind": "land",
+          "day": 3,
+          "label": "Land 8"
+        },
+        {
+          "id": "forest-1",
+          "kind": "forest",
+          "day": 3,
+          "label": "Forest 1"
+        },
+        {
+          "id": "forest-2",
+          "kind": "forest",
+          "day": 3,
+          "label": "Forest 2"
+        },
+        {
+          "id": "sun-1",
+          "kind": "sun",
+          "day": 4,
+          "label": "Sun"
+        },
+        {
+          "id": "moon-1",
+          "kind": "moon",
+          "day": 4,
+          "label": "Moon"
+        },
+        {
+          "id": "fish-1",
+          "kind": "fish",
+          "day": 5,
+          "label": "Fish"
+        },
+        {
+          "id": "bird-1",
+          "kind": "bird",
+          "day": 5,
+          "label": "Bird"
+        },
+        {
+          "id": "goat-1",
+          "kind": "goat",
+          "day": 6,
+          "label": "Goat"
+        },
+        {
+          "id": "rabbit-1",
+          "kind": "rabbit",
+          "day": 6,
+          "label": "Rabbit"
+        }
+      ],
+      "target_moves": 32
+    }
+  }
+}

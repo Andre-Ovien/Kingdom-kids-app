@@ -1,0 +1,27 @@
+--- before/Frontend/mobile/test/story_screen_test.dart
++++ Frontend/mobile/test/story_screen_test.dart
+@@ -452,6 +452,7 @@
+ 
+     await tester.pumpWidget(
+       MaterialApp(
++        theme: ThemeData.dark(),
+         builder: (context, child) => MediaQuery(
+           data: MediaQuery.of(
+             context,
+@@ -472,6 +473,16 @@
+     await tester.pumpAndSettle();
+ 
+     expect(find.byKey(const Key('story-search-field')), findsOneWidget);
++    expect(
++      tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor,
++      Colors.white,
++    );
++    expect(
++      Theme.of(
++        tester.element(find.byKey(const Key('story-search-field'))),
++      ).brightness,
++      Brightness.light,
++    );
+     expect(
+       find.bySemanticsLabel(
+         'Featured story: David & Goliath. Courage. 4 min. Open story.',

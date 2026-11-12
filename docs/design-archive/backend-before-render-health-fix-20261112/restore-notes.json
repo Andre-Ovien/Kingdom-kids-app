@@ -1,0 +1,6 @@
+{
+  "scope": "Restore only the exact health declaration and tests/paragraph when reverting this fix; preserve all concurrent approved settings/README work.",
+  "production_file": "Backend/Core/Core/settings.py",
+  "new_declaration": "SECURE_REDIRECT_EXEMPT = [r'^health/live/$', r'^health/ready/$']",
+  "baseline_evidence": "output/render-release-prep-20261112/health-baseline.json"
+}

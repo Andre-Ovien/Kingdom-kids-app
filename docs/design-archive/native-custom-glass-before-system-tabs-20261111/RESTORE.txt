@@ -1,0 +1,3 @@
+Snapshot of the previous UIGlassEffect custom-button/manual-lens implementation.
+The replacement uses the real system UITabBar and the existing factory/channel registration, so restoring this source snapshot changes only the native navigation view.
+Compare later edits before restoring wholesale; the manifest records the previous byte-exact source hash.

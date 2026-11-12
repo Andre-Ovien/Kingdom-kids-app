@@ -1,0 +1,14 @@
+{
+  "archived_at": "2026-11-11T13:41:00.561935+01:00",
+  "variant": "Approved blue wave V2 before installation",
+  "source_exactness": "Direct copies of active files at archive time",
+  "source_hashes": {
+    "lib/features/auth/presentation/auth_screen.dart": "3a4c7b93206545a9eea3633c0669107928284d9ed4e4bcd9c096c310658f7187",
+    "lib/features/auth/presentation/auth_wave_header.dart": "fa67bb8d15fa9bd9210100af32307c1fa54455bdf0d49f26d5e867ebde1a57bc",
+    "test/auth_screen_test.dart": "fb09762395c6c681cf39d8cd455bb4fab07859c79e38c60f0d52c9aa4b4d76a5",
+    "test/auth_compact_layout_test.dart": "275453e7a530438dba6a2b4b0be431895d2f94244d63995b3df52cade8a208f0"
+  },
+  "preview_root": "output/auth-redesign-20261111-v2",
+  "validation": "15 functional/layout tests; 4 native preview checks; fixed Sign pixels verified across 132 frames",
+  "active_source_changed": false
+}

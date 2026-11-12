@@ -1,0 +1,61 @@
+{
+  "tool": "built-in image_gen.imagegen",
+  "intent": "Replace rejected Blender story covers with the approved existing 2D illustrated series",
+  "jobs": [
+    {
+      "slug": "lost-sheep",
+      "prompt": "Redraw the FIRST reference image completely as a polished flat 2D children's Bible storybook cover. The first image is a rejected Blender placeholder; retain only the story premise, NOT its 3D geometry, anatomy, rendering or composition. The next three reference images are the approved illustration series: match their hand-painted gouache texture, subtle paper grain, dark expressive ink outlines, warm light, rich cobalt blue, ochre gold, coral and violet colors, appealing expressive faces and natural illustrated proportions. Absolutely no 3D render, plastic dolls, low-poly forms, toy figures, robotic construction, photorealism or Pixar style. All human characters have dark warm brown skin and black textured hair, with modest ancient biblical clothing. Deliver one square full-bleed cover illustration, no text, title, lettering, logos, watermark, border, panels or collage. Keep the main faces and story action within the central crop-safe area, visually readable as a small app cover. Make it a cohesive member of the SAME illustrated series, not a new style. Scene: A joyful dark-skinned adult shepherd with kind expressive eyes and black curly hair and beard, wearing a blue and terracotta robe, carries his rescued fluffy white lamb comfortably across his shoulders with his hands supporting its legs. A curved wooden shepherd's staff rests beside him. Sunny green and golden hills, a meadow and a small flock behind him. Warm relief, kindness and delight; the sheep is charming and anatomically readable, not a toy.",
+      "referenced_image_paths": [
+        "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/Frontend/mobile/assets/images/stories/lost-sheep-blender-v1.webp",
+        "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/Frontend/mobile/assets/images/stories/esther-speaks-up-v2.webp",
+        "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/Frontend/mobile/assets/images/stories/noah-builds-the-ark-v2.webp",
+        "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/Frontend/mobile/assets/images/stories/daniel-in-the-lions-den-v2.webp"
+      ],
+      "transparent_background": false
+    },
+    {
+      "slug": "joseph-colorful-coat",
+      "prompt": "Redraw the FIRST reference image completely as a polished flat 2D children's Bible storybook cover. The first image is a rejected Blender placeholder; retain only the story premise, NOT its 3D geometry, anatomy, rendering or composition. The next three reference images are the approved illustration series: match their hand-painted gouache texture, subtle paper grain, dark expressive ink outlines, warm light, rich cobalt blue, ochre gold, coral and violet colors, appealing expressive faces and natural illustrated proportions. Absolutely no 3D render, plastic dolls, low-poly forms, toy figures, robotic construction, photorealism or Pixar style. All human characters have dark warm brown skin and black textured hair, with modest ancient biblical clothing. Deliver one square full-bleed cover illustration, no text, title, lettering, logos, watermark, border, panels or collage. Keep the main faces and story action within the central crop-safe area, visually readable as a small app cover. Make it a cohesive member of the SAME illustrated series, not a new style. Scene: Dark-skinned teenage Joseph proudly wears a beautifully illustrated flowing coat with distinct bright multicolored woven stripes in blue, coral, violet and gold. His warm expressive face and the distinctive coat are the central story cue. His elderly dark-skinned father Jacob, with soft gray-white beard and ancient robes, stands warmly beside him with an affectionate hand on his shoulder. An ancient village, olive trees and sunlit hills behind. Natural arms and hands, fabric folds and painterly details; do not reduce the coat to a cylindrical rainbow shape.",
+      "referenced_image_paths": [
+        "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/Frontend/mobile/assets/images/stories/joseph-colorful-coat-blender-v1.webp",
+        "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/Frontend/mobile/assets/images/stories/esther-speaks-up-v2.webp",
+        "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/Frontend/mobile/assets/images/stories/noah-builds-the-ark-v2.webp",
+        "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/Frontend/mobile/assets/images/stories/daniel-in-the-lions-den-v2.webp"
+      ],
+      "transparent_background": false
+    },
+    {
+      "slug": "good-samaritan",
+      "prompt": "Redraw the FIRST reference image completely as a polished flat 2D children's Bible storybook cover. The first image is a rejected Blender placeholder; retain only the story premise, NOT its 3D geometry, anatomy, rendering or composition. The next three reference images are the approved illustration series: match their hand-painted gouache texture, subtle paper grain, dark expressive ink outlines, warm light, rich cobalt blue, ochre gold, coral and violet colors, appealing expressive faces and natural illustrated proportions. Absolutely no 3D render, plastic dolls, low-poly forms, toy figures, robotic construction, photorealism or Pixar style. All human characters have dark warm brown skin and black textured hair, with modest ancient biblical clothing. Deliver one square full-bleed cover illustration, no text, title, lettering, logos, watermark, border, panels or collage. Keep the main faces and story action within the central crop-safe area, visually readable as a small app cover. Make it a cohesive member of the SAME illustrated series, not a new style. Scene: A kind dark-skinned adult Samaritan kneels beside a dark-skinned seated traveler on a warm winding rocky road, gently wrapping a clean bandage around the traveler's forearm. Both are fully clothed in ancient blue, ochre and terracotta robes. The traveler looks tired but safe, the Samaritan attentive and compassionate. A friendly donkey waits beside them, and an inn appears in the distance. Natural clear hands and caring interaction. No blood, gore, violence, injury close-up or frightening imagery.",
+      "referenced_image_paths": [
+        "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/Frontend/mobile/assets/images/stories/good-samaritan-blender-v1.webp",
+        "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/Frontend/mobile/assets/images/stories/esther-speaks-up-v2.webp",
+        "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/Frontend/mobile/assets/images/stories/noah-builds-the-ark-v2.webp",
+        "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/Frontend/mobile/assets/images/stories/daniel-in-the-lions-den-v2.webp"
+      ],
+      "transparent_background": false
+    },
+    {
+      "slug": "walls-of-jericho",
+      "prompt": "Redraw the FIRST reference image completely as a polished flat 2D children's Bible storybook cover. The first image is a rejected Blender placeholder; retain only the story premise, NOT its 3D geometry, anatomy, rendering or composition. The next three reference images are the approved illustration series: match their hand-painted gouache texture, subtle paper grain, dark expressive ink outlines, warm light, rich cobalt blue, ochre gold, coral and violet colors, appealing expressive faces and natural illustrated proportions. Absolutely no 3D render, plastic dolls, low-poly forms, toy figures, robotic construction, photorealism or Pixar style. All human characters have dark warm brown skin and black textured hair, with modest ancient biblical clothing. Deliver one square full-bleed cover illustration, no text, title, lettering, logos, watermark, border, panels or collage. Keep the main faces and story action within the central crop-safe area, visually readable as a small app cover. Make it a cohesive member of the SAME illustrated series, not a new style. Scene: Dark-skinned Joshua leads a peaceful ancient procession beside Jericho's towering stone city walls. Several dark-skinned priests sound golden trumpets with cheeks gently puffed; a small group behind carries an ornate golden sacred chest on poles, not a boat. The walls form a grand architectural backdrop with a light hint of dust and small cracks starting; all people safely on the open road, no debris hitting anyone, no weapons, battles, gore or frightened children. Rich blue sky, gold stone and coral/violet robes, expressive hopeful faces, warm biblical adventure.",
+      "referenced_image_paths": [
+        "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/Frontend/mobile/assets/images/stories/walls-of-jericho-blender-v1.webp",
+        "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/Frontend/mobile/assets/images/stories/esther-speaks-up-v2.webp",
+        "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/Frontend/mobile/assets/images/stories/noah-builds-the-ark-v2.webp",
+        "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/Frontend/mobile/assets/images/stories/daniel-in-the-lions-den-v2.webp"
+      ],
+      "transparent_background": false
+    },
+    {
+      "slug": "ruth-and-naomi",
+      "prompt": "Redraw the FIRST reference image completely as a polished flat 2D children's Bible storybook cover. The first image is a rejected Blender placeholder; retain only the story premise, NOT its 3D geometry, anatomy, rendering or composition. The next three reference images are the approved illustration series: match their hand-painted gouache texture, subtle paper grain, dark expressive ink outlines, warm light, rich cobalt blue, ochre gold, coral and violet colors, appealing expressive faces and natural illustrated proportions. Absolutely no 3D render, plastic dolls, low-poly forms, toy figures, robotic construction, photorealism or Pixar style. All human characters have dark warm brown skin and black textured hair, with modest ancient biblical clothing. Deliver one square full-bleed cover illustration, no text, title, lettering, logos, watermark, border, panels or collage. Keep the main faces and story action within the central crop-safe area, visually readable as a small app cover. Make it a cohesive member of the SAME illustrated series, not a new style. Scene: Dark-skinned young adult Ruth, with black textured hair and a blue-violet modest robe, gathers golden wheat stalks into a woven basket in a sunlit grain field. Elderly dark-skinned Naomi, with gray hair under a gentle headscarf and a warm terracotta robe, stands nearby with an affectionate encouraging expression. Their care for each other is clear. Golden wheat, blue sky, soft hills, flowers and warm harvest light. Natural hands, distinct ages, graceful illustrated fabric, bright inviting palette.",
+      "referenced_image_paths": [
+        "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/Frontend/mobile/assets/images/stories/ruth-and-naomi-blender-v1.webp",
+        "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/Frontend/mobile/assets/images/stories/esther-speaks-up-v2.webp",
+        "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/Frontend/mobile/assets/images/stories/noah-builds-the-ark-v2.webp",
+        "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/Frontend/mobile/assets/images/stories/daniel-in-the-lions-den-v2.webp"
+      ],
+      "transparent_background": false
+    }
+  ]
+}

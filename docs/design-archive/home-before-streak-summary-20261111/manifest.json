@@ -1,0 +1,14 @@
+{
+  "archivedAt": "2026-11-11T16:45:42.049263+00:00",
+  "files": {
+    "home_screen.dart.txt": {
+      "originalPath": "Frontend/mobile/lib/features/home/presentation/home_screen.dart",
+      "sha256": "13d972e6cef31178d133fe3139ab7d62bea915f2444db04a4ec6674cc4f3e686"
+    },
+    "home_screen_test.dart.txt": {
+      "originalPath": "Frontend/mobile/test/home_screen_test.dart",
+      "sha256": "747a3d79005b3e4634adb84b4c60d7acfe520186da93147f64e248aa6a9ec6c6"
+    }
+  },
+  "reason": "Before real child streak summary strip. Daily claim, rewards and modal-once flags are not reset."
+}

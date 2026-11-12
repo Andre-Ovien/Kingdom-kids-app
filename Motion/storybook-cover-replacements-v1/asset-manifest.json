@@ -1,0 +1,60 @@
+{
+  "tool": "built-in image_gen.imagegen",
+  "outputs": [
+    {
+      "slug": "lost-sheep",
+      "master": "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/Motion/storybook-cover-replacements-v1/masters/lost-sheep-storybook-v1.png",
+      "asset": "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/Frontend/mobile/assets/images/stories/lost-sheep-storybook-v1.webp",
+      "size": [
+        1254,
+        1254
+      ],
+      "bytes": 563632,
+      "sha256": "8f4968a136ca791a74a77d9ec8c558102a978aeb92c993669bad912985ccf918"
+    },
+    {
+      "slug": "joseph-colorful-coat",
+      "master": "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/Motion/storybook-cover-replacements-v1/masters/joseph-colorful-coat-storybook-v1.png",
+      "asset": "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/Frontend/mobile/assets/images/stories/joseph-colorful-coat-storybook-v1.webp",
+      "size": [
+        1254,
+        1254
+      ],
+      "bytes": 584250,
+      "sha256": "e3c281dc8527ef1f8680d1863bee77da4bc61a2750573f816da055be55d629b9"
+    },
+    {
+      "slug": "good-samaritan",
+      "master": "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/Motion/storybook-cover-replacements-v1/masters/good-samaritan-storybook-v1.png",
+      "asset": "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/Frontend/mobile/assets/images/stories/good-samaritan-storybook-v1.webp",
+      "size": [
+        1254,
+        1254
+      ],
+      "bytes": 577590,
+      "sha256": "422f43c586e0274082bc0898d2d0bbbe5c8b083de3cfef21d8d5992ed846a566"
+    },
+    {
+      "slug": "walls-of-jericho",
+      "master": "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/Motion/storybook-cover-replacements-v1/masters/walls-of-jericho-storybook-v1.png",
+      "asset": "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/Frontend/mobile/assets/images/stories/walls-of-jericho-storybook-v1.webp",
+      "size": [
+        1254,
+        1254
+      ],
+      "bytes": 586892,
+      "sha256": "f6744a2d60bbd3e075223da0f2720b625a825b3fb93791b8fdfaa6708880ed0f"
+    },
+    {
+      "slug": "ruth-and-naomi",
+      "master": "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/Motion/storybook-cover-replacements-v1/masters/ruth-and-naomi-storybook-v1.png",
+      "asset": "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/Frontend/mobile/assets/images/stories/ruth-and-naomi-storybook-v1.webp",
+      "size": [
+        1254,
+        1254
+      ],
+      "bytes": 552812,
+      "sha256": "dc0d79cbd2617dd1711233c1f2887512b61c7042e660b39a14daa401bd43ea8d"
+    }
+  ]
+}

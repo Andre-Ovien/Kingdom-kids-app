@@ -1,0 +1,14 @@
+{
+  "archivedAt": "2026-11-11T14:42:53.362988+00:00",
+  "files": {
+    "floating_liquid_nav.dart.txt": {
+      "originalPath": "Frontend/mobile/lib/shared/widgets/floating_liquid_nav.dart",
+      "sha256": "c7c6f0566ee9e973c7ae307685b5a3f9bf5e49c2d6cd14e87e953bb3ddc64d65"
+    },
+    "app.dart.txt": {
+      "originalPath": "Frontend/mobile/lib/app/app.dart",
+      "sha256": "745ec38d95c4fa8bfef49eaa777c95e46668b5c0ef197fba446927edb301642b"
+    }
+  },
+  "reason": "User rejected the frosted squircle nav; save it before persistent native Liquid Glass integration."
+}

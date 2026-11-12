@@ -1,0 +1,1069 @@
+{
+  "1": {
+    "mode": "ark_traffic",
+    "traffic": {
+      "tick_ms": 100,
+      "time_limit_ticks": 1200,
+      "nodes": [
+        {
+          "id": "bridge-in",
+          "x": 0.47,
+          "y": 0.58
+        },
+        {
+          "id": "bridge-out",
+          "x": 0.47,
+          "y": 0.41
+        },
+        {
+          "id": "lower-hub",
+          "x": 0.47,
+          "y": 0.73
+        },
+        {
+          "id": "west-hub",
+          "x": 0.25,
+          "y": 0.65
+        },
+        {
+          "id": "rock-in",
+          "x": 0.18,
+          "y": 0.45
+        },
+        {
+          "id": "upper-west",
+          "x": 0.33,
+          "y": 0.29
+        },
+        {
+          "id": "upper-hub",
+          "x": 0.7,
+          "y": 0.29
+        },
+        {
+          "id": "east-in",
+          "x": 0.78,
+          "y": 0.65
+        },
+        {
+          "id": "east-out",
+          "x": 0.78,
+          "y": 0.36
+        },
+        {
+          "id": "ark",
+          "x": 0.8,
+          "y": 0.16
+        },
+        {
+          "id": "home-elephant-1",
+          "x": 0.39,
+          "y": 0.82
+        },
+        {
+          "id": "home-elephant-2",
+          "x": 0.6,
+          "y": 0.91
+        },
+        {
+          "id": "home-tortoise-2",
+          "x": 0.65,
+          "y": 0.73
+        },
+        {
+          "id": "home-goat-1",
+          "x": 0.13,
+          "y": 0.83
+        },
+        {
+          "id": "home-goat-2",
+          "x": 0.12,
+          "y": 0.69
+        },
+        {
+          "id": "home-rabbit-1",
+          "x": 0.84,
+          "y": 0.85
+        },
+        {
+          "id": "home-rabbit-2",
+          "x": 0.87,
+          "y": 0.73
+        }
+      ],
+      "edges": [
+        {
+          "id": "elephant-1-trail",
+          "a": "home-elephant-1",
+          "b": "lower-hub",
+          "width": 0.13,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "elephant-2-trail",
+          "a": "home-elephant-2",
+          "b": "lower-hub",
+          "width": 0.13,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "tortoise-2-trail",
+          "a": "home-tortoise-2",
+          "b": "lower-hub",
+          "width": 0.12,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "goat-1-trail",
+          "a": "home-goat-1",
+          "b": "west-hub",
+          "width": 0.09,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "goat-2-trail",
+          "a": "home-goat-2",
+          "b": "west-hub",
+          "width": 0.09,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "rabbit-1-trail",
+          "a": "home-rabbit-1",
+          "b": "east-in",
+          "width": 0.1,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "rabbit-2-trail",
+          "a": "home-rabbit-2",
+          "b": "east-in",
+          "width": 0.1,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "bridge-approach",
+          "a": "lower-hub",
+          "b": "bridge-in",
+          "width": 0.12,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "west-link",
+          "a": "lower-hub",
+          "b": "west-hub",
+          "width": 0.12,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "east-link",
+          "a": "lower-hub",
+          "b": "east-in",
+          "width": 0.12,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "bridge",
+          "a": "bridge-in",
+          "b": "bridge-out",
+          "width": 0.082,
+          "terrain": "trail",
+          "gate": null,
+          "route_group": "bridge"
+        },
+        {
+          "id": "bridge-exit",
+          "a": "bridge-out",
+          "b": "upper-hub",
+          "width": 0.13,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "ark-approach",
+          "a": "upper-hub",
+          "b": "ark",
+          "width": 0.14,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "rock-crossing",
+          "a": "west-hub",
+          "b": "rock-in",
+          "width": 0.062,
+          "terrain": "rocky",
+          "gate": null,
+          "route_group": "rocks"
+        },
+        {
+          "id": "rock-climb",
+          "a": "rock-in",
+          "b": "upper-west",
+          "width": 0.062,
+          "terrain": "rocky",
+          "gate": null
+        },
+        {
+          "id": "upper-west-link",
+          "a": "upper-west",
+          "b": "upper-hub",
+          "width": 0.12,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "east-crossing",
+          "a": "east-in",
+          "b": "east-out",
+          "width": 0.13,
+          "terrain": "trail",
+          "gate": null,
+          "route_group": "east"
+        },
+        {
+          "id": "east-exit",
+          "a": "east-out",
+          "b": "upper-hub",
+          "width": 0.13,
+          "terrain": "trail",
+          "gate": null
+        }
+      ],
+      "animals": [
+        {
+          "id": "tortoise-1",
+          "species": "tortoise",
+          "start_node": "bridge-in",
+          "route": [
+            "bridge-in",
+            "bridge-out"
+          ],
+          "start_progress": 0.5
+        },
+        {
+          "id": "elephant-1",
+          "species": "elephant",
+          "start_node": "lower-hub",
+          "route": [
+            "lower-hub",
+            "bridge-in"
+          ],
+          "start_progress": 0.65
+        },
+        {
+          "id": "elephant-2",
+          "species": "elephant",
+          "start_node": "lower-hub",
+          "route": [
+            "lower-hub",
+            "bridge-in"
+          ],
+          "start_progress": 0.05
+        },
+        {
+          "id": "tortoise-2",
+          "species": "tortoise",
+          "start_node": "home-tortoise-2"
+        },
+        {
+          "id": "goat-1",
+          "species": "goat",
+          "start_node": "home-goat-1"
+        },
+        {
+          "id": "goat-2",
+          "species": "goat",
+          "start_node": "home-goat-2"
+        },
+        {
+          "id": "rabbit-1",
+          "species": "rabbit",
+          "start_node": "home-rabbit-1"
+        },
+        {
+          "id": "rabbit-2",
+          "species": "rabbit",
+          "start_node": "home-rabbit-2"
+        }
+      ],
+      "ark_node": "ark",
+      "gates": [],
+      "target_jam_ticks": 120,
+      "replay_challenges": [
+        {
+          "id": "no-jams",
+          "label": "A smooth rescue",
+          "kind": "no_jam"
+        },
+        {
+          "id": "different-routes",
+          "label": "Try another river route",
+          "kind": "different_routes"
+        }
+      ]
+    }
+  },
+  "2": {
+    "mode": "ark_traffic",
+    "traffic": {
+      "tick_ms": 100,
+      "time_limit_ticks": 1500,
+      "nodes": [
+        {
+          "id": "bridge-in",
+          "x": 0.47,
+          "y": 0.58
+        },
+        {
+          "id": "bridge-out",
+          "x": 0.47,
+          "y": 0.41
+        },
+        {
+          "id": "lower-hub",
+          "x": 0.47,
+          "y": 0.73
+        },
+        {
+          "id": "west-hub",
+          "x": 0.25,
+          "y": 0.65
+        },
+        {
+          "id": "rock-in",
+          "x": 0.18,
+          "y": 0.45
+        },
+        {
+          "id": "upper-west",
+          "x": 0.33,
+          "y": 0.29
+        },
+        {
+          "id": "upper-hub",
+          "x": 0.7,
+          "y": 0.29
+        },
+        {
+          "id": "east-in",
+          "x": 0.78,
+          "y": 0.65
+        },
+        {
+          "id": "east-out",
+          "x": 0.78,
+          "y": 0.36
+        },
+        {
+          "id": "ark",
+          "x": 0.8,
+          "y": 0.16
+        },
+        {
+          "id": "home-elephant-1",
+          "x": 0.39,
+          "y": 0.82
+        },
+        {
+          "id": "home-elephant-2",
+          "x": 0.6,
+          "y": 0.91
+        },
+        {
+          "id": "home-tortoise-2",
+          "x": 0.65,
+          "y": 0.73
+        },
+        {
+          "id": "home-goat-1",
+          "x": 0.13,
+          "y": 0.83
+        },
+        {
+          "id": "home-goat-2",
+          "x": 0.12,
+          "y": 0.69
+        },
+        {
+          "id": "home-rabbit-1",
+          "x": 0.84,
+          "y": 0.85
+        },
+        {
+          "id": "home-rabbit-2",
+          "x": 0.87,
+          "y": 0.73
+        },
+        {
+          "id": "home-goat-3",
+          "x": 0.12,
+          "y": 0.57
+        },
+        {
+          "id": "home-goat-4",
+          "x": 0.12,
+          "y": 0.94
+        }
+      ],
+      "edges": [
+        {
+          "id": "elephant-1-trail",
+          "a": "home-elephant-1",
+          "b": "lower-hub",
+          "width": 0.13,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "elephant-2-trail",
+          "a": "home-elephant-2",
+          "b": "lower-hub",
+          "width": 0.13,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "tortoise-2-trail",
+          "a": "home-tortoise-2",
+          "b": "lower-hub",
+          "width": 0.12,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "goat-1-trail",
+          "a": "home-goat-1",
+          "b": "west-hub",
+          "width": 0.09,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "goat-2-trail",
+          "a": "home-goat-2",
+          "b": "west-hub",
+          "width": 0.09,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "rabbit-1-trail",
+          "a": "home-rabbit-1",
+          "b": "east-in",
+          "width": 0.1,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "rabbit-2-trail",
+          "a": "home-rabbit-2",
+          "b": "east-in",
+          "width": 0.1,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "bridge-approach",
+          "a": "lower-hub",
+          "b": "bridge-in",
+          "width": 0.12,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "west-link",
+          "a": "lower-hub",
+          "b": "west-hub",
+          "width": 0.12,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "east-link",
+          "a": "lower-hub",
+          "b": "east-in",
+          "width": 0.12,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "bridge",
+          "a": "bridge-in",
+          "b": "bridge-out",
+          "width": 0.082,
+          "terrain": "trail",
+          "gate": null,
+          "route_group": "bridge"
+        },
+        {
+          "id": "bridge-exit",
+          "a": "bridge-out",
+          "b": "upper-hub",
+          "width": 0.13,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "ark-approach",
+          "a": "upper-hub",
+          "b": "ark",
+          "width": 0.14,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "rock-crossing",
+          "a": "west-hub",
+          "b": "rock-in",
+          "width": 0.062,
+          "terrain": "rocky",
+          "gate": null,
+          "route_group": "rocks"
+        },
+        {
+          "id": "rock-climb",
+          "a": "rock-in",
+          "b": "upper-west",
+          "width": 0.062,
+          "terrain": "rocky",
+          "gate": null
+        },
+        {
+          "id": "upper-west-link",
+          "a": "upper-west",
+          "b": "upper-hub",
+          "width": 0.12,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "east-crossing",
+          "a": "east-in",
+          "b": "east-out",
+          "width": 0.13,
+          "terrain": "trail",
+          "gate": "gate-a",
+          "route_group": "east"
+        },
+        {
+          "id": "east-exit",
+          "a": "east-out",
+          "b": "upper-hub",
+          "width": 0.13,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "goat-3-trail",
+          "a": "home-goat-3",
+          "b": "west-hub",
+          "width": 0.1,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "goat-4-trail",
+          "a": "home-goat-4",
+          "b": "west-hub",
+          "width": 0.1,
+          "terrain": "trail",
+          "gate": null
+        }
+      ],
+      "animals": [
+        {
+          "id": "tortoise-1",
+          "species": "tortoise",
+          "start_node": "bridge-in",
+          "route": [
+            "bridge-in",
+            "bridge-out"
+          ],
+          "start_progress": 0.5
+        },
+        {
+          "id": "elephant-1",
+          "species": "elephant",
+          "start_node": "lower-hub",
+          "route": [
+            "lower-hub",
+            "bridge-in"
+          ],
+          "start_progress": 0.65
+        },
+        {
+          "id": "elephant-2",
+          "species": "elephant",
+          "start_node": "lower-hub",
+          "route": [
+            "lower-hub",
+            "bridge-in"
+          ],
+          "start_progress": 0.05
+        },
+        {
+          "id": "tortoise-2",
+          "species": "tortoise",
+          "start_node": "home-tortoise-2"
+        },
+        {
+          "id": "goat-1",
+          "species": "goat",
+          "start_node": "home-goat-1"
+        },
+        {
+          "id": "goat-2",
+          "species": "goat",
+          "start_node": "home-goat-2"
+        },
+        {
+          "id": "rabbit-1",
+          "species": "rabbit",
+          "start_node": "home-rabbit-1"
+        },
+        {
+          "id": "rabbit-2",
+          "species": "rabbit",
+          "start_node": "home-rabbit-2"
+        },
+        {
+          "id": "goat-3",
+          "species": "goat",
+          "start_node": "home-goat-3"
+        },
+        {
+          "id": "goat-4",
+          "species": "goat",
+          "start_node": "home-goat-4"
+        }
+      ],
+      "ark_node": "ark",
+      "gates": [
+        {
+          "id": "gate-a",
+          "open": false
+        }
+      ],
+      "target_jam_ticks": 180,
+      "replay_challenges": [
+        {
+          "id": "no-jams",
+          "label": "A smooth rescue",
+          "kind": "no_jam"
+        },
+        {
+          "id": "different-routes",
+          "label": "Try another river route",
+          "kind": "different_routes"
+        }
+      ]
+    }
+  },
+  "3": {
+    "mode": "ark_traffic",
+    "traffic": {
+      "tick_ms": 100,
+      "time_limit_ticks": 1800,
+      "nodes": [
+        {
+          "id": "bridge-in",
+          "x": 0.47,
+          "y": 0.58
+        },
+        {
+          "id": "bridge-out",
+          "x": 0.47,
+          "y": 0.41
+        },
+        {
+          "id": "lower-hub",
+          "x": 0.47,
+          "y": 0.73
+        },
+        {
+          "id": "west-hub",
+          "x": 0.25,
+          "y": 0.65
+        },
+        {
+          "id": "rock-in",
+          "x": 0.18,
+          "y": 0.45
+        },
+        {
+          "id": "upper-west",
+          "x": 0.33,
+          "y": 0.29
+        },
+        {
+          "id": "upper-hub",
+          "x": 0.7,
+          "y": 0.29
+        },
+        {
+          "id": "east-in",
+          "x": 0.78,
+          "y": 0.65
+        },
+        {
+          "id": "east-out",
+          "x": 0.78,
+          "y": 0.36
+        },
+        {
+          "id": "ark",
+          "x": 0.8,
+          "y": 0.16
+        },
+        {
+          "id": "home-elephant-1",
+          "x": 0.39,
+          "y": 0.82
+        },
+        {
+          "id": "home-elephant-2",
+          "x": 0.6,
+          "y": 0.91
+        },
+        {
+          "id": "home-tortoise-2",
+          "x": 0.65,
+          "y": 0.73
+        },
+        {
+          "id": "home-goat-1",
+          "x": 0.13,
+          "y": 0.83
+        },
+        {
+          "id": "home-goat-2",
+          "x": 0.12,
+          "y": 0.69
+        },
+        {
+          "id": "home-rabbit-1",
+          "x": 0.84,
+          "y": 0.85
+        },
+        {
+          "id": "home-rabbit-2",
+          "x": 0.87,
+          "y": 0.73
+        },
+        {
+          "id": "home-goat-3",
+          "x": 0.12,
+          "y": 0.57
+        },
+        {
+          "id": "home-goat-4",
+          "x": 0.12,
+          "y": 0.94
+        },
+        {
+          "id": "home-rabbit-3",
+          "x": 0.85,
+          "y": 0.57
+        },
+        {
+          "id": "home-rabbit-4",
+          "x": 0.85,
+          "y": 0.94
+        }
+      ],
+      "edges": [
+        {
+          "id": "elephant-1-trail",
+          "a": "home-elephant-1",
+          "b": "lower-hub",
+          "width": 0.13,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "elephant-2-trail",
+          "a": "home-elephant-2",
+          "b": "lower-hub",
+          "width": 0.13,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "tortoise-2-trail",
+          "a": "home-tortoise-2",
+          "b": "lower-hub",
+          "width": 0.12,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "goat-1-trail",
+          "a": "home-goat-1",
+          "b": "west-hub",
+          "width": 0.09,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "goat-2-trail",
+          "a": "home-goat-2",
+          "b": "west-hub",
+          "width": 0.09,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "rabbit-1-trail",
+          "a": "home-rabbit-1",
+          "b": "east-in",
+          "width": 0.1,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "rabbit-2-trail",
+          "a": "home-rabbit-2",
+          "b": "east-in",
+          "width": 0.1,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "bridge-approach",
+          "a": "lower-hub",
+          "b": "bridge-in",
+          "width": 0.12,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "west-link",
+          "a": "lower-hub",
+          "b": "west-hub",
+          "width": 0.12,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "east-link",
+          "a": "lower-hub",
+          "b": "east-in",
+          "width": 0.12,
+          "terrain": "mud",
+          "gate": null
+        },
+        {
+          "id": "bridge",
+          "a": "bridge-in",
+          "b": "bridge-out",
+          "width": 0.082,
+          "terrain": "trail",
+          "gate": null,
+          "route_group": "bridge"
+        },
+        {
+          "id": "bridge-exit",
+          "a": "bridge-out",
+          "b": "upper-hub",
+          "width": 0.13,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "ark-approach",
+          "a": "upper-hub",
+          "b": "ark",
+          "width": 0.14,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "rock-crossing",
+          "a": "west-hub",
+          "b": "rock-in",
+          "width": 0.062,
+          "terrain": "rocky",
+          "gate": null,
+          "route_group": "rocks"
+        },
+        {
+          "id": "rock-climb",
+          "a": "rock-in",
+          "b": "upper-west",
+          "width": 0.062,
+          "terrain": "rocky",
+          "gate": null
+        },
+        {
+          "id": "upper-west-link",
+          "a": "upper-west",
+          "b": "upper-hub",
+          "width": 0.12,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "east-crossing",
+          "a": "east-in",
+          "b": "east-out",
+          "width": 0.13,
+          "terrain": "mud",
+          "gate": "gate-a",
+          "route_group": "east"
+        },
+        {
+          "id": "east-exit",
+          "a": "east-out",
+          "b": "upper-hub",
+          "width": 0.13,
+          "terrain": "trail",
+          "gate": "gate-b"
+        },
+        {
+          "id": "goat-3-trail",
+          "a": "home-goat-3",
+          "b": "west-hub",
+          "width": 0.1,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "goat-4-trail",
+          "a": "home-goat-4",
+          "b": "west-hub",
+          "width": 0.1,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "rabbit-3-trail",
+          "a": "home-rabbit-3",
+          "b": "east-in",
+          "width": 0.1,
+          "terrain": "trail",
+          "gate": null
+        },
+        {
+          "id": "rabbit-4-trail",
+          "a": "home-rabbit-4",
+          "b": "east-in",
+          "width": 0.1,
+          "terrain": "trail",
+          "gate": null
+        }
+      ],
+      "animals": [
+        {
+          "id": "tortoise-1",
+          "species": "tortoise",
+          "start_node": "bridge-in",
+          "route": [
+            "bridge-in",
+            "bridge-out"
+          ],
+          "start_progress": 0.5
+        },
+        {
+          "id": "elephant-1",
+          "species": "elephant",
+          "start_node": "lower-hub",
+          "route": [
+            "lower-hub",
+            "bridge-in"
+          ],
+          "start_progress": 0.65
+        },
+        {
+          "id": "elephant-2",
+          "species": "elephant",
+          "start_node": "lower-hub",
+          "route": [
+            "lower-hub",
+            "bridge-in"
+          ],
+          "start_progress": 0.05
+        },
+        {
+          "id": "tortoise-2",
+          "species": "tortoise",
+          "start_node": "home-tortoise-2"
+        },
+        {
+          "id": "goat-1",
+          "species": "goat",
+          "start_node": "home-goat-1"
+        },
+        {
+          "id": "goat-2",
+          "species": "goat",
+          "start_node": "home-goat-2"
+        },
+        {
+          "id": "rabbit-1",
+          "species": "rabbit",
+          "start_node": "home-rabbit-1"
+        },
+        {
+          "id": "rabbit-2",
+          "species": "rabbit",
+          "start_node": "home-rabbit-2"
+        },
+        {
+          "id": "goat-3",
+          "species": "goat",
+          "start_node": "home-goat-3"
+        },
+        {
+          "id": "goat-4",
+          "species": "goat",
+          "start_node": "home-goat-4"
+        },
+        {
+          "id": "rabbit-3",
+          "species": "rabbit",
+          "start_node": "home-rabbit-3"
+        },
+        {
+          "id": "rabbit-4",
+          "species": "rabbit",
+          "start_node": "home-rabbit-4"
+        }
+      ],
+      "ark_node": "ark",
+      "gates": [
+        {
+          "id": "gate-a",
+          "open": false
+        },
+        {
+          "id": "gate-b",
+          "open": true
+        }
+      ],
+      "target_jam_ticks": 240,
+      "replay_challenges": [
+        {
+          "id": "no-jams",
+          "label": "A smooth rescue",
+          "kind": "no_jam"
+        },
+        {
+          "id": "different-routes",
+          "label": "Try another river route",
+          "kind": "different_routes"
+        }
+      ]
+    }
+  }
+}

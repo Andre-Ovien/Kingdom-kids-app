@@ -1,0 +1,34 @@
+{
+  "archivedAt": "2026-11-11T15:43:53.705658+00:00",
+  "files": {
+    "lib__app__router.dart.txt": {
+      "originalPath": "Frontend/mobile/lib/app/router.dart",
+      "sha256": "ecca30df120824649c32f57571753654ddf7e6f1fe615f060f4668232133321f"
+    },
+    "lib__app__app.dart.txt": {
+      "originalPath": "Frontend/mobile/lib/app/app.dart",
+      "sha256": "e47b46261707a94cf73e3a5186ef3ab29ccf6060f8dcd64c622c6a4aee36f2a7"
+    },
+    "lib__shared__widgets__floating_liquid_nav.dart.txt": {
+      "originalPath": "Frontend/mobile/lib/shared/widgets/floating_liquid_nav.dart",
+      "sha256": "ef21af677ce8515d9b5df3c0c50a8472a21585ba7866038057857edc100871de"
+    },
+    "lib__shared__widgets__liquid_navigation_controller.dart.txt": {
+      "originalPath": "Frontend/mobile/lib/shared/widgets/liquid_navigation_controller.dart",
+      "sha256": "5e709e10c4ce359a8c43288fee68d1979850fa2b2b5b82fb689622caea91fed3"
+    },
+    "test__widget_test.dart.txt": {
+      "originalPath": "Frontend/mobile/test/widget_test.dart",
+      "sha256": "eadd609bc92cf6f982231f14c38c67a8f40962a0d46db2f3d6807dcca3d08539"
+    },
+    "test__app_audio_ui_feedback_test.dart.txt": {
+      "originalPath": "Frontend/mobile/test/app_audio_ui_feedback_test.dart",
+      "sha256": "9629fb9ae6c2961ca9c58d966eca45c897e126b577cdfc52d880c570fe2fde77"
+    },
+    "test__persistent_liquid_navigation_test.dart.txt": {
+      "originalPath": "Frontend/mobile/test/persistent_liquid_navigation_test.dart",
+      "sha256": "9fbabb9a16de5e2c84ed25ed5c1f77536fb6bab82fc4a9b7cf82e07c6c4bef56"
+    }
+  },
+  "reason": "Before silent coordinated horizontal tab-page glide; persistent native bar and native factory retained."
+}

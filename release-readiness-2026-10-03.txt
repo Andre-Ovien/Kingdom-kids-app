@@ -1,0 +1,153 @@
+Kingdom Kids — pre-release audit
+Date: October 3, 2026 (Africa/Lagos)
+
+Status: audit complete; fixes validated. Production upload prerequisites remain.
+The final splash design and UI changes are reserved for the next review.
+
+Confirmed fixes
+- Refreshing authentication preserves edits to child profile metadata.
+- A delayed logout cannot clear a fresh sign-in, including the same parent.
+- Narration pauses when another route covers the reader; stale completion
+  callbacks cannot submit reading activity behind that route.
+- Home refreshes an edited name/avatar even when the child ID is unchanged.
+- An authoritative expired session on Home returns to parent sign-in.
+- A valid saved account takes precedence over a missing first-launch flag;
+  returning families restore Home/picker/setup instead of repeating onboarding.
+- Malformed JSON in sensitive backend handlers and malformed profile UUIDs
+  return client errors instead of server crashes.
+- Production narration samples/tracks can use an owned, allowlisted HTTPS
+  storage origin; durable DJANGO_MEDIA_ROOT and DJANGO_MEDIA_URL are configurable.
+  Relative local narrator URLs remain hidden in production.
+- Android secure storage is updated to 10.3.4 within the existing version-10
+  migration bridge, addressing documented migration/data-loss and detach bugs.
+- Guarded Android release options cannot override mode, API address, build
+  number, or entrypoint; versionCode is bounded; invocation works from any cwd.
+- Flutter's required Kotlin/Gradle DSL compatibility flags are explicitly
+  pinned so release builds do not depend on automatic configuration edits.
+- Website packages upgraded within the supported major release, including
+  Astro 7.3.5, Sharp 0.35.5 and vulnerable transitive dependencies.
+- Account-deletion page copy typo corrected; website output is explicitly static.
+
+Verified checks
+- Flutter final: all 581 tests pass and full static analysis is clean.
+  Fourteen audit regressions cover auth/profile/reader/Home/startup boundaries.
+- Release tooling/motion: 17 focused checks pass, including five new guarded
+  build-script regressions (the existing Flutter checks are in the 581 suite).
+- Django final: 243 tests pass on both SQLite and disposable PostgreSQL.
+  Nine audit regressions were added. Migration drift, dependency consistency,
+  production-template deploy checks and static collection (611 files) pass.
+  Patched security audit: zero known findings across 11 pinned runtime entries.
+- Narration integrity: all 24 ready character tracks exist and match current
+  story hashes; three approved character samples are present.
+- Website: 9 Astro source files, zero errors/warnings/hints; all 3 pages build;
+  generated account-deletion credential-safety checks pass.
+- All literal bundled media references in Flutter production code exist.
+- No tracked environment secrets, keystores, local databases or generated
+  dependency/build directories were found by the filename inventory.
+- A read-only content scan of 450 source/config text files found no apparent
+  embedded live credentials, private signing material or production auth
+  bypass. Matches were placeholders, fixtures, examples and UI text. Ignored
+  live environment files and binary/generated content were excluded.
+- Git whitespace check clean.
+- Read-only local database audit: zero duplicate groups for normalized emails,
+  profile creation operations, game operations/progress, story operations,
+  positive story rewards, and daily streak rewards. No data rewritten.
+- Android isolated unsigned release build passes: Dart AOT, native/plugin
+  compilation, R8 and resource shrinking complete. Bundletool validates the
+  AAB; its configuration declares PAGE_ALIGNMENT_16K. All six 64-bit native
+  shared libraries have LOAD alignment of at least 16 KB. All nine native
+  libraries in the generated universal QA APK are ZIP-aligned to 16 KB;
+  zipalign verification passes. QA APK signing verifies as Android Debug.
+  The sailing_motion channel survives R8. No production signing was used.
+- Android's first attempt failed because this Mac could not resolve
+  repo.maven.apache.org. The successful isolated retry used the official
+  repo1.maven.org endpoint for the same artifacts. Production repository
+  configuration and signing/API guards are preserved. Pinned Gradle 8.14.5
+  and official bundletool 1.18.3 were checksum-verified.
+- Merged Android release manifest: target API 36/minimum 24, cleartext and
+  backups disabled. No advertising ID, location, camera, storage, exact-alarm
+  permissions or required sensor feature. AndroidX's additional exported
+  profile-install receiver is protected by android.permission.DUMP.
+
+Android audit artifact (NOT FOR PLAY UPLOAD)
+/Users/macbook/.cache/kingdom-kids/android-release-audit-birom5gm/artifacts/kingdom-kids-UNSIGNED-QA-NOT-FOR-UPLOAD.aab
+Size: 114,891,327 bytes. SHA-256:
+76ec708a45157ee71de714532d266685fbc843d3ebc8b262cac845fdfc7a1864
+Build log:
+/Users/macbook/.cache/kingdom-kids/android-release-audit-birom5gm/artifacts/android-release-build.log
+Detailed Android audit:
+/Users/macbook/.cache/kingdom-kids/android-release-audit-birom5gm/android-readiness-audit.json
+APK packaging checks:
+/Users/macbook/.cache/kingdom-kids/android-release-audit-birom5gm/artifacts/apk-packaging-report.json
+The isolated audit build is unsigned, has a QA label and no shipping API
+configuration. It proves compilation/packaging, not production connectivity
+or 16 KB runtime behavior on a device. Final Dart source and dependency lock
+match the held workspace source.
+
+Known external launch requirements
+1. Public HTTPS backend URL is not configured in the release environment.
+   Current iPhone review uses a local LAN development server. Deploy if needed
+   and verify PostgreSQL, shared cache, email delivery and durable narration media.
+2. Android upload signing is not configured: android/key.properties and all
+   ANDROID_KEYSTORE_* environment variables are absent. Store the upload key
+   and passwords outside source control; use Google Play App Signing.
+3. Privacy and account-deletion URLs are configured as
+   https://kingdom-kids.app/privacy/ and
+   https://kingdom-kids.app/account-deletion/. DNS resolution failed from
+   this host during the audit; this does not establish their global deployment
+   state. Verify/deploy these public pages, the same-origin deletion API route,
+   and the monitored privacy contact before upload.
+4. Finalize production vendors, retention/backup policies and the public
+   privacy policy. Complete target-audience, Data safety, content-rating,
+   and reviewer-access declarations from the actual deployed service.
+5. Confirm Play Console production eligibility and choose an increasing
+   build number. Personal accounts created after November 13, 2023 may need
+   the required closed test before production access. An upload for testing
+   and a public production rollout are separate steps.
+6. Build the final signed AAB after the remaining UI/splash review. Do not
+   upload any unsigned or development audit artifact.
+7. Run the signed Android build on an Android device/emulator: returning-account
+   startup, registration/email verification, all game controls including tilt,
+   narration/timing, reading and game XP, streak/milestone updates, and account
+   deletion. No Android runtime device/emulator is connected in this audit;
+   compilation and packaging checks do not constitute runtime verification.
+
+Dependency advisory limits
+The website npm audit currently reports two high-severity entries for one
+underlying unpatched http-cache-semantics advisory (CVE-2026-93748): the library
+and its Astro parent. The library is used by Astro's build-time remote-image
+cache. This site uses local images, ships only static dist/ files and does not
+use that library for authenticated API response caching. No patched upstream
+version exists as of this check; recheck before any server-rendering/image
+cache change. Do not cache /api/* at the production proxy.
+The real backend is healthy on the local LAN. No production deployment was
+performed and no live user activity or account data was rewritten.
+
+Android maintenance note: the pinned toolchain builds successfully with the
+explicit Kotlin/Gradle compatibility flags. Flutter warns that a future upgrade
+will require Built-in Kotlin migration for the app, flutter_timezone and
+flutter_tts together. The SDK CLI also emits an XML-version compatibility
+warning; SDK installation and this release compilation still succeeded.
+
+Backend: PyJWT upgraded to 2.15.0 and sqlparse to 0.6.0; the final
+known-advisory scan reports zero findings. Vulnerability scans cover the
+advisories known at audit time, not a guarantee of future advisories.
+
+Existing feature limit
+Pending story saves retain their idempotent receipt while the reader is open;
+there is no durable offline submission queue across closing/restarting. The
+release requires connectivity for server-confirmed progress.
+
+Official references checked
+Google Play target API requirements (new apps/API 36 from August 31, 2026):
+https://support.google.com/googleplay/android-developer/answer/11926878?hl=en
+Google Play new personal-account testing rules (12 testers/14 continuous days):
+https://support.google.com/googleplay/android-developer/answer/14151465?hl=en
+Google Play account deletion requirements:
+https://support.google.com/googleplay/android-developer/answer/13327111?hl=en
+Android native 16 KB page-size checks:
+https://developer.android.com/guide/practices/page-sizes
+Secure storage 10.3.4 changelog:
+https://pub.dev/packages/flutter_secure_storage/versions/10.3.4/changelog
+Remaining website advisory:
+https://github.com/advisories/GHSA-ch52-4w7c-c8xp

@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "generation_started": false,
+  "expected_track_count": 15,
+  "voices": [
+    {
+      "character": "kai",
+      "avatar_key": "lion",
+      "review_status": "approved",
+      "selected_variant": "boy2",
+      "reference_wav_sha256": "bbd0bb6ce604c756f8706ade75029901e0e44fd7c0c84b235f6879a71bb9a20a"
+    },
+    {
+      "character": "nia",
+      "avatar_key": "dove",
+      "review_status": "acceptable-preview",
+      "selected_variant": null,
+      "reference_wav_sha256": "5dd94f4ccbf0b450ba64a85e73d08bbf2caa09628d0ece276a98749b29849078"
+    },
+    {
+      "character": "zuri",
+      "avatar_key": "rainbow",
+      "review_status": "acceptable-preview",
+      "selected_variant": null,
+      "reference_wav_sha256": "893b5018796b5ae1f0503e8d01d6e566848d7006c33898f5a87e44496563169a"
+    }
+  ],
+  "stories": [
+    {
+      "slug": "good-samaritan",
+      "title": "The Good Samaritan",
+      "text_sha256": "4017a281c13ea6a4ea3eb8a362a380beffa8a87a87633bc250ff7551b41f28c2",
+      "word_count": 196,
+      "reading_time_minutes": 2
+    },
+    {
+      "slug": "joseph-colorful-coat",
+      "title": "Joseph and His Colorful Coat",
+      "text_sha256": "416986056168b65186f66645d151fdcbd04acd9bd5d1646da99aae15b90ae348",
+      "word_count": 199,
+      "reading_time_minutes": 2
+    },
+    {
+      "slug": "lost-sheep",
+      "title": "The Lost Sheep",
+      "text_sha256": "6461f33c798d1c12ce8423f6f4382eb152ceb4cce9c9f4f6d7e29f168a774aec",
+      "word_count": 181,
+      "reading_time_minutes": 2
+    },
+    {
+      "slug": "ruth-and-naomi",
+      "title": "Ruth and Naomi",
+      "text_sha256": "5327f036e022edca6d38bf72f9eed3fb470f92c9feb1dcde5dccee6864f4d8bc",
+      "word_count": 199,
+      "reading_time_minutes": 2
+    },
+    {
+      "slug": "walls-of-jericho",
+      "title": "The Walls of Jericho",
+      "text_sha256": "763b15236dac1384f0fc921af5d88491e97fe10d87619f158c2880f75f6a76f6",
+      "word_count": 194,
+      "reading_time_minutes": 2
+    }
+  ],
+  "measured_word_timestamps": "pending local generation and forced alignment"
+}

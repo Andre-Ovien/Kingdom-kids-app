@@ -1,0 +1,128 @@
+{
+  "version": 1,
+  "species_count": 10,
+  "scope": "Editable third-party source candidates only; none of these inventory assets have been added to the mobile game by this acquisition task. Blender modeling/animation remains with the visible GUI workflow.",
+  "assets": [
+    {
+      "species": "elephant",
+      "source_asset": "syncopika-elephant/elephant-lowpoly.blend",
+      "exists": true,
+      "author": "syncopika",
+      "license": "CC0 1.0",
+      "ai_origin": false,
+      "rig_available": true,
+      "notes": "idle/eating/sitting/get-up; walk requires authoring",
+      "publisher_url": "https://opengameart.org/content/low-poly-elephant-model",
+      "status": "downloaded source candidate; native GUI art/animation review required before app use"
+    },
+    {
+      "species": "lion",
+      "source_asset": "lion-google-poly/lion.glb",
+      "exists": true,
+      "author": "Poly by Google",
+      "license": "CC BY 3.0",
+      "ai_origin": false,
+      "rig_available": false,
+      "notes": "unrigged editable mesh; needs native rig/walk",
+      "publisher_url": "https://poly.pizza/m/3XAJojWxSWz",
+      "status": "downloaded source candidate; native GUI art/animation review required before app use"
+    },
+    {
+      "species": "giraffe",
+      "source_asset": "giraffe-animalanimator/giraffe_rig.glb",
+      "exists": true,
+      "author": "AnimalAnimator.com / Arthur",
+      "license": "Creator commercial-use permission; attribution optional",
+      "ai_origin": true,
+      "rig_available": true,
+      "notes": "separate idle/walk/run files, plus native giraffe.blend",
+      "publisher_url": "https://animalanimator.com/download-your-free-ai-animated-giraffe-idle-walk-and-run-assets-included/",
+      "status": "downloaded source candidate; native GUI art/animation review required before app use",
+      "license_note": "Creator GitHub README expressly permits personal and commercial use. CC BY 2.0 on the article belongs to its separate skeleton reference photograph, not this model."
+    },
+    {
+      "species": "zebra",
+      "source_asset": "quaternius-farm-animals/extracted/Farm Animals by @Quaternius/Blends/Zebra.blend",
+      "exists": true,
+      "author": "Quaternius",
+      "license": "CC0 1.0",
+      "ai_origin": false,
+      "rig_available": true,
+      "notes": "Idle/Walk/WalkSlow/Run/Jump",
+      "publisher_url": "https://opengameart.org/content/lowpoly-animated-farm-animal-pack",
+      "status": "downloaded source candidate; native GUI art/animation review required before app use"
+    },
+    {
+      "species": "dove",
+      "source_asset": "mujtaba-pigeon/genuinely-my-pigeon-extended-furthur.blend",
+      "exists": true,
+      "author": "mujtaba-io",
+      "license": "CC0 1.0",
+      "ai_origin": false,
+      "rig_available": true,
+      "notes": "pigeon base for dove customization; idle/flap/legs-up",
+      "publisher_url": "https://opengameart.org/node/167919",
+      "status": "downloaded source candidate; native GUI art/animation review required before app use"
+    },
+    {
+      "species": "sheep",
+      "source_asset": "quaternius-farm-animals/extracted/Farm Animals by @Quaternius/Blends/Sheep.blend",
+      "exists": true,
+      "author": "Quaternius",
+      "license": "CC0 1.0",
+      "ai_origin": false,
+      "rig_available": true,
+      "notes": "Idle/Walk/WalkSlow/Run/Jump",
+      "publisher_url": "https://opengameart.org/content/lowpoly-animated-farm-animal-pack",
+      "status": "downloaded source candidate; native GUI art/animation review required before app use"
+    },
+    {
+      "species": "camel",
+      "source_asset": "noway-camel/camel.blend",
+      "exists": true,
+      "author": "noway",
+      "license": "CC0 1.0",
+      "ai_origin": false,
+      "rig_available": false,
+      "notes": "unrigged anatomical base; needs rig and native walk",
+      "publisher_url": "https://opengameart.org/content/camel-basemesh",
+      "status": "downloaded source candidate; native GUI art/animation review required before app use"
+    },
+    {
+      "species": "donkey",
+      "source_asset": "quaternius-donkey-mirror/Donkey.glb",
+      "exists": true,
+      "author": "Quaternius",
+      "license": "CC0 1.0",
+      "ai_origin": false,
+      "rig_available": true,
+      "notes": "13 clips including Walk/Eating/Idle/Idle_2/Idle_Headlow",
+      "publisher_url": "https://quaternius.com/packs/ultimateanimatedanimals.html",
+      "status": "downloaded source candidate; native GUI art/animation review required before app use"
+    },
+    {
+      "species": "deer",
+      "source_asset": "cdmir-deer/doe.blend",
+      "exists": true,
+      "author": "CDmir and TinyWorlds",
+      "license": "CC0 1.0",
+      "ai_origin": false,
+      "rig_available": true,
+      "notes": "rigged doe with idle/eat/look-around/run/stand",
+      "publisher_url": "https://opengameart.org/content/deer-female",
+      "status": "downloaded source candidate; native GUI art/animation review required before app use"
+    },
+    {
+      "species": "rabbit",
+      "source_asset": "cdmir-rabbit/rabbit.blend",
+      "exists": true,
+      "author": "CDmir and TinyWorlds",
+      "license": "CC0 1.0",
+      "ai_origin": false,
+      "rig_available": true,
+      "notes": "rigged rabbit with packed textures; running/jump/sitting/guard",
+      "publisher_url": "https://opengameart.org/content/rabbit-0",
+      "status": "downloaded source candidate; native GUI art/animation review required before app use"
+    }
+  ]
+}

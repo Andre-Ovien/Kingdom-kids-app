@@ -1,0 +1,158 @@
+{
+  "clips": {
+    "moses_ready": {
+      "frames": "frames/moses_ready/*.png",
+      "durationSeconds": 1.0,
+      "loop": false,
+      "footAnchor": [
+        162.099,
+        346.782
+      ],
+      "bodyHeight": 220.993,
+      "frameCount": 1
+    },
+    "moses_action": {
+      "frames": "frames/moses_action/*.png",
+      "durationSeconds": 2.6,
+      "loop": false,
+      "footAnchor": [
+        162.099,
+        346.782
+      ],
+      "bodyHeight": 220.993,
+      "frameCount": 63
+    },
+    "traveller_0_idle": {
+      "frames": "frames/traveller_0_idle/*.png",
+      "frameCount": 1,
+      "durationSeconds": 1.0,
+      "loop": false,
+      "footAnchor": [
+        64.0,
+        175.003
+      ],
+      "bodyHeight": 148.76
+    },
+    "traveller_0_turn": {
+      "frames": "frames/traveller_0_turn/*.png",
+      "frameCount": 8,
+      "durationSeconds": 0.38,
+      "loop": false,
+      "footAnchor": [
+        64.0,
+        175.003
+      ],
+      "bodyHeight": 148.76
+    },
+    "traveller_0_walk": {
+      "frames": "frames/traveller_0_walk/*.png",
+      "frameCount": 24,
+      "durationSeconds": 0.9,
+      "loop": true,
+      "footAnchor": [
+        64.0,
+        175.003
+      ],
+      "bodyHeight": 148.76
+    },
+    "traveller_0_back": {
+      "frames": "frames/traveller_0_back/*.png",
+      "frameCount": 1,
+      "durationSeconds": 1.0,
+      "loop": false,
+      "footAnchor": [
+        64.0,
+        175.003
+      ],
+      "bodyHeight": 148.76
+    },
+    "traveller_1_idle": {
+      "frames": "frames/traveller_1_idle/*.png",
+      "frameCount": 1,
+      "durationSeconds": 1.0,
+      "loop": false,
+      "footAnchor": [
+        64.0,
+        174.856
+      ],
+      "bodyHeight": 148.593
+    },
+    "traveller_1_turn": {
+      "frames": "frames/traveller_1_turn/*.png",
+      "frameCount": 8,
+      "durationSeconds": 0.38,
+      "loop": false,
+      "footAnchor": [
+        64.0,
+        174.856
+      ],
+      "bodyHeight": 148.593
+    },
+    "traveller_1_walk": {
+      "frames": "frames/traveller_1_walk/*.png",
+      "frameCount": 24,
+      "durationSeconds": 0.9,
+      "loop": true,
+      "footAnchor": [
+        64.0,
+        174.856
+      ],
+      "bodyHeight": 148.593
+    },
+    "traveller_1_back": {
+      "frames": "frames/traveller_1_back/*.png",
+      "frameCount": 1,
+      "durationSeconds": 1.0,
+      "loop": false,
+      "footAnchor": [
+        64.0,
+        174.856
+      ],
+      "bodyHeight": 148.593
+    },
+    "traveller_2_idle": {
+      "frames": "frames/traveller_2_idle/*.png",
+      "frameCount": 1,
+      "durationSeconds": 1.0,
+      "loop": false,
+      "footAnchor": [
+        64.0,
+        174.595
+      ],
+      "bodyHeight": 148.302
+    },
+    "traveller_2_turn": {
+      "frames": "frames/traveller_2_turn/*.png",
+      "frameCount": 8,
+      "durationSeconds": 0.38,
+      "loop": false,
+      "footAnchor": [
+        64.0,
+        174.595
+      ],
+      "bodyHeight": 148.302
+    },
+    "traveller_2_walk": {
+      "frames": "frames/traveller_2_walk/*.png",
+      "frameCount": 24,
+      "durationSeconds": 0.9,
+      "loop": true,
+      "footAnchor": [
+        64.0,
+        174.595
+      ],
+      "bodyHeight": 148.302
+    },
+    "traveller_2_back": {
+      "frames": "frames/traveller_2_back/*.png",
+      "frameCount": 1,
+      "durationSeconds": 1.0,
+      "loop": false,
+      "footAnchor": [
+        64.0,
+        174.595
+      ],
+      "bodyHeight": 148.302
+    }
+  }
+}

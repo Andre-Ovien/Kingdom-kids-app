@@ -1,0 +1,2 @@
+These source and test snapshots precede removal of the Profile My badges section.
+The archive is UI-only; no badge or progress records were changed. Compare later edits before restoring source wholesale.

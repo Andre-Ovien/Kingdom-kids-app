@@ -1,0 +1,14 @@
+{
+  "production_edits_by_this_agent": false,
+  "test_changed": "Frontend/mobile/test/profile_progress_carousel_test.dart",
+  "geometry_assertions": [
+    "393logical phone width produces353\u00d7116card",
+    "Label left20px; count right20px; minimum16px gap and aligned centers",
+    "Background watermark is178\u00d7178, vertically centered and extends beyond card; approved Material flag and whitealpha0.34"
+  ],
+  "command": "flutter test --no-pub test/profile_progress_carousel_test.dart test/profile_screen_test.dart --reporter expanded",
+  "result": "15passed, exit0",
+  "existing_coverage": "7second forward endless loop; manual swipe; covered-route/background/pointer guards; ReduceMotion/accessibility pause;320px2\u00d7text/profile switching; backend metrics/loading/errors/ranks/parent reauthentication.",
+  "scoped_analysis": "profile_progress_carousel.dart and both Profile test files: no issues found.",
+  "flutter_lock": "released to root for signed bundle installation"
+}

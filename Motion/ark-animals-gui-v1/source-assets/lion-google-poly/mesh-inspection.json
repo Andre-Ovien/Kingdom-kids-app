@@ -1,0 +1,37 @@
+{
+  "file": "lion.glb",
+  "mesh_report": [
+    {
+      "mesh": "Lion_mesh_1",
+      "vertices": 3098,
+      "triangles": 1350,
+      "position_welded_components": [
+        484,
+        195
+      ],
+      "bounds": {
+        "min": [
+          -1.7018500566482544,
+          -0.00023200000578071922,
+          -8.941640853881836
+        ],
+        "max": [
+          1.7011699676513672,
+          6.762969970703125,
+          5.522193908691406
+        ]
+      }
+    }
+  ],
+  "skins": 0,
+  "joints": [],
+  "animations": [],
+  "images": [
+    {
+      "name": "Lion_BaseColor",
+      "mimeType": "image/png",
+      "bufferView": 4
+    }
+  ],
+  "warning": "Data-only inspection; appearance/deformation require visible Blender review. No changes made to geometry."
+}

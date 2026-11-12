@@ -1,0 +1,27 @@
+{
+  "author": "Quaternius",
+  "pack": "Ultimate Animated Animal Pack",
+  "license": "CC0 1.0 Universal",
+  "ai_origin": false,
+  "primary_publisher_url": "https://quaternius.com/packs/ultimateanimatedanimals.html",
+  "primary_download_folder": "https://drive.google.com/drive/folders/1uJ3N5HfB7jKTseJUNQr3N4YaN0UuEtHk",
+  "primary_blends_folder": "https://drive.google.com/drive/folders/1zIacLXjG-W1A_DN_fCbAGlZy1h-9qAfb",
+  "verified_date": "2026-10-13",
+  "files": {
+    "Donkey": {
+      "filename": "Donkey.blend",
+      "source_file_id": "1_zF8xp1UjtYi2Cir0m850zLVDukkYWZL",
+      "bytes": 2858844,
+      "sha256": "e0b2e675219e6d7af2904594d048214490fd85b900b0281e2e55ff353b771066",
+      "source_download_url": "https://drive.usercontent.google.com/download?id=1_zF8xp1UjtYi2Cir0m850zLVDukkYWZL&export=download&authuser=0&confirm=t"
+    },
+    "Deer": {
+      "filename": "Deer.blend",
+      "source_file_id": "1XOyqlUcRPKO6J3eLTJypQt6LAuvCw4M_",
+      "bytes": 2603644,
+      "sha256": "e0561b31230bb10434fdaf1755a140dcffce80f1d1e36d5d674f922976d801a4",
+      "source_download_url": "https://drive.usercontent.google.com/download?id=1XOyqlUcRPKO6J3eLTJypQt6LAuvCw4M_&export=download&authuser=0&confirm=t"
+    }
+  },
+  "scope": "Unmodified artist source candidates for visible Blender GUI review; not added to production game."
+}

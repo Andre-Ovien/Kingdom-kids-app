@@ -1,0 +1,14 @@
+{
+  "scope": "Stories and Games tab pages only; Home/carousel, details/readers/gameplay untouched.",
+  "background": "Colors.white in both tab Scaffolds",
+  "theme": "Page-local light brightness, surface white, dark onSurface/primary/textTheme/iconTheme; existing font family retained by copyWith/apply.",
+  "behavior": "Shared category pills, cards, repository/search/filter and route mechanics retained. Detail navigation uses original State context outside local Theme.",
+  "verification": {
+    "test_count": 5,
+    "tests": "Existing library/game category and search tests; compact Stories with inherited dark theme, compact Games with light/dark themes; explicit white Scaffold and local light theme assertions.",
+    "result": "all passed",
+    "analysis": "No issues found in both tab pages and both changed regression files."
+  },
+  "production_sources": "frozen",
+  "flutter_lock": "released to root"
+}

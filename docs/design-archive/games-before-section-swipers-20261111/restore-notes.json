@@ -1,0 +1,11 @@
+{
+  "archived_at_utc": "2026-11-11T22:59:58.224261+00:00",
+  "reason": "Approved weekly-hero + stacked catalogue baseline before user-authorized manual category image rows. Restore these sources together; no data/session/media changes.",
+  "files": {
+    "Frontend/mobile/lib/features/games/presentation/games_screen.dart": "9315efaf5f9b6571052676c6675c77aafb90032d3f649a8dc146854438aa3c9f",
+    "Frontend/mobile/lib/features/games/presentation/games_course_widgets.dart": "5da927f079e5b3317c94f7bada8f3b230bb1aeade080f4022201d03c08412671",
+    "Frontend/mobile/lib/features/games/presentation/games_week_carousel.dart": "c6292efa1571c3c3243ba5b5afdca2a5e453a06e74fac0b9a4b125c83c0c6d8f",
+    "Frontend/mobile/test/game_screen_test.dart": "f52fa947c0e82e1d7c7dd81ae8e9cd58832999d7edbe7f9004a41685c06bcf67",
+    "Frontend/mobile/test/games_week_rotation_test.dart": "6c6c474f9f9ab956fa90acfbe889873c5d7ca4eda6eefa328fc0ec0cbf737d53"
+  }
+}

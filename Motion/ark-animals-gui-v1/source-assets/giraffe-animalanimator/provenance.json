@@ -1,0 +1,64 @@
+{
+  "retrieved_date": "2026-10-12",
+  "creator": "AnimalAnimator.com / Arthur / serpentacademy",
+  "source": "https://animalanimator.com/download-your-free-ai-animated-giraffe-idle-walk-and-run-assets-included/",
+  "repository": "https://github.com/serpentacademy/Free-3D-AI-Animated-Giraffe",
+  "license": "Custom permission: free for personal and commercial projects; attribution appreciated but not required (README.md). Not CC0.",
+  "origin": "AI concept/model, author retopology in Blender, AI-generated baked animations.",
+  "files": [
+    {
+      "file": "README.md",
+      "bytes": 1069,
+      "sha256": "63d425b47843d30da4f26acc0077868fa8e0086d66fea156d498f6c50be87249",
+      "url": "https://raw.githubusercontent.com/serpentacademy/Free-3D-AI-Animated-Giraffe/master/README.md"
+    },
+    {
+      "file": "giraffe.blend",
+      "bytes": 4154045,
+      "sha256": "f699553b6030122a5704c34fcb56bd37245669666b21d6ed7ae2ba40f37318ef",
+      "url": "https://raw.githubusercontent.com/serpentacademy/Free-3D-AI-Animated-Giraffe/master/giraffe.blend"
+    },
+    {
+      "file": "giraffe.fbx",
+      "bytes": 384668,
+      "sha256": "0d2a53f4ba97e6e545d3be763b33cec7f929b40221e7210a199f156efba73ad2",
+      "url": "https://raw.githubusercontent.com/serpentacademy/Free-3D-AI-Animated-Giraffe/master/giraffe.fbx"
+    },
+    {
+      "file": "giraffe_d.png",
+      "bytes": 867683,
+      "sha256": "edb03ba602f611a2386eea9a6fcd654ac7662e1a09a57662aacda96111cb06d6",
+      "url": "https://raw.githubusercontent.com/serpentacademy/Free-3D-AI-Animated-Giraffe/master/giraffe_d.png"
+    },
+    {
+      "file": "giraffe_n.png",
+      "bytes": 2477416,
+      "sha256": "50542646919328760ff7d3a4c76279af3b026ad30394b9cde452009c30c8f4c4",
+      "url": "https://raw.githubusercontent.com/serpentacademy/Free-3D-AI-Animated-Giraffe/master/giraffe_n.png"
+    },
+    {
+      "file": "giraffe_rig.glb",
+      "bytes": 516944,
+      "sha256": "1c23b3dba2905237dcad2f18292bfc5155a2d3d0a3a89757ffa2fe796fe38fd4",
+      "url": "https://raw.githubusercontent.com/serpentacademy/Free-3D-AI-Animated-Giraffe/master/giraffe%230000/animations/final_rig/giraffe.glb"
+    },
+    {
+      "file": "giraffe_idle.glb",
+      "bytes": 809012,
+      "sha256": "fc8094269e69105b2a3c305e86b96cafcbf05010f046fda71e63f65341da2cb1",
+      "url": "https://raw.githubusercontent.com/serpentacademy/Free-3D-AI-Animated-Giraffe/master/giraffe%230000/animations/idle/giraffe_idle.glb"
+    },
+    {
+      "file": "giraffe_walk.glb",
+      "bytes": 615876,
+      "sha256": "ac293ef53818a8de7d90ac162b68f9e27a6cf25b93a5d40eea37c4fde077e442",
+      "url": "https://raw.githubusercontent.com/serpentacademy/Free-3D-AI-Animated-Giraffe/master/giraffe%230000/animations/walk/giraffe_walk.glb"
+    },
+    {
+      "file": "giraffe_run.glb",
+      "bytes": 549000,
+      "sha256": "8179148eb39b7c57ad5899617f3666e345959ef22caeac38f52a151cae85224c",
+      "url": "https://raw.githubusercontent.com/serpentacademy/Free-3D-AI-Animated-Giraffe/master/giraffe%230000/animations/run/giraffe_run.glb"
+    }
+  ]
+}

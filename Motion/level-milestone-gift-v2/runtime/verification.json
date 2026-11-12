@@ -1,0 +1,20 @@
+{
+  "frames": 80,
+  "atlasDimensions": [
+    3520,
+    2816
+  ],
+  "fps": 20,
+  "durationSeconds": 4,
+  "decodedMiB": 37.8125,
+  "encodedAtlasBytes": 1314686,
+  "posterBytes": 35760,
+  "allFramesUnclippedWithTransparentMargins": true,
+  "exactRgbaDecode": true,
+  "alphaBoundsUnion": [
+    24,
+    32,
+    331,
+    295
+  ]
+}

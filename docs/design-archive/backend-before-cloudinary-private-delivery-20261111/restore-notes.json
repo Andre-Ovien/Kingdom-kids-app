@@ -1,0 +1,22 @@
+{
+  "files": {
+    "Backend/Core/Core/settings.py": "28653d7296d2ac0b3d039f7f56c904ce9903412a3cb7689621c702380a1ec4a3",
+    "Backend/.env.example": "ac7601a1087d9c93bd6756afcc7ecea87124cd44e9cb33447bc996bf08b31edf",
+    "Backend/Core/apps/stories/serializers.py": "fdf0449056090356bb78e992700586178d9e682b41d89218da7e84cd2fd3a285",
+    "Backend/Core/apps/games/serializers.py": "15180c9076133cf3a1bb8a3914862a771b67c5442aa490ef6f367d51d127f7d0",
+    "Backend/Dockerfile": "f194693c1fdc2ecb5fb9bec0854b589b5b41e5af75753c48df6b20df41dcd953",
+    "Backend/.dockerignore": "13f4e90764281c7097c6654af1e9a5a08da59dc5b327263e84b5562343dfafe0",
+    "Backend/Core/apps/stories/test_character_narration.py": "e62e7ae914200f8b13a983e8ecd88c367b03f5e6eec4695ae1fd6341c6f23965"
+  },
+  "scope": "Default-OFF backend private delivery signer + explicit frozen map + serializer-only hooks; no models/migrations/runtime/environment mutations",
+  "warning": "settings and env are shared with independent Square owner. Restore only the exact Cloudinary additions rather than overwrite newer billing lines.",
+  "new_files": [
+    "Backend/Core/Core/media_delivery.py",
+    "Backend/Core/Core/media_serializers.py",
+    "Backend/Core/Core/test_media_delivery.py",
+    "tools/cloudinary_transfer/build_delivery_map.py",
+    "tools/cloudinary_transfer/test_build_delivery_map.py",
+    "Backend/content/releases/cloudinary_delivery_bindings_v1.json",
+    "Backend/content/releases/cloudinary_first_release_v1.json"
+  ]
+}

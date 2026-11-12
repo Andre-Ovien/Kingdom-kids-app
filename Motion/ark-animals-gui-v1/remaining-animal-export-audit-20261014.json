@@ -1,0 +1,646 @@
+{
+  "checked_at_utc": "2026-10-14T17:06:38.949787+00:00",
+  "scope": "Read-only native/export structural and animation data audit; no gameplay, rendering, or visual approval. Models modified through root visible Blender GUI only.",
+  "source_files_unchanged": true,
+  "license": "CC BY-SA 3.0; Wildfire Games attribution retained.",
+  "results": [
+    {
+      "file": "Motion/ark-animals-gui-v1/lion-review.glb",
+      "bytes": 1129076,
+      "valid_header": true,
+      "meshes": [
+        {
+          "name": "Mesh",
+          "primitives": [
+            {
+              "vertices": 15090,
+              "triangles": 19680,
+              "unique_positions": 9842,
+              "connected_components": [
+                9842
+              ],
+              "positionFinite": true,
+              "local_bounds": [
+                [
+                  -0.006424946244806051,
+                  -5.4949541663518175e-05,
+                  -0.040317852050065994
+                ],
+                [
+                  0.006424929480999708,
+                  0.032190918922424316,
+                  0.025212520733475685
+                ]
+              ],
+              "normalsFinite": true,
+              "maxNormalUnitError": 1.1920928955078125e-07,
+              "uvFinite": true,
+              "material": 0,
+              "weightSumMaxError": 1.7881393432617188e-07,
+              "negativeWeights": 0,
+              "zeroWeightedVertices": 0,
+              "maxUsedInfluences": 4,
+              "maxJointIndex": 26
+            }
+          ]
+        }
+      ],
+      "skins": [
+        {
+          "name": "Lion_Rig",
+          "joints": 27,
+          "jointNames": [
+            "Horse",
+            "Horse_Pelvis",
+            "Horse_Spine",
+            "Horse_Spine1",
+            "Horse_Neck",
+            "Horse_L_Clavicle",
+            "Horse_L_UpperArm",
+            "Horse_L_Forearm",
+            "Horse_L_Hand",
+            "Horse_L_Finger0",
+            "Horse_Neck1",
+            "Horse_Head",
+            "Horse_R_Clavicle",
+            "Horse_R_UpperArm",
+            "Horse_R_Forearm",
+            "Horse_R_Hand",
+            "Horse_R_Finger0",
+            "Horse_L_Thigh",
+            "Horse_L_Calf",
+            "Horse_L_Foot",
+            "Horse_L_Toe0",
+            "Horse_R_Thigh",
+            "Horse_R_Calf",
+            "Horse_R_Foot",
+            "Horse_R_Toe0",
+            "Horse_Tail",
+            "Horse_Tail1"
+          ],
+          "ibCount": 27,
+          "ibFinite": true,
+          "singularMatrices": 0
+        }
+      ],
+      "textures": [
+        {
+          "name": "animal_lion",
+          "mimeType": "image/png",
+          "bytes": 118265,
+          "size": [
+            256,
+            256
+          ],
+          "sha256": "98516012400a7bd88e9e46aacb6330be619783aaca0485a6049224b098e67eb4",
+          "PNGcrcValid": true
+        }
+      ],
+      "animations": [
+        {
+          "name": "LionTurnLeft",
+          "channels": 81,
+          "ranges": [
+            [
+              0.0,
+              3.3333332538604736
+            ]
+          ],
+          "sampleCounts": [
+            2,
+            81
+          ],
+          "paths": {
+            "translation": 27,
+            "rotation": 27,
+            "scale": 27
+          },
+          "maxendpointError": 0,
+          "maxQuaternionNormError": 1.1920928955078125e-07,
+          "nonFiniteTracks": 0
+        },
+        {
+          "name": "LionTurnRight",
+          "channels": 81,
+          "ranges": [
+            [
+              0.0,
+              3.3333332538604736
+            ]
+          ],
+          "sampleCounts": [
+            2,
+            81
+          ],
+          "paths": {
+            "translation": 27,
+            "rotation": 27,
+            "scale": 27
+          },
+          "maxendpointError": 0,
+          "maxQuaternionNormError": 1.1920928955078125e-07,
+          "nonFiniteTracks": 0
+        },
+        {
+          "name": "LionWalk",
+          "channels": 81,
+          "ranges": [
+            [
+              0.0,
+              3.3333332538604736
+            ]
+          ],
+          "sampleCounts": [
+            2,
+            81
+          ],
+          "paths": {
+            "translation": 27,
+            "rotation": 27,
+            "scale": 27
+          },
+          "maxendpointError": 0,
+          "maxQuaternionNormError": 1.1920928955078125e-07,
+          "nonFiniteTracks": 0
+        }
+      ],
+      "extensionsUsed": [],
+      "materials": [
+        {
+          "doubleSided": true,
+          "name": "Material_002-effect",
+          "pbrMetallicRoughness": {
+            "baseColorTexture": {
+              "index": 0
+            },
+            "metallicFactor": 0,
+            "roughnessFactor": 0.800000011920929
+          }
+        }
+      ],
+      "asset": {
+        "copyright": "Wildfire Games / 0 A.D. - CC BY-SA 3.0; modified Kingdom Kids",
+        "generator": "Khronos glTF Blender I/O v4.5.51",
+        "version": "2.0"
+      },
+      "sha256": "cbfa74e6c9705280cf83ce7a0f0abf00d3afa09a68b1065c94f88b0872c5ba3b",
+      "expectedDuration": 3.3333333333333335,
+      "pass": true
+    },
+    {
+      "file": "Motion/ark-animals-gui-v1/camel-review.glb",
+      "bytes": 3073700,
+      "valid_header": true,
+      "meshes": [
+        {
+          "name": "Mesh",
+          "primitives": [
+            {
+              "vertices": 41768,
+              "triangles": 55056,
+              "unique_positions": 27693,
+              "connected_components": [
+                27693
+              ],
+              "positionFinite": true,
+              "local_bounds": [
+                [
+                  -0.8326321840286255,
+                  -5.146260264154989e-06,
+                  -2.385054588317871
+                ],
+                [
+                  0.8326321840286255,
+                  6.068856716156006,
+                  4.706116199493408
+                ]
+              ],
+              "normalsFinite": true,
+              "maxNormalUnitError": 1.1920928955078125e-07,
+              "uvFinite": true,
+              "material": 0,
+              "weightSumMaxError": 1.7881393432617188e-07,
+              "negativeWeights": 0,
+              "zeroWeightedVertices": 0,
+              "maxUsedInfluences": 4,
+              "maxJointIndex": 67
+            }
+          ]
+        }
+      ],
+      "skins": [
+        {
+          "name": "Camelus",
+          "joints": 94,
+          "jointNames": [
+            "Camelus_root",
+            "Knee_F_R",
+            "Knee_B_R",
+            "Camelus_Pelvis",
+            "Camelus_Spine",
+            "prop_left_cargo",
+            "prop_rider",
+            "prop_hump",
+            "prop_rider_front",
+            "prop_right_cargo",
+            "prop_quiver_R",
+            "prop_rider_back",
+            "Camelus_Belly",
+            "CamelTurnControl",
+            "Camelus_Spine1",
+            "Camelus_Spine2",
+            "Camelus_Neck_01",
+            "Camelus_Neck_02",
+            "Camelus_Neck_03",
+            "Camelus_Neck_04",
+            "Camelus_Head",
+            "prop_head",
+            "Camelus_Bot_Jaw_1",
+            "Camelus_Bot_Jaw_2",
+            "prop_mouth_bot",
+            "Camelus_Top_Jaw",
+            "Camelus_Top_Jaw_R",
+            "Camelus_Top_Jaw_L",
+            "Head_Stretch_IK",
+            "Camelus_shoulder_R",
+            "Camelus_upperarm_R",
+            "Camelus_Arm_R",
+            "Camelus_Forearm_R",
+            "Camelus_Hand_R",
+            "Camelus_Hoof_R",
+            "Knee_Stretch_R",
+            "Camelus_shoulder_L",
+            "Camelus_upperarm_L",
+            "Camelus_Arm_L",
+            "Camelus_Forearm_L",
+            "Camelus_Hand_L",
+            "Camelus_Hoof_L",
+            "Knee_Stretch_L",
+            "Shoulder_Target_R",
+            "Shoulder_Target_L",
+            "Camelus_Tail",
+            "Camelus_Tail_01",
+            "Camelus_Tail_02",
+            "Camelus_Tail_03",
+            "Camelus_Femur_R",
+            "Camelus_Thigh_R",
+            "Camelus_Leg_R",
+            "Camelus_Foreleg_R",
+            "Camelus_Shin_R",
+            "Camelus_Foot_R",
+            "Camelus_Hoof_back_R",
+            "Knee_Stretch_B_R",
+            "Camelus_Femur_L",
+            "Camelus_Thigh_L",
+            "Camelus_Leg_L",
+            "Camelus_Foreleg_L",
+            "Camelus_Shin_L",
+            "Camelus_Foot_L",
+            "Camelus_Hoof_back_L",
+            "Knee_Stretch_B_L",
+            "Leg_target_R",
+            "Leg_target_L",
+            "Camelus_Tail_Root",
+            "Camelus_HeadNub",
+            "Camelus_Spine_02_IK",
+            "Camelus_Hand_IK_R",
+            "Hand_R",
+            "Hoof_F_R",
+            "Camelus_leg_IK_R",
+            "Foot_R",
+            "Hoof_B_R",
+            "prop_rider_R",
+            "prop_rider_L",
+            "Camelus_Hand_IK_L",
+            "Hand_L",
+            "Hoof_F_L",
+            "Camelus_leg_IK_L",
+            "Foot_L",
+            "Hoof_B_L",
+            "Camelus_Spine_01_IK",
+            "Camelus_Spine_03_IK",
+            "Knee_F_L",
+            "Knee_B_L",
+            "Camelus_Rein",
+            "prop.decals",
+            "prop.blanket",
+            "prop_rider_root",
+            "prop_chest",
+            "Head_Rotation_IK"
+          ],
+          "ibCount": 94,
+          "ibFinite": true,
+          "singularMatrices": 0
+        }
+      ],
+      "textures": [
+        {
+          "name": "animal_camel_c",
+          "mimeType": "image/png",
+          "bytes": 331861,
+          "size": [
+            512,
+            512
+          ],
+          "sha256": "bb63749636d4a0c31a752209bd0fbbd322a4d1ff292d3b6a4495820c0d01cdbb",
+          "PNGcrcValid": true
+        }
+      ],
+      "animations": [
+        {
+          "name": "CamelTurnLeft",
+          "channels": 284,
+          "ranges": [
+            [
+              0.0,
+              1.3333333730697632
+            ]
+          ],
+          "sampleCounts": [
+            2,
+            33
+          ],
+          "paths": {
+            "translation": 95,
+            "rotation": 94,
+            "scale": 95
+          },
+          "maxendpointError": 0,
+          "maxQuaternionNormError": 1.1920928955078125e-07,
+          "nonFiniteTracks": 0
+        },
+        {
+          "name": "CamelTurnRight",
+          "channels": 284,
+          "ranges": [
+            [
+              0.0,
+              1.3333333730697632
+            ]
+          ],
+          "sampleCounts": [
+            2,
+            33
+          ],
+          "paths": {
+            "translation": 95,
+            "rotation": 94,
+            "scale": 95
+          },
+          "maxendpointError": 0,
+          "maxQuaternionNormError": 1.1920928955078125e-07,
+          "nonFiniteTracks": 0
+        },
+        {
+          "name": "CamelWalk",
+          "channels": 284,
+          "ranges": [
+            [
+              0.0,
+              1.3333333730697632
+            ]
+          ],
+          "sampleCounts": [
+            2,
+            33
+          ],
+          "paths": {
+            "translation": 95,
+            "rotation": 94,
+            "scale": 95
+          },
+          "maxendpointError": 0,
+          "maxQuaternionNormError": 1.1920928955078125e-07,
+          "nonFiniteTracks": 0
+        }
+      ],
+      "extensionsUsed": [
+        "KHR_materials_specular"
+      ],
+      "materials": [
+        {
+          "doubleSided": true,
+          "extensions": {
+            "KHR_materials_specular": {
+              "specularFactor": 0
+            }
+          },
+          "name": "Camel",
+          "pbrMetallicRoughness": {
+            "baseColorTexture": {
+              "index": 0
+            },
+            "metallicFactor": 0,
+            "roughnessFactor": 0.800000011920929
+          }
+        }
+      ],
+      "asset": {
+        "copyright": "Wildfire Games / 0 A.D. - CC BY-SA 3.0; modified Kingdom Kids",
+        "generator": "Khronos glTF Blender I/O v4.5.51",
+        "version": "2.0"
+      },
+      "sha256": "447e35b599a15391a932dc0c6205c8dac8964302ba3d0305f6c42ab3db03fe68",
+      "expectedDuration": 1.3333333333333333,
+      "pass": true
+    },
+    {
+      "file": "Motion/ark-animals-gui-v1/giraffe-review.glb",
+      "bytes": 1224000,
+      "valid_header": true,
+      "meshes": [
+        {
+          "name": "Mesh",
+          "primitives": [
+            {
+              "vertices": 12348,
+              "triangles": 16560,
+              "unique_positions": 8289,
+              "connected_components": [
+                8289
+              ],
+              "positionFinite": true,
+              "local_bounds": [
+                [
+                  -0.011977058835327625,
+                  0.0001453083095839247,
+                  -0.027094760909676552
+                ],
+                [
+                  0.011974320746958256,
+                  0.1276348978281021,
+                  0.0589866116642952
+                ]
+              ],
+              "normalsFinite": true,
+              "maxNormalUnitError": 1.1920928955078125e-07,
+              "uvFinite": true,
+              "material": 0,
+              "weightSumMaxError": 1.1920928955078125e-07,
+              "negativeWeights": 0,
+              "zeroWeightedVertices": 0,
+              "maxUsedInfluences": 4,
+              "maxJointIndex": 30
+            }
+          ]
+        }
+      ],
+      "skins": [
+        {
+          "name": "Armature",
+          "joints": 31,
+          "jointNames": [
+            "main_pelvis",
+            "spine_01",
+            "spine_02",
+            "spine_neck",
+            "neck_01",
+            "neck_02",
+            "neck_03",
+            "head",
+            "right_f_pelvis_upper",
+            "right_f_leg_top",
+            "right_f_leg_mid",
+            "right_f_leg_bottom",
+            "right_f_foot",
+            "left_f_pelvis_upper",
+            "left_f_leg_top",
+            "left_f_leg_mid",
+            "left_f_leg_bottom",
+            "left_f_foot",
+            "left_r_pelvis_upper",
+            "left_r_leg_top",
+            "left_r_leg_mid",
+            "left_r_leg_bottom",
+            "left_r_foot",
+            "right_r_pelvis_upper",
+            "right_r_leg_top",
+            "right_r_leg_mid",
+            "right_r_leg_bottom",
+            "right_r_foot",
+            "tail_01",
+            "tail_02",
+            "tail_03"
+          ],
+          "ibCount": 31,
+          "ibFinite": true,
+          "singularMatrices": 0
+        }
+      ],
+      "textures": [
+        {
+          "name": "animal_giraffe",
+          "mimeType": "image/png",
+          "bytes": 348900,
+          "size": [
+            512,
+            512
+          ],
+          "sha256": "3a724f3aa5acd67731e2e2442a5681b4c33f7c992382207067638be04a496c52",
+          "PNGcrcValid": true
+        }
+      ],
+      "animations": [
+        {
+          "name": "GiraffeTurnLeft",
+          "channels": 93,
+          "ranges": [
+            [
+              0.0,
+              3.3333332538604736
+            ]
+          ],
+          "sampleCounts": [
+            2,
+            81
+          ],
+          "paths": {
+            "translation": 31,
+            "rotation": 31,
+            "scale": 31
+          },
+          "maxendpointError": 1.862645149230957e-09,
+          "maxQuaternionNormError": 1.1920928955078125e-07,
+          "nonFiniteTracks": 0
+        },
+        {
+          "name": "GiraffeTurnRight",
+          "channels": 93,
+          "ranges": [
+            [
+              0.0,
+              3.3333332538604736
+            ]
+          ],
+          "sampleCounts": [
+            2,
+            81
+          ],
+          "paths": {
+            "translation": 31,
+            "rotation": 31,
+            "scale": 31
+          },
+          "maxendpointError": 1.862645149230957e-09,
+          "maxQuaternionNormError": 1.1920928955078125e-07,
+          "nonFiniteTracks": 0
+        },
+        {
+          "name": "GiraffeWalk",
+          "channels": 93,
+          "ranges": [
+            [
+              0.0,
+              3.3333332538604736
+            ]
+          ],
+          "sampleCounts": [
+            2,
+            81
+          ],
+          "paths": {
+            "translation": 31,
+            "rotation": 31,
+            "scale": 31
+          },
+          "maxendpointError": 1.862645149230957e-09,
+          "maxQuaternionNormError": 1.1920928955078125e-07,
+          "nonFiniteTracks": 0
+        }
+      ],
+      "extensionsUsed": [
+        "KHR_materials_specular",
+        "KHR_materials_ior"
+      ],
+      "materials": [
+        {
+          "doubleSided": true,
+          "extensions": {
+            "KHR_materials_specular": {
+              "specularFactor": 0
+            },
+            "KHR_materials_ior": {
+              "ior": 1
+            }
+          },
+          "name": "_01___Default",
+          "pbrMetallicRoughness": {
+            "baseColorTexture": {
+              "index": 0
+            },
+            "metallicFactor": 0,
+            "roughnessFactor": 0.800000011920929
+          }
+        }
+      ],
+      "asset": {
+        "copyright": "Wildfire Games / 0 A.D. - CC BY-SA 3.0; modified Kingdom Kids",
+        "generator": "Khronos glTF Blender I/O v4.5.51",
+        "version": "2.0"
+      },
+      "sha256": "eec740e250c59d28795fad37cad58ada5aba389cfbf064fa49f639306992ddf3",
+      "expectedDuration": 3.3333333333333335,
+      "pass": true
+    }
+  ]
+}

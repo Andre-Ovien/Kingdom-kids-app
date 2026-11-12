@@ -1,0 +1,68 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import 'package:mobile/app/app.dart';
+import 'package:mobile/app/router.dart';
+
+void main() {
+  test('tab routes jump instantly while detail routes keep transitions', () {
+    final tabRoute = AppRouter.onGenerateRoute(
+      const RouteSettings(
+        name: AppRoutes.stories,
+        arguments: TabRouteTransition(fromRoute: AppRoutes.home),
+      ),
+    );
+    final detailRoute = AppRouter.onGenerateRoute(
+      const RouteSettings(name: AppRoutes.storyDetail),
+    );
+    final readAlongRoute = AppRouter.onGenerateRoute(
+      const RouteSettings(name: AppRoutes.storyReadAlong),
+    );
+
+    final tabTransition = tabRoute as TransitionRoute<dynamic>;
+    expect(tabTransition.transitionDuration, Duration.zero);
+    expect(tabTransition.reverseTransitionDuration, Duration.zero);
+    expect(detailRoute, isA<MaterialPageRoute<void>>());
+    expect(readAlongRoute, isA<MaterialPageRoute<void>>());
+  });
+
+  Future<void> enterHome(WidgetTester tester) async {
+    await tester.pumpWidget(const KingdomKidsApp(initialRoute: AppRoutes.home));
+    await tester.pump(const Duration(seconds: 1));
+  }
+
+  testWidgets('does not invent a streak presentation for a direct route', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const KingdomKidsApp(initialRoute: AppRoutes.streak),
+    );
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.byKey(const Key('streak-screen')), findsNothing);
+    expect(find.text('Hey, explorer!'), findsOneWidget);
+  });
+
+  testWidgets('shows the Kingdom Kids home shell', (tester) async {
+    await enterHome(tester);
+
+    expect(find.text('Hey, explorer!'), findsOneWidget);
+    expect(find.text('Pick your adventure'), findsOneWidget);
+    expect(find.text('Stories'), findsWidgets);
+    expect(find.text('Watch'), findsNothing);
+    expect(find.text('Games'), findsWidgets);
+  });
+
+  testWidgets('opens the backend-driven game room shell', (tester) async {
+    await enterHome(tester);
+
+    await tester.tap(find.text('Games').last);
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.text('Ready to play?'), findsOneWidget);
+    expect(find.byKey(const Key('games-header-icon')), findsOneWidget);
+    expect(find.byKey(const Key('game-search-field')), findsOneWidget);
+    expect(find.text('Quick Bible Games'), findsNothing);
+  });
+}

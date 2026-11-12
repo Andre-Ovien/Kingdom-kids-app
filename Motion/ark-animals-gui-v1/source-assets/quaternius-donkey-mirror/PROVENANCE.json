@@ -1,0 +1,12 @@
+{
+  "asset": "Donkey.glb",
+  "author": "Quaternius",
+  "publisher_page": "https://quaternius.com/packs/ultimateanimatedanimals.html",
+  "mirror_download_url": "https://raw.githubusercontent.com/ramirezmike/quien_es_el_mechaburro/jam-release/assets/models/burro_old.glb",
+  "mirror_context": "https://ramirezmike2.itch.io/quien-es-el-mechaburro/devlog/354715/bevy-jam-1-postmortem",
+  "license": "CC0 1.0",
+  "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "sha256": "85be3f76e1d2ae5c618e251986742c3ecf7ba3e2cc00add86b5f8f538f497bdb",
+  "bytes": 881792,
+  "inspection_note": "Original donkey from Quaternius pack preserved as burro_old.glb in developer repository; developer primary post identifies that original asset source. GLB metadata inspected without Blender."
+}

@@ -1,0 +1,11 @@
+{
+  "scope": "Test-only verification of root-owned first-release Profile simplification. Progress carousel implementation remains retained; Profile no longer renders it.",
+  "changed_test": "Frontend/mobile/test/profile_screen_test.dart",
+  "assertions": "Quest hero then24pxgap then Quest Activity; Progress Overview/tally/carousel/pages/sixmetric labels/cards/ratios absent. Genuine nextquest10/20, level2rank/XP,2-daystreak and activity retained.",
+  "command": "flutter test --no-pub test/profile_screen_test.dart --reporter expanded",
+  "result": "10passed, exit0",
+  "coverage_retained": "Backend data/loading/retry/no selection/maxrank; compact320px2\u00d7text/XP text bounds; chart semantics; parent-gated profile name/avatar PATCH and cached selection.",
+  "analysis": "Scoped ProfileScreen+Profile test analysis: no issues found.",
+  "production_edits_by_this_agent": false,
+  "flutter_lock": "released to root for signed build/install"
+}

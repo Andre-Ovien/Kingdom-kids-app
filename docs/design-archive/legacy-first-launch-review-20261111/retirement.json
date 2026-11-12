@@ -1,0 +1,8 @@
+{
+  "at": "2026-11-11T14:31:52.945621+01:00",
+  "original_path": "Frontend/mobile/tool/replay_first_launch.dart",
+  "original_sha256": "a3231b49649fc490d6bc2ff532a7db68b3e1b31c82df66c7e3ec96cc73533438",
+  "reason": "User requires saved sign-in and active child to survive all future in-place updates and relaunches. The historical review target cleared local auth/selection when its old marker was absent.",
+  "replacement": "Legacy target delegates to normal main with no storage writes. Explicit non-destructive onboarding review remains in tool/replay_onboarding.dart.",
+  "normal_installed_build_impact": "None: current normal lib/main.dart build does not import this separate legacy entrypoint."
+}

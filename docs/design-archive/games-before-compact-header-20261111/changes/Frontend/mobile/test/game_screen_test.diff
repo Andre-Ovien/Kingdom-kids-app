@@ -1,0 +1,194 @@
+--- before/Frontend/mobile/test/game_screen_test.dart
++++ Frontend/mobile/test/game_screen_test.dart
+@@ -161,7 +161,7 @@
+ 
+     expect(find.text('Ready, Ada?'), findsOneWidget);
+     expect(find.text('GAME ROOM'), findsNothing);
+-    expect(find.byKey(const Key('games-header-icon')), findsOneWidget);
++    expect(find.byKey(const Key('games-header-icon')), findsNothing);
+     expect(find.text('Esther Brave Quiz'), findsWidgets);
+     expect(repository.listProfileIds, ['kid-1']);
+ 
+@@ -174,21 +174,17 @@
+     expect(find.text('Another Order Quest'), findsOneWidget);
+ 
+     await tester.enterText(find.byKey(const Key('game-search-field')), '');
+-    await tester.tap(find.byKey(const Key('game-filter-quiz')));
++    await _selectGameCategory(tester, 'quiz');
+     await tester.pump();
+     expect(find.text('Esther Brave Quiz'), findsOneWidget);
+     expect(find.text('Another Order Quest'), findsNothing);
+     expect(
+-      tester.getSemantics(find.byKey(const Key('game-filter-quiz'))),
+-      matchesSemantics(
+-        label: 'Quizzes',
+-        isButton: true,
+-        hasSelectedState: true,
+-        isSelected: true,
+-        hasTapAction: true,
++      find.bySemanticsLabel(
++        RegExp(r'Filter game categories\. Quizzes selected'),
+       ),
+-    );
+-    await tester.tap(find.byKey(const Key('game-filter-all')));
++      findsWidgets,
++    );
++    await _selectGameCategory(tester, 'all');
+     await tester.pump();
+     expect(find.text('Esther Brave Quiz'), findsWidgets);
+     expect(find.text('Another Order Quest'), findsOneWidget);
+@@ -251,10 +247,11 @@
+       );
+       await tester.pumpAndSettle();
+ 
+-      expect(find.byKey(const Key('game-filter-memory')), findsNothing);
+-      expect(find.byKey(const Key('game-filter-matching')), findsNothing);
+-      expect(find.byKey(const Key('game-filter-path')), findsNothing);
+-      expect(find.byKey(const Key('game-filter-ordering')), findsNothing);
++      await _expectGameCategories(
++        tester,
++        present: ['quiz'],
++        absent: ['memory', 'matching', 'path', 'ordering'],
++      );
+       expect(find.text('Red Sea Crossing'), findsNothing);
+       expect(find.text('Daniel Memory Match'), findsNothing);
+       expect(find.text('Noah’s Ark Rescue'), findsNothing);
+@@ -323,7 +320,7 @@
+ 
+     expect(find.text('Creation Order'), findsNothing);
+     expect(find.text('Wise and Foolish Builders'), findsNothing);
+-    expect(find.byKey(const Key('game-filter-game')), findsOneWidget);
++    await _expectGameCategories(tester, present: ['game', 'quiz']);
+     expect(
+       find.bySemanticsLabel('2 quests available. 1 started. 1 star earned.'),
+       findsOneWidget,
+@@ -332,7 +329,7 @@
+       find.bySemanticsLabel(RegExp(r'Today’s big quest\. Esther Brave Quiz\.')),
+       findsOneWidget,
+     );
+-    await tester.tap(find.byKey(const Key('game-filter-game')));
++    await _selectGameCategory(tester, 'game');
+     await tester.pumpAndSettle();
+     expect(find.text('1 GAME'), findsOneWidget);
+     expect(find.text('Another Order Quest'), findsOneWidget);
+@@ -367,8 +364,8 @@
+         ),
+       );
+       await tester.pumpAndSettle();
+-      expect(find.byKey(const Key('game-filter-matching')), findsNothing);
+-      await tester.tap(find.byKey(const Key('game-filter-quiz')));
++      await _expectGameCategories(tester, absent: ['matching']);
++      await _selectGameCategory(tester, 'quiz');
+       await tester.pumpAndSettle();
+       expect(find.text('5 GAMES'), findsOneWidget);
+       expect(find.text('Moses Matching'), findsNothing);
+@@ -429,13 +426,12 @@
+         find.bySemanticsLabel(RegExp(r'^10 quests available\.')),
+         findsOneWidget,
+       );
+-      expect(find.byKey(const Key('game-filter-game')), findsNothing);
+-      expect(find.byKey(const Key('game-filter-aim')), findsNothing);
+-      expect(find.byKey(const Key('game-filter-maze')), findsNothing);
+-      expect(find.byKey(const Key('game-filter-ordering')), findsNothing);
+-      expect(find.byKey(const Key('game-filter-matching')), findsNothing);
+-      await tester.ensureVisible(find.byKey(const Key('game-filter-puzzle')));
+-      await tester.tap(find.byKey(const Key('game-filter-puzzle')));
++      await _expectGameCategories(
++        tester,
++        present: ['puzzle', 'quiz'],
++        absent: ['game', 'aim', 'maze', 'ordering', 'matching'],
++      );
++      await _selectGameCategory(tester, 'puzzle');
+       await tester.pumpAndSettle();
+       expect(find.text('5 GAMES'), findsOneWidget);
+ 
+@@ -458,7 +454,7 @@
+         }
+       }
+       await tester.enterText(find.byKey(const Key('game-search-field')), '');
+-      await tester.tap(find.byKey(const Key('game-filter-quiz')));
++      await _selectGameCategory(tester, 'quiz');
+       await tester.pumpAndSettle();
+       expect(find.text('5 GAMES'), findsOneWidget);
+       for (final quiz in _storyQuizzes.where(
+@@ -504,10 +500,10 @@
+         ),
+       );
+       await tester.pumpAndSettle();
+-      expect(find.byKey(const Key('game-filter-matching')), findsNothing);
++      await _expectGameCategories(tester, absent: ['matching']);
+       expect(find.text('Noah’s Ark Rescue'), findsNothing);
+       expect(find.text('Moses Matching'), findsNothing);
+-      expect(find.byKey(const Key('game-filter-game')), findsNothing);
++      await _expectGameCategories(tester, absent: ['game']);
+       expect(find.text('1 GAME'), findsOneWidget);
+       expect(find.text('Noah’s Ark Garden'), findsNothing);
+       expect(find.text('Jonah Ocean Maze'), findsNothing);
+@@ -568,7 +564,7 @@
+         findsOneWidget,
+       );
+       expect(find.text('15 GAMES'), findsOneWidget);
+-      expect(find.byKey(const Key('game-filter-game')), findsNothing);
++      await _expectGameCategories(tester, absent: ['game']);
+       expect(
+         find.bySemanticsLabel(
+           RegExp(r'Today’s big quest\. Esther Brave Quiz\.'),
+@@ -602,10 +598,7 @@
+         GameCategory.matching,
+       ]) {
+         await tester.enterText(find.byKey(const Key('game-search-field')), '');
+-        await tester.ensureVisible(
+-          find.byKey(Key('game-filter-${category.name}')),
+-        );
+-        await tester.tap(find.byKey(Key('game-filter-${category.name}')));
++        await _selectGameCategory(tester, category.name);
+         await tester.pumpAndSettle();
+         expect(find.text('5 GAMES'), findsOneWidget);
+         for (final game in kept.where((game) => game.category == category)) {
+@@ -1322,7 +1315,7 @@
+         await tester.pumpAndSettle();
+ 
+         expect(find.text('Ready, Ada?'), findsOneWidget);
+-        expect(find.byKey(const Key('game-filter-all')), findsOneWidget);
++        expect(find.byKey(const Key('game-filter-button')), findsOneWidget);
+         expect(
+           tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor,
+           Colors.white,
+@@ -2494,6 +2487,37 @@
+     ),
+   );
+   await tester.pump();
++}
++
++Future<void> _openGameCategoryMenu(WidgetTester tester) async {
++  final button = find.byKey(const Key('game-filter-button'));
++  await tester.ensureVisible(button);
++  await tester.tap(button);
++  await tester.pumpAndSettle();
++}
++
++Future<void> _selectGameCategory(WidgetTester tester, String category) async {
++  await _openGameCategoryMenu(tester);
++  final option = find.byKey(Key('game-filter-$category'));
++  await tester.ensureVisible(option);
++  await tester.tap(option);
++  await tester.pumpAndSettle();
++}
++
++Future<void> _expectGameCategories(
++  WidgetTester tester, {
++  List<String> present = const [],
++  List<String> absent = const [],
++}) async {
++  await _openGameCategoryMenu(tester);
++  for (final category in present) {
++    expect(find.byKey(Key('game-filter-$category')), findsOneWidget);
++  }
++  for (final category in absent) {
++    expect(find.byKey(Key('game-filter-$category')), findsNothing);
++  }
++  Navigator.of(tester.element(find.byKey(const Key('game-filter-all')))).pop();
++  await tester.pumpAndSettle();
+ }
+ 
+ void _useTallSurface(WidgetTester tester) {

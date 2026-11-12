@@ -1,0 +1,438 @@
+import 'dart:convert';
+import 'dart:io';
+import 'dart:ui' as ui;
+
+import 'package:flutter/foundation.dart' show listEquals;
+import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile/app/theme.dart';
+import 'package:mobile/features/auth/data/auth_api.dart';
+import 'package:mobile/features/auth/data/auth_repository.dart';
+import 'package:mobile/features/auth/data/auth_session_store.dart';
+import 'package:mobile/features/auth/domain/auth_requests.dart';
+import 'package:mobile/features/auth/domain/auth_session.dart';
+import 'package:mobile/features/auth/domain/email_verification.dart';
+import 'package:mobile/features/auth/presentation/auth_screen.dart';
+import 'package:mobile/features/auth/presentation/auth_wave_header.dart';
+
+const _capture = bool.fromEnvironment('CAPTURE_AUTH_WAVE');
+const _frameStep = Duration(microseconds: 33333);
+const _modeLink = Key('auth-mode-link');
+
+// Opt-in native Flutter preview. No server request, account, or device install
+// is involved. Animation time advances through the real widget controller.
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUpAll(() async {
+    final fonts =
+        jsonDecode(await rootBundle.loadString('FontManifest.json')) as List;
+    for (final entry in fonts.cast<Map<String, dynamic>>()) {
+      final loader = FontLoader(entry['family'] as String);
+      for (final font in entry['fonts'] as List) {
+        loader.addFont(rootBundle.load((font as Map)['asset'] as String));
+      }
+      await loader.load();
+    }
+
+    // Native-font extracts are temporary preview inputs, never app assets.
+    final nativeFontDir = Platform.environment['KINGDOM_AUTH_FONT_DIR'];
+    if (nativeFontDir != null) {
+      final entries =
+          (jsonDecode(await File('$nativeFontDir/manifest.json').readAsString())
+                  as List)
+              .cast<Map<String, dynamic>>();
+      for (final family in entries.map((entry) => entry['family']).toSet()) {
+        final loader = FontLoader(family as String);
+        for (final entry in entries.where(
+          (entry) => entry['family'] == family,
+        )) {
+          loader.addFont(
+            Future.value(
+              ByteData.sublistView(
+                await File(entry['path'] as String).readAsBytes(),
+              ),
+            ),
+          );
+        }
+        await loader.load();
+      }
+    }
+  });
+
+  testWidgets('native blue auth endpoints and both transition directions', (
+    tester,
+  ) async {
+    _usePhone(tester);
+    final boundary = GlobalKey();
+    final repository = _PreviewRepository();
+    final output = _outputDirectory();
+    await tester.pumpWidget(_previewApp(boundary, repository: repository));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 1000));
+    _expectUsableEndpoint(tester, AuthScreenMode.login);
+    final signInHeader = tester.widget<AuthWaveHeader>(
+      find.byType(AuthWaveHeader),
+    );
+
+    if (_capture) {
+      await _writePng(
+        tester,
+        boundary,
+        '${output.path}/sign-in-393x852.png',
+        pixelRatio: 3,
+      );
+    }
+    final signBefore = _signRect(tester);
+    expect(signBefore, isNotNull);
+    final fixedSignRaster = _FixedPixelRegion(signBefore!);
+    var frame = 0;
+    Future<void> record(int count) async {
+      for (var index = 0; index < count; index++) {
+        await tester.pump(_frameStep);
+        expect(tester.takeException(), isNull);
+        if (_capture) {
+          await _writePng(
+            tester,
+            boundary,
+            '${output.path}/frames/frame-${frame.toString().padLeft(4, '0')}.png',
+            pixelRatio: 2,
+            fixedRegion: fixedSignRaster,
+          );
+        }
+        frame++;
+      }
+    }
+
+    await record(24);
+    await tester.tap(find.byKey(_modeLink).hitTestable());
+    await tester.pump();
+    await record(30);
+    _expectUsableEndpoint(tester, AuthScreenMode.register);
+    final signUpHeader = tester.widget<AuthWaveHeader>(
+      find.byType(AuthWaveHeader),
+    );
+    final signAfter = _signRect(tester);
+    if (signBefore != null && signAfter != null) {
+      expect(signAfter, signBefore, reason: 'The Sign label stays anchored.');
+    }
+    if (_capture) {
+      await _writePng(
+        tester,
+        boundary,
+        '${output.path}/sign-up-393x852.png',
+        pixelRatio: 3,
+      );
+    }
+    await record(24);
+    await tester.tap(find.byKey(_modeLink).hitTestable());
+    await tester.pump();
+    await record(30);
+    _expectUsableEndpoint(tester, AuthScreenMode.login);
+    await record(24);
+    expect(repository.calls, 0);
+    if (_capture) {
+      await tester.runAsync(() async {
+        await File('${output.path}/capture-metadata.json').writeAsString(
+          const JsonEncoder.withIndent('  ').convert({
+            'source': 'Actual AuthScreen Flutter widget render',
+            'logicalSize': [393, 852],
+            'safeAreas': {'top': 59, 'bottom': 34},
+            'endpointPixelRatio': 3,
+            'motionPixelRatio': 2,
+            'framesPerSecond': 30,
+            'frameCount': frame,
+            'segments': [
+              {'mode': 'Sign In', 'frames': 24},
+              {'motion': 'Sign In to Sign Up', 'frames': 30},
+              {'mode': 'Sign Up', 'frames': 24},
+              {'motion': 'Sign Up to Sign In', 'frames': 30},
+              {'mode': 'Sign In', 'frames': 24},
+            ],
+            'networkCalls': repository.calls,
+            'headerHeights': {
+              'signIn': signInHeader.height,
+              'signUp': signUpHeader.height,
+            },
+            'headerColorArgb': signInHeader.color.toARGB32().toRadixString(16),
+            'fixedSignRaster': {
+              'verifiedFrames': fixedSignRaster.verifiedFrames,
+              'identicalRgbaEveryFrame': true,
+              'brightGlyphPixels': fixedSignRaster.brightGlyphPixels,
+              'logicalRect': {
+                'left': signBefore.left,
+                'top': signBefore.top,
+                'right': signBefore.right,
+                'bottom': signBefore.bottom,
+              },
+            },
+          }),
+        );
+      });
+    }
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  for (final scenario in [
+    (
+      name: 'small-phone',
+      size: const Size(360, 640),
+      keyboard: 0.0,
+      scale: 1.0,
+    ),
+    (name: 'keyboard', size: const Size(393, 852), keyboard: 346.0, scale: 1.0),
+    (name: 'large-text', size: const Size(393, 852), keyboard: 0.0, scale: 1.6),
+  ]) {
+    testWidgets('auth preview accessibility review: ${scenario.name}', (
+      tester,
+    ) async {
+      _usePhone(tester, size: scenario.size);
+      final boundary = GlobalKey();
+      await tester.pumpWidget(
+        _previewApp(
+          boundary,
+          repository: _PreviewRepository(),
+          keyboard: scenario.keyboard,
+          textScale: scenario.scale,
+          reduceMotion: true,
+        ),
+      );
+      await tester.pump();
+      for (final mode in [AuthScreenMode.login, AuthScreenMode.register]) {
+        expect(tester.takeException(), isNull);
+        _expectReviewViewport(
+          tester,
+          mode,
+          top: 59,
+          bottom:
+              scenario.size.height -
+              (scenario.keyboard > 0 ? scenario.keyboard : 34),
+          scenario: scenario.name,
+        );
+        // Review captures deliberately retain the initial viewport. The
+        // functional layout suite verifies each control's reachability.
+        if (_capture) {
+          await _writePng(
+            tester,
+            boundary,
+            '${_outputDirectory().path}/review-${scenario.name}-${mode.name}.png',
+            pixelRatio: 2,
+          );
+        }
+        if (mode == AuthScreenMode.login) {
+          await tester.ensureVisible(find.byKey(_modeLink));
+          await tester.tap(find.byKey(_modeLink).hitTestable());
+          await tester.pump();
+        }
+      }
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+  }
+}
+
+Widget _previewApp(
+  GlobalKey boundary, {
+  required AuthRepository repository,
+  double keyboard = 0,
+  double textScale = 1,
+  bool reduceMotion = false,
+}) => RepaintBoundary(
+  key: boundary,
+  child: MaterialApp(
+    debugShowCheckedModeBanner: false,
+    theme: buildKingdomKidsTheme(),
+    builder: (context, child) => MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+        padding: EdgeInsets.only(top: 59, bottom: keyboard > 0 ? 0 : 34),
+        viewPadding: const EdgeInsets.only(top: 59, bottom: 34),
+        viewInsets: EdgeInsets.only(bottom: keyboard),
+        textScaler: TextScaler.linear(textScale),
+        disableAnimations: reduceMotion,
+      ),
+      child: child!,
+    ),
+    home: AuthScreen(
+      initialMode: AuthScreenMode.login,
+      repository: repository,
+      externalUrlLauncher: (_) async => true,
+    ),
+  ),
+);
+
+void _usePhone(WidgetTester tester, {Size size = const Size(393, 852)}) {
+  tester.view.physicalSize = size;
+  tester.view.devicePixelRatio = 1;
+  tester.view.padding = const FakeViewPadding(top: 59, bottom: 34);
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+  addTearDown(tester.view.resetPadding);
+}
+
+void _expectUsableEndpoint(WidgetTester tester, AuthScreenMode mode) {
+  for (final key in [
+    'auth-email-field',
+    'auth-password-field',
+    'auth-submit-button',
+    'auth-mode-link',
+    'auth-privacy-policy',
+  ]) {
+    expect(find.byKey(Key(key)).hitTestable(), findsOneWidget);
+  }
+  expect(
+    find.byKey(const Key('auth-confirm-password-field')),
+    mode == AuthScreenMode.register ? findsOneWidget : findsNothing,
+  );
+  _expectReviewViewport(
+    tester,
+    mode,
+    top: 59,
+    bottom: 818,
+    scenario: 'standard phone',
+  );
+  expect(tester.takeException(), isNull);
+}
+
+void _expectReviewViewport(
+  WidgetTester tester,
+  AuthScreenMode mode, {
+  required double top,
+  required double bottom,
+  required String scenario,
+}) {
+  for (final key in [
+    'auth-email-field',
+    'auth-password-field',
+    if (mode == AuthScreenMode.register) 'auth-confirm-password-field',
+    'auth-submit-button',
+    'auth-privacy-policy',
+    'auth-mode-link',
+    'auth-parent-safety-note',
+  ]) {
+    final item = find.byKey(Key(key));
+    expect(
+      item.hitTestable(),
+      findsOneWidget,
+      reason: '$key stays usable in $scenario ${mode.name}.',
+    );
+    final rect = tester.getRect(item);
+    expect(
+      rect.top,
+      greaterThanOrEqualTo(top - 0.5),
+      reason: '$key stays below the top safe area in $scenario ${mode.name}.',
+    );
+    expect(
+      rect.bottom,
+      lessThanOrEqualTo(bottom + 0.5),
+      reason: '$key stays above the lower inset in $scenario ${mode.name}.',
+    );
+  }
+}
+
+Rect? _signRect(WidgetTester tester) {
+  final keyedLabel = find.byKey(const Key('auth-sign-label'));
+  final label = keyedLabel.evaluate().isNotEmpty
+      ? keyedLabel
+      : find.text('Sign');
+  return label.evaluate().length == 1 ? tester.getRect(label) : null;
+}
+
+Directory _outputDirectory() => Directory(
+  Platform.environment['KINGDOM_AUTH_WAVE_OUTPUT'] ??
+      '${Directory.current.parent.parent.path}/output/auth-redesign-20261111-v2',
+);
+
+Future<void> _writePng(
+  WidgetTester tester,
+  GlobalKey key,
+  String path, {
+  required double pixelRatio,
+  _FixedPixelRegion? fixedRegion,
+}) async {
+  await tester.runAsync(() async {
+    final render =
+        key.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+    final image = await render.toImage(pixelRatio: pixelRatio);
+    try {
+      await fixedRegion?.verify(image, pixelRatio);
+      final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+      final file = File(path);
+      await file.parent.create(recursive: true);
+      await file.writeAsBytes(bytes!.buffer.asUint8List());
+    } finally {
+      image.dispose();
+    }
+  });
+}
+
+// Geometry alone cannot prove that a retained label was painted. Each captured
+// motion frame must contain exactly the same visible Sign glyph pixels.
+class _FixedPixelRegion {
+  _FixedPixelRegion(this.rect);
+
+  final Rect rect;
+  List<int>? _reference;
+  int verifiedFrames = 0;
+  int brightGlyphPixels = 0;
+
+  Future<void> verify(ui.Image image, double ratio) async {
+    final raw = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+    final pixels = raw!.buffer.asUint8List();
+    final left = (rect.left * ratio).floor();
+    final top = (rect.top * ratio).floor();
+    final right = (rect.right * ratio).ceil();
+    final bottom = (rect.bottom * ratio).ceil();
+    final region = <int>[];
+    for (var y = top; y < bottom; y++) {
+      region.addAll(
+        pixels.sublist(
+          (y * image.width + left) * 4,
+          (y * image.width + right) * 4,
+        ),
+      );
+    }
+    if (_reference == null) {
+      _reference = region;
+      for (var index = 0; index < region.length; index += 4) {
+        if (region[index] > 245 &&
+            region[index + 1] > 245 &&
+            region[index + 2] > 245) {
+          brightGlyphPixels++;
+        }
+      }
+      expect(brightGlyphPixels, greaterThan(100));
+    }
+    expect(
+      listEquals(region, _reference),
+      isTrue,
+      reason: 'Sign must remain visibly identical in frame $verifiedFrames.',
+    );
+    verifiedFrames++;
+  }
+}
+
+class _PreviewRepository extends AuthRepository {
+  _PreviewRepository()
+    : super(api: _OfflineAuthApi(), sessionStore: MemoryAuthSessionStore());
+
+  int calls = 0;
+
+  @override
+  Future<AuthSession> login(LoginRequest request) {
+    calls++;
+    throw StateError('The visual preview cannot sign in.');
+  }
+
+  @override
+  Future<PendingEmailVerification> register(RegisterParentRequest request) {
+    calls++;
+    throw StateError('The visual preview cannot create an account.');
+  }
+}
+
+class _OfflineAuthApi implements AuthApi {
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw StateError('No API operation is available in the visual preview.');
+}

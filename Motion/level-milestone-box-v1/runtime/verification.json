@@ -1,0 +1,18 @@
+{
+  "frames": 80,
+  "atlasSize": [
+    3520,
+    2816
+  ],
+  "decodedMiB": 37.8125,
+  "encodedAtlasBytes": 2267878,
+  "posterBytes": 69636,
+  "allFramesTransparentCorners": true,
+  "alphaBoundingBoxUnion": [
+    44,
+    12,
+    332,
+    330
+  ],
+  "losslessDecodedPixelsMatch": true
+}

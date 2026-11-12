@@ -1,0 +1,24 @@
+{
+  "status": "Final source frozen and verified24/24checks; scoped analysis clean.",
+  "source_hashes": {
+    "Frontend/mobile/lib/features/games/presentation/games_screen.dart": "b51a49fc5b1fabdc402b1834c86b9e739be41dcea61c0ed60de194b893a93df1",
+    "Frontend/mobile/lib/features/games/presentation/games_course_widgets.dart": "fe6736f3a79e30085e0abae3144a1879b636c1b1be99d8103ab7a2e858d1a0c4"
+  },
+  "business_methods_unchanged": {
+    "load": true,
+    "visible_games": true,
+    "open": true,
+    "choose_profile": true,
+    "clear_filters": true,
+    "choose_category": true
+  },
+  "header": "Actual backend-selected featured MiniGame cover fills banner via GameCoverImage/default focal alignment; readable scrim, Game of the Week and actual title; sole black Play+triangle button opens same featured game. Controller art and Games/Levels chips removed.",
+  "cards": "357pxnormal width\u2192228.48pxheight, continuous superellipse42pxradius; bottom/right14pxinset; static full360degree78pxouterring surrounds64pxwhitearrow circle. Real progress indicator remains separate. Existing dark/lavendercolors retained.",
+  "large_text": "TextPainter measures actual label/title/metadata with system text scale; card/header height expands to avoid overlaps.",
+  "archive": "Both immediately previous production files retained in this directory. No other tabs/native/auth/backend files edited.",
+  "header_font": "Play button inherits Theme.labelLarge font family; measured text height rounded upward to avoid subpixel large-text overflow.",
+  "review_status": "24passed against exactfe6736...widgets+b51a49...screen, including actual featured-cover/Play action and357\u00d7228.48card/superellipse42/static78/64ring plus320px2.2xlight/dark/longtitle cases.",
+  "installation": "Held by root for explicitly requested user chat-preview review; this agent does not build or install.",
+  "tests_owner": "streak_fire_preview",
+  "flutter_lock": "released to root"
+}

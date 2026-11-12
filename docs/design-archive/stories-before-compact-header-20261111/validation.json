@@ -1,0 +1,19 @@
+{
+  "scope": "Stories tab only. Home/Games/reader/gameplay sources unchanged.",
+  "reference_inspected": "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/output/story-library-compact-20261111/device/before-retry.png",
+  "changes": [
+    "Storytime heading reduced from32/w900to24/w700; subtitle and top-right book removed.",
+    "Search uses smaller14pxcopy, rounded99pxoutline and minimum48pxheight; filter button is48pxcircle with Icons.filter_list_rounded.",
+    "Latest user steering applied: Stories inline category rail removed. Existing category bottom sheet and active-filter indicator retained. Home/Games category pills unchanged.",
+    "Oversized featured layout replaced by existing unmodified HomeStoryCard for all featured stories, retaining actualmetadata/cover/title/summary and story-card-*route key."
+  ],
+  "behavior": "No eager fetch added. Same library data, search/category filtering, shelf, white theme and navigation.",
+  "validation": {
+    "command": "flutter test --no-pub test/story_screen_test.dart --name '^library|^a search with no matches' --reporter expanded",
+    "result": "6passed, exit0",
+    "coverage": "Backend list/search/route, retry and stale data, filter button\u2192bottom sheet\u2192Mercy\u2192All, empty-search reset, compact large text under inherited dark theme. Default library checks use light theme.",
+    "analysis": "No issues found in Stories source and relevant test file."
+  },
+  "source_state": "frozen",
+  "flutter_lock": "released to root for build/install"
+}

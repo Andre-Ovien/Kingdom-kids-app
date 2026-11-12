@@ -1,0 +1,32 @@
+{
+  "file": "giraffe_rig.glb",
+  "mesh_report": [
+    {
+      "mesh": "giraffe",
+      "vertices": 8176,
+      "triangles": 12798,
+      "position_welded_components": [
+        6401
+      ],
+      "bounds": {
+        "min": [
+          -7.701569080352783,
+          -40.72694396972656,
+          -27.96429443359375
+        ],
+        "max": [
+          7.701569557189941,
+          40.726932525634766,
+          27.964298248291016
+        ]
+      }
+    }
+  ],
+  "skins": 1,
+  "joints": [
+    42
+  ],
+  "animations": [],
+  "images": [],
+  "warning": "Data-only inspection; appearance/deformation require visible Blender review. No changes made to geometry."
+}

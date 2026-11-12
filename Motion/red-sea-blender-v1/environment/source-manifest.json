@@ -1,0 +1,41 @@
+{
+  "clips": {
+    "sea_ready": {
+      "frames": "frames/sea_ready/*.png",
+      "durationSeconds": 1,
+      "loop": true,
+      "cellWidth": 300,
+      "cellHeight": 650,
+      "frameCount": 1
+    },
+    "sea_opening": {
+      "frames": "frames/sea_opening/*.png",
+      "durationSeconds": 2.6,
+      "loop": false,
+      "cellWidth": 300,
+      "cellHeight": 650,
+      "frameCount": 64
+    },
+    "sea_idle": {
+      "frames": "frames/sea_idle/*.png",
+      "durationSeconds": 2,
+      "loop": true,
+      "cellWidth": 300,
+      "cellHeight": 650,
+      "frameCount": 48
+    }
+  },
+  "cameraAspect": [
+    393,
+    852
+  ],
+  "staffContactSeconds": 1.0,
+  "readyLoopCellCount": 24,
+  "openingWaterStartSeconds": 1.0,
+  "introIdleMatch": "Both use update(1,0).",
+  "idleCycle": "Blender FFT height/foam fields sampled along two forward-moving time windows with C1 cosine crossfade; period two seconds.",
+  "readyAlias": "Opening cells 0\u201323 form a complete 2\u03c0 closed-sea loop; cell 24 repeats phase zero for staff contact.",
+  "oceanSurfaceLevel": 0.0,
+  "deepSeabedLevel": -24.0,
+  "estimatedDecodedRgbaBytes": 88140000
+}

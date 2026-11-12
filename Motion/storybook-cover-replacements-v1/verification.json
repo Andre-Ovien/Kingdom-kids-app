@@ -1,0 +1,10 @@
+{
+  "installation": "success",
+  "launch": "failed",
+  "launch_limitation": "iPhone locked",
+  "focused_backend_checks_passed": 22,
+  "live_api_checks": "Health, five story details and matching puzzle details, Ark, Creation and Builders all HTTP 200; 15 narration tracks ready",
+  "runtime_cover_files": 5,
+  "held_gift_assets": 0,
+  "story_body_narration_progress_preserved": true
+}

@@ -1,0 +1,1 @@
+Restore the three archived Dart files to their paths in manifest.json to revert this Games-only hierarchy experiment. These files preserve the approved weekly hero, catalogue/progress behavior, and prior tall course cards. No backend, authentication, native navigation, or other tab source is included or changed.

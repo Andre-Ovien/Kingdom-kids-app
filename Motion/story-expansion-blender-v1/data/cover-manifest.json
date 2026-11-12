@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "covers": [
+    {
+      "slug": "lost-sheep",
+      "asset": "assets/images/stories/lost-sheep-blender-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "encodedBytes": 629174,
+      "sha256": "e1a0c321dfd6adfddf0330e85a5eee2f5f17c05adb11f3b87a319fa3c43624f8",
+      "exactDecodedPixels": true,
+      "sourceBlend": "source/lost-sheep.blend"
+    },
+    {
+      "slug": "joseph-colorful-coat",
+      "asset": "assets/images/stories/joseph-colorful-coat-blender-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "encodedBytes": 641670,
+      "sha256": "8a5755605f1a6f3e685e2d13e092638cea9b306e054088e1379204eb4c4c5da6",
+      "exactDecodedPixels": true,
+      "sourceBlend": "source/joseph-colorful-coat.blend"
+    },
+    {
+      "slug": "good-samaritan",
+      "asset": "assets/images/stories/good-samaritan-blender-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "encodedBytes": 655624,
+      "sha256": "0b2471289e0a18d1b9f70b8ac94957adb5c84a672f70390c3e94e915dc973537",
+      "exactDecodedPixels": true,
+      "sourceBlend": "source/good-samaritan.blend"
+    },
+    {
+      "slug": "walls-of-jericho",
+      "asset": "assets/images/stories/walls-of-jericho-blender-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "encodedBytes": 628440,
+      "sha256": "f528914767c5607575dae32a918dfe6376fde27087a134e32d9488af929a664a",
+      "exactDecodedPixels": true,
+      "sourceBlend": "source/walls-of-jericho.blend"
+    },
+    {
+      "slug": "ruth-and-naomi",
+      "asset": "assets/images/stories/ruth-and-naomi-blender-v1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "encodedBytes": 678792,
+      "sha256": "b98a7867f3b736d8937ed42590e582e41ad155712573468261b21b12bde95c10",
+      "exactDecodedPixels": true,
+      "sourceBlend": "source/ruth-and-naomi.blend"
+    }
+  ]
+}

@@ -111,3 +111,14 @@ Thumbs.db
 *.swo
 **/.idea/
 /.vscode/
+
+# Local review exports and downloaded design reference
+/Motion/level-milestone-gift-v3/reference/
+/Motion/character-spotlights/blender-kai/kai-motion-study.mp4
+/Motion/character-spotlights/blender-kai/kai-motion-study.gif
+/Motion/david-native-gameplay/*.mp4
+/Motion/david-native-gameplay/*.jpg
+/Motion/goliath-blender-fall-v1/*.mp4
+/Motion/milestone-ui-review-v1/*.mp4
+/Motion/**/review-*.gif
+/Motion/**/review-*.png

@@ -1,0 +1,4 @@
+This archive captures the iOS registration sources before the native glass navigation bridge.
+To remove that bridge, remove LiquidNavigationViewFactory registration from AppDelegate.swift and remove LiquidNavigationView.swift from the Runner sources/group, then remove the native source file.
+The archived source copies and SHA-256 manifest are for comparison; do not replace a later-edited AppDelegate or Xcode project wholesale.
+The existing sailing Core Motion handler was preserved unchanged.

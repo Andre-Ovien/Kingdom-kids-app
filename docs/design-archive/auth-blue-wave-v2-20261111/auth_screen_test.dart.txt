@@ -1,0 +1,447 @@
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:mobile/app/router.dart';
+import 'package:mobile/core/constants/app_constants.dart';
+import 'package:mobile/features/auth/data/auth_api.dart';
+import 'package:mobile/features/auth/data/auth_repository.dart';
+import 'package:mobile/features/auth/data/auth_session_store.dart';
+import 'package:mobile/features/auth/domain/email_verification.dart';
+import 'package:mobile/features/auth/presentation/auth_screen.dart';
+import 'package:mobile/features/auth/presentation/email_verification_screen.dart';
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  setUpAll(() async {
+    final fonts =
+        jsonDecode(await rootBundle.loadString('FontManifest.json'))
+            as List<dynamic>;
+    for (final entry in fonts.cast<Map<String, dynamic>>()) {
+      final loader = FontLoader(entry['family'] as String);
+      for (final font in entry['fonts'] as List<dynamic>) {
+        loader.addFont(rootBundle.load((font as Map)['asset'] as String));
+      }
+      await loader.load();
+    }
+  });
+  for (final mode in AuthScreenMode.values) {
+    testWidgets(
+      'opens the public privacy policy before ${mode.name} submission',
+      (tester) async {
+        final launchedUris = <Uri>[];
+        await tester.pumpWidget(
+          MaterialApp(
+            home: AuthScreen(
+              initialMode: mode,
+              externalUrlLauncher: (uri) async {
+                launchedUris.add(uri);
+                return true;
+              },
+            ),
+          ),
+        );
+
+        final privacyLink = find.byKey(const Key('auth-privacy-policy'));
+        final submitButton = find.byKey(const Key('auth-submit-button'));
+        await tester.ensureVisible(privacyLink);
+        await tester.pump();
+
+        expect(privacyLink, findsOneWidget);
+        expect(submitButton, findsOneWidget);
+        expect(
+          tester.getTopLeft(privacyLink).dy,
+          greaterThanOrEqualTo(tester.getBottomLeft(submitButton).dy),
+        );
+        await tester.tap(privacyLink);
+        await tester.pump();
+
+        expect(launchedUris, [Uri.parse(AppConstants.privacyPolicyUrl)]);
+      },
+    );
+  }
+
+  testWidgets('switches between the playful sign-up and sign-in forms', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const MaterialApp(home: AuthScreen()));
+
+    expect(find.text('Hey, welcome!'), findsOneWidget);
+    expect(
+      find.byKey(const Key('auth-confirm-password-field')),
+      findsOneWidget,
+    );
+    expect(find.text('Create account'), findsOneWidget);
+
+    final modeLink = find.byKey(const Key('auth-mode-link'));
+    await tester.ensureVisible(modeLink);
+    await tester.pump();
+    await tester.tap(modeLink);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Welcome back!'), findsOneWidget);
+    expect(find.byKey(const Key('auth-confirm-password-field')), findsNothing);
+    expect(find.text('Sign in'), findsOneWidget);
+  });
+
+  testWidgets('opens password recovery from login without route secrets', (
+    tester,
+  ) async {
+    RouteSettings? resetRouteSettings;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: const AuthScreen(initialMode: AuthScreenMode.login),
+        onGenerateRoute: (settings) {
+          resetRouteSettings = settings;
+          return MaterialPageRoute<void>(
+            settings: settings,
+            builder: (_) => const Scaffold(body: Text('Reset route reached')),
+          );
+        },
+      ),
+    );
+
+    final forgotPassword = find.byKey(const Key('auth-forgot-password'));
+    await tester.ensureVisible(forgotPassword);
+    await tester.pump();
+    await tester.tap(forgotPassword);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Reset route reached'), findsOneWidget);
+    expect(resetRouteSettings?.name, AppRoutes.passwordReset);
+    expect(resetRouteSettings?.arguments, isNull);
+  });
+
+  testWidgets(
+    'mode change morphs one header with Sign anchored and keeps typed email',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(393, 852));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        const MaterialApp(home: AuthScreen(initialMode: AuthScreenMode.login)),
+      );
+      final sign = find.byKey(const Key('auth-sign-label'));
+      final header = find.byKey(const Key('auth-wave-header'));
+      final initialSign = tester.getTopLeft(sign);
+      final initialHeight = tester.getSize(header).height;
+      await tester.enterText(
+        _fieldWithin(const Key('auth-email-field')),
+        'parent@example.com',
+      );
+      await tester.tap(find.byKey(const Key('auth-mode-link')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 340));
+      expect(tester.getTopLeft(sign), initialSign);
+      expect(tester.getSize(header).height, lessThan(initialHeight));
+      expect(tester.getSize(header).height, greaterThan(210));
+      await tester.pump(const Duration(milliseconds: 340));
+      expect(tester.getTopLeft(sign), initialSign);
+      expect(tester.getSize(header).height, 210);
+      expect(
+        tester
+            .widget<TextFormField>(_fieldWithin(const Key('auth-email-field')))
+            .controller!
+            .text,
+        'parent@example.com',
+      );
+      expect(
+        find.byKey(const Key('auth-confirm-password-field')).hitTestable(),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('reduced motion changes mode immediately without moving Sign', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(393, 852));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(disableAnimations: true),
+          child: child!,
+        ),
+        home: const AuthScreen(initialMode: AuthScreenMode.login),
+      ),
+    );
+    final sign = tester.getTopLeft(find.byKey(const Key('auth-sign-label')));
+    await tester.tap(find.byKey(const Key('auth-mode-link')));
+    await tester.pump();
+    expect(
+      tester.getSize(find.byKey(const Key('auth-wave-header'))).height,
+      210,
+    );
+    expect(tester.getTopLeft(find.byKey(const Key('auth-sign-label'))), sign);
+    expect(
+      find.byKey(const Key('auth-confirm-password-field')).hitTestable(),
+      findsOneWidget,
+    );
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const Key('auth-submit-button')))
+          .onPressed,
+      isNotNull,
+    );
+  });
+
+  testWidgets(
+    'rapid reversal returns the same form to sign in without losing values',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(393, 852));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        const MaterialApp(home: AuthScreen(initialMode: AuthScreenMode.login)),
+      );
+      await tester.enterText(
+        _fieldWithin(const Key('auth-email-field')),
+        'parent@example.com',
+      );
+      await tester.tap(find.byKey(const Key('auth-mode-link')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      final middleHeight = tester
+          .getSize(find.byKey(const Key('auth-wave-header')))
+          .height;
+      await tester.tap(find.byKey(const Key('auth-mode-link')));
+      await tester.pump();
+      expect(
+        tester.getSize(find.byKey(const Key('auth-wave-header'))).height,
+        closeTo(middleHeight, 0.1),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('auth-confirm-password-field')),
+        findsNothing,
+      );
+      expect(find.text('Welcome back!'), findsOneWidget);
+      expect(
+        tester
+            .widget<TextFormField>(_fieldWithin(const Key('auth-email-field')))
+            .controller!
+            .text,
+        'parent@example.com',
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('registration opens verification without storing a JWT', (
+    tester,
+  ) async {
+    late http.Request registerRequest;
+    final store = MemoryAuthSessionStore();
+    final repository = AuthRepository(
+      api: HttpAuthApi(
+        baseUrl: 'https://kingdom-kids.test/api',
+        client: MockClient((request) async {
+          registerRequest = request;
+          return http.Response(
+            jsonEncode({
+              'verification': {
+                'challenge_id': 'challenge-1',
+                'email': 'parent@example.com',
+                'destination_hint': 'pa••••@example.com',
+                'expires_in': 600,
+                'resend_after': 60,
+              },
+            }),
+            202,
+            headers: {'content-type': 'application/json; charset=utf-8'},
+          );
+        }),
+      ),
+      sessionStore: store,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AuthScreen(repository: repository),
+        onGenerateRoute: (settings) {
+          if (settings.name == AppRoutes.emailVerification &&
+              settings.arguments is PendingEmailVerification) {
+            return MaterialPageRoute<void>(
+              builder: (_) => EmailVerificationScreen(
+                pending: settings.arguments! as PendingEmailVerification,
+                repository: repository,
+              ),
+            );
+          }
+          return null;
+        },
+      ),
+    );
+
+    await tester.enterText(
+      _fieldWithin(const Key('auth-email-field')),
+      'PARENT@EXAMPLE.COM',
+    );
+    await tester.enterText(
+      _fieldWithin(const Key('auth-password-field')),
+      'Correct-Horse-Battery-Staple-2026!',
+    );
+    await tester.enterText(
+      _fieldWithin(const Key('auth-confirm-password-field')),
+      'Correct-Horse-Battery-Staple-2026!',
+    );
+    final submitButton = find.byKey(const Key('auth-submit-button'));
+    await tester.ensureVisible(submitButton);
+    await tester.pump();
+    await tester.tap(submitButton);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 700));
+
+    expect(find.text('Enter your magic code.'), findsOneWidget);
+    expect(await store.readSession(), isNull);
+    expect(jsonDecode(registerRequest.body), {
+      'email': 'parent@example.com',
+      'password': 'Correct-Horse-Battery-Staple-2026!',
+      'password_confirmation': 'Correct-Horse-Battery-Staple-2026!',
+    });
+  });
+
+  testWidgets('unverified sign-in returns to the pending challenge', (
+    tester,
+  ) async {
+    final repository = AuthRepository(
+      api: HttpAuthApi(
+        baseUrl: 'https://kingdom-kids.test/api',
+        client: MockClient((request) async {
+          return http.Response(
+            jsonEncode({
+              'code': 'email_verification_required',
+              'detail': 'Verify your email address before signing in.',
+              'verification': {
+                'challenge_id': 'challenge-1',
+                'email': 'parent@example.com',
+                'destination_hint': 'pa••••@example.com',
+                'expires_in': 600,
+                'resend_after': 15,
+              },
+            }),
+            403,
+            headers: {'content-type': 'application/json; charset=utf-8'},
+          );
+        }),
+      ),
+      sessionStore: MemoryAuthSessionStore(),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AuthScreen(
+          initialMode: AuthScreenMode.login,
+          repository: repository,
+        ),
+        onGenerateRoute: (settings) {
+          if (settings.name == AppRoutes.emailVerification &&
+              settings.arguments is PendingEmailVerification) {
+            return MaterialPageRoute<void>(
+              builder: (_) => EmailVerificationScreen(
+                pending: settings.arguments! as PendingEmailVerification,
+                repository: repository,
+              ),
+            );
+          }
+          return null;
+        },
+      ),
+    );
+
+    await tester.enterText(
+      _fieldWithin(const Key('auth-email-field')),
+      'parent@example.com',
+    );
+    await tester.enterText(
+      _fieldWithin(const Key('auth-password-field')),
+      'Correct-Horse-Battery-Staple-2026!',
+    );
+    final submitButton = find.byKey(const Key('auth-submit-button'));
+    await tester.ensureVisible(submitButton);
+    await tester.pump();
+    await tester.tap(submitButton);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.text('Enter your magic code.'), findsOneWidget);
+    expect(find.textContaining('pa••••@example.com'), findsOneWidget);
+  });
+
+  testWidgets('auth form remains scroll-safe with large text', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(360, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: (context, child) {
+          return MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: const TextScaler.linear(2)),
+            child: child!,
+          );
+        },
+        home: const AuthScreen(),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byType(SingleChildScrollView), findsOneWidget);
+    expect(find.text('Hey, welcome!'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('ignores a second keyboard submission while registering', (
+    tester,
+  ) async {
+    var registrationCount = 0;
+    final response = Completer<http.Response>();
+    final repository = AuthRepository(
+      api: HttpAuthApi(
+        baseUrl: 'https://kingdom-kids.test/api',
+        client: MockClient((_) {
+          registrationCount += 1;
+          return response.future;
+        }),
+      ),
+      sessionStore: MemoryAuthSessionStore(),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(home: AuthScreen(repository: repository)),
+    );
+    await tester.enterText(
+      _fieldWithin(const Key('auth-email-field')),
+      'parent@example.com',
+    );
+    await tester.enterText(
+      _fieldWithin(const Key('auth-password-field')),
+      'Correct-Horse-Battery-Staple-2026!',
+    );
+    await tester.enterText(
+      _fieldWithin(const Key('auth-confirm-password-field')),
+      'Correct-Horse-Battery-Staple-2026!',
+    );
+
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+
+    expect(registrationCount, 1);
+    response.complete(
+      http.Response(jsonEncode({'detail': 'Please retry.'}), 503),
+    );
+    await tester.pump();
+  });
+}
+
+Finder _fieldWithin(Key key) {
+  return find.descendant(
+    of: find.byKey(key),
+    matching: find.byType(TextFormField),
+  );
+}

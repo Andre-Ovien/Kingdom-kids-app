@@ -1,0 +1,7 @@
+{
+  "restore": "Copy the archived games_screen.dart and games_course_widgets.dart to their original Games presentation paths together.",
+  "scope": "Only these two Games presentation files changed; no other tabs/native/auth/backend/assets modified.",
+  "before": "Generic glossy-controller orange header with Games/Levels chips,186pxminimum cards,30pxrounded rectangles and46pxarrow circles.",
+  "after": "Actual featured cover banner with Play,228.48pxcards at357pxwidth, continuous42pxcorners, static78/64fullrings; palette unchanged.",
+  "behavior": "Original data/auth/filter/retired+paused exclusions/search/detail-return/progress methods retained byte-for-byte."
+}

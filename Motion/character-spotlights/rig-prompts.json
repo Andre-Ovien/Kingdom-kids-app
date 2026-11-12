@@ -1,0 +1,56 @@
+{
+  "generator": "Built-in imagegen",
+  "purpose": "Joint-driven character performances for child-profile setup, separate shoulder/elbow/hip/neck parts and blink heads.",
+  "atlas_layout": [
+    "head-open",
+    "head-blink",
+    "torso-dress",
+    "screen-left-upper-arm",
+    "screen-left-forearm-hand",
+    "screen-right-upper-arm",
+    "screen-right-forearm-hand",
+    "screen-left-leg-shoe",
+    "screen-right-leg-shoe"
+  ],
+  "prompt_set": [
+    {
+      "character": "Kai",
+      "asset": "Frontend/mobile/assets/images/characters/rigs/kai-atlas.png",
+      "reference": "Frontend/mobile/assets/images/mascot/mascot_wave.png",
+      "prompt": "Production 2D skeletal-animation texture atlas matching the exact Kai reference identity, polished 3D style and clothes. Transparent square canvas, strict 3x3 row-major grid, one disconnected isolated part per cell, no text or grid. Full smiling head with dreadlocks, ears, neck and open eyes; identical closed-eye head; green T-shirt torso without head arms legs; screen-left upper arm with green sleeve; screen-left forearm with open five-finger palm; screen-right upper arm with sleeve; screen-right forearm with hand; left full blue-jeans leg and green sneaker; right full leg and sneaker. Front-facing, round overlapping joints, each part inside its cell, transparent margins and no background shadows.",
+      "refinement": "Edit ONLY green clothing shoulder joints. Top-right torso: remove protruding T-shirt sleeves, leave rounded sleeveless openings so articulated sleeves attach without duplication. Middle-left and middle-right upper arms: remove visible brown oval shoulder caps, replace top edge with green sleeve fabric and rounded shoulder ends. Preserve canvas, grid, Kai identity, all expressions, other parts and transparency.",
+      "final_refinement": "Fill the two dark vertical shoulder slots with matching green fabric. Preserve all cells, identity, expressions and transparency. Solid rounded shoulder silhouette, no protruding sleeves."
+    },
+    {
+      "character": "Nia",
+      "asset": "Frontend/mobile/assets/images/characters/rigs/nia-atlas.png",
+      "reference": "Frontend/mobile/assets/images/characters/poses/nia-standing.png",
+      "prompt": "Production skeletal-animation texture atlas for exact Nia reference: brown girl with single large high hair bun, peach bow, charcoal floral dress with peach trim, black leggings and peach Mary Janes. Match polished 3D identity. Transparent square 3x3 grid with no labels or lines. Row-major: full smiling open-eye head; identical closed-eye blink head; dress torso without head arms legs; left short-sleeved upper arm; left forearm and open palm; right upper arm; right forearm and palm; left leg including leggings and shoe; right leg and shoe. Straight downward limbs, rounded overlapping joints, front-facing, isolated parts with consistent lighting and generous margins."
+    },
+    {
+      "character": "Zuri",
+      "asset": "Frontend/mobile/assets/images/characters/rigs/zuri-atlas.png",
+      "reference": "Frontend/mobile/assets/images/characters/poses/zuri-standing.png",
+      "prompt": "Production skeletal-animation texture atlas for exact Zuri reference: brown girl with two curly hair puffs, pink bow headband, pale pink long-sleeved dress, black leggings, white socks and pink sneakers. Match polished 3D identity. Transparent square strict 3x3 grid, no labels or lines, 10 percent margins inside each cell. Row-major: full smiling open-eye head; identical closed-eye head; sleeveless dress torso without head arms legs; left pink-sleeved upper arm; left forearm sleeve cuff and relaxed hand; right upper arm; right forearm cuff and hand; left complete leg leggings socks sneaker; right complete leg. Straight downward limbs, clean alpha, rounded overlapping joints, front-facing and consistent studio lighting.",
+      "refinement": "Fill both shoulder armhole slots of the torso with matching pale pink dress fabric. Remove wrist-style cuffs from the upper-arm elbow ends; retain the actual wrist cuffs on forearm/hand parts. Preserve all heads, legs, hands, placement and transparency."
+    }
+  ],
+  "performances": {
+    "Kai": [
+      "wave",
+      "hand to heart",
+      "open-arm greeting"
+    ],
+    "Nia": [
+      "applause",
+      "hand to heart",
+      "wave"
+    ],
+    "Zuri": [
+      "curtsy and skirt spread",
+      "hand to heart",
+      "wave"
+    ]
+  },
+  "rendering": "Articulated raster rig, not a full 3D model. Asset textures stay separate; canvas joints drive continuous movement. Reduced motion displays a still pose."
+}

@@ -1,0 +1,19 @@
+--- before/Frontend/mobile/test/game_screen_test.dart
++++ Frontend/mobile/test/game_screen_test.dart
+@@ -1323,6 +1323,16 @@
+ 
+         expect(find.text('Ready, Ada?'), findsOneWidget);
+         expect(find.byKey(const Key('game-filter-all')), findsOneWidget);
++        expect(
++          tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor,
++          Colors.white,
++        );
++        expect(
++          Theme.of(
++            tester.element(find.byKey(const Key('game-search-field'))),
++          ).brightness,
++          Brightness.light,
++        );
+         await tester.scrollUntilVisible(
+           find.byKey(const Key('game-card-esther-quiz')),
+           260,

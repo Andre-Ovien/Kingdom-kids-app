@@ -1,0 +1,11 @@
+{
+  "asset": "rabbit.blend",
+  "author": "CDmir and TinyWorlds",
+  "publisher_page": "https://opengameart.org/content/rabbit-0",
+  "download_url": "https://opengameart.org/sites/default/files/rabbit.blend",
+  "license": "CC0 1.0",
+  "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "sha256": "bb6deef1ee91b21380355138374cae87946451ce864502b1af68eb60f4750843",
+  "bytes": 5996916,
+  "inspection_note": "rigged animated rabbit with packed textures; downloaded as data only, no Blender execution."
+}

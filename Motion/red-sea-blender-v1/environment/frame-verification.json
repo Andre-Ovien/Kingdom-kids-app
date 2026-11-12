@@ -1,0 +1,60 @@
+{
+  "clips": {
+    "sea_ready": {
+      "count": 1,
+      "dimensions": [
+        300,
+        650
+      ],
+      "totalPngBytes": 332920,
+      "firstAlphaRange": [
+        255,
+        255
+      ],
+      "lastAlphaRange": [
+        255,
+        255
+      ]
+    },
+    "sea_opening": {
+      "count": 64,
+      "dimensions": [
+        300,
+        650
+      ],
+      "totalPngBytes": 20333867,
+      "firstAlphaRange": [
+        255,
+        255
+      ],
+      "lastAlphaRange": [
+        255,
+        255
+      ]
+    },
+    "sea_idle": {
+      "count": 48,
+      "dimensions": [
+        300,
+        650
+      ],
+      "totalPngBytes": 14238630,
+      "firstAlphaRange": [
+        255,
+        255
+      ],
+      "lastAlphaRange": [
+        255,
+        255
+      ]
+    }
+  },
+  "errors": [],
+  "openingIdleSamePngBytes": true,
+  "readyLoop": {
+    "cellCount": 24,
+    "distinctFrames": 24,
+    "staffContactPhaseZero": true
+  },
+  "estimatedDecodedRgbaBytes": 88140000
+}

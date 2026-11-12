@@ -1,0 +1,46 @@
+{
+  "blender": "4.5.9 LTS",
+  "source_artwork_sha256": {
+    "Frontend/mobile/assets/images/games/goliath-angry-v2.png": "42e41fb1dbb06904883cf47cccfa63dc9c0166e13946cad5195da75dee2405c9",
+    "Frontend/mobile/assets/images/games/goliath-body-rig-v3.png": "2c481b6250bb24202296bde374e7253236ad0cb51d06fc7df8a2f71615e35fb5",
+    "Frontend/mobile/assets/images/games/david-valley-armies-v3.webp": "34aa02cd70f2adb6627b4fc9e091e1c0a571cc6807e5ccc0390a94254ba9b9e7"
+  },
+  "implementation_files": [
+    "Frontend/mobile/lib/features/games/presentation/goliath_motion_model.dart",
+    "Frontend/mobile/lib/features/games/presentation/goliath_blender_fall_track.dart",
+    "Frontend/mobile/lib/features/games/presentation/goliath_mesh_renderer.dart"
+  ],
+  "focused_flutter_checks": {
+    "passed": 43,
+    "files": [
+      "test/goliath_motion_model_test.dart",
+      "test/goliath_mesh_renderer_test.dart",
+      "test/david_sling_engine_test.dart"
+    ]
+  },
+  "targeted_dart_analysis": "No issues found",
+  "native_capture": {
+    "passed": true,
+    "levels": [
+      1,
+      2,
+      3
+    ],
+    "frames": 525,
+    "fps": 30,
+    "viewport": [
+      390,
+      844
+    ],
+    "source": "Actual native DavidSlingEngine; real gesture, original assets, current unchanged target placements"
+  },
+  "scope_preserved": [
+    "original artwork",
+    "battlefield/armies/flags/positions",
+    "sling and game controls",
+    "scoring and grounded completion hold",
+    "backend and XP/milestones"
+  ],
+  "blender_scene_sha256": "8218d48044d9cac42a2d00c6676c3e3358ff2a31093a6077bc3694ae3a2ac280",
+  "blender_joint_bake_sha256": "8fe9f2689c3c15e335e54832b40846ae16c0bd542d45cc537bd66c2a9ef53651"
+}

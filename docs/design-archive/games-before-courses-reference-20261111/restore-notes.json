@@ -1,0 +1,10 @@
+{
+  "archive": "games_screen.dart is the exact immediately previous version.",
+  "restore": "Restore archived games_screen.dart to Frontend/mobile/lib/features/games/presentation/games_screen.dart; games_course_widgets.dart then becomes unreferenced and may be retained or removed separately.",
+  "data_safety": "No backend/auth/native/other-tab sources were modified. No data migrations or saved-state changes.",
+  "current_source_files": [
+    "Frontend/mobile/lib/features/games/presentation/games_screen.dart",
+    "Frontend/mobile/lib/features/games/presentation/games_course_widgets.dart"
+  ],
+  "current_validation": "validation.json"
+}

@@ -1,0 +1,11 @@
+{
+  "reason": "User deferred Progress Overview from first release; retain for later",
+  "files": {
+    "Frontend/mobile/lib/features/profile/presentation/profile_screen.dart": "ff928e04595f3d5fd0287983bbcb86ffba0b539764fccb3d425ad41d41d22092",
+    "Frontend/mobile/lib/features/profile/presentation/profile_progress_carousel.dart": "93555c22f2b1747302afe8b1bac5b89492b60212c42c6483876d1c3ea3fca82d",
+    "Frontend/mobile/test/profile_screen_test.dart": "562b521011ad0833a5526aadce00f1fac4ba1ef9e23ead9a722776ea2615f6db",
+    "Frontend/mobile/test/profile_progress_carousel_test.dart": "51d64491f71eadcb1a4672280df133a5d0de74d9d71e29bc4de69f534d4f6642"
+  },
+  "last_installed_evidence": "output/profile-progress-watermark-install-20261111/device",
+  "approved_preview": "output/profile-progress-watermark-preview-20261111/profile-progress-watermark-board.png"
+}

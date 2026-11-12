@@ -1,0 +1,20 @@
+{
+  "scope": "Games tab only; no Home, Stories, Profile, reader/detail or gameplay source edits.",
+  "changes": [
+    "Ready heading now24px/w500 with original profile name; redundant subtitle and header icon removed.",
+    "Search now14pxcopy and48pxminimum oval; adjacent48pxcircular Icons.filter_list_rounded control.",
+    "Games inline category rail removed; only categories present in already-filtered backend catalogue plus All are selectable in new bottom sheet. Existing search/category state and badge preserved.",
+    "Native MiniGame featured card mirrors established Home/Stories structure:116pxcover at left and title/summary/levels/duration/action at right,166pxheight at regular widths; natural vertical fallback for narrow/large-text layouts. Actual progress indicator and Continue semantics retained.",
+    "Counters, availability filtering, lower game library, native navigation and existing routes unchanged. No fake StoryDetail or eager fetch introduced."
+  ],
+  "test_changes": "Existing category tests now interact via the filter button and bottom-sheet options; availability assertions still inspect real available options. App shell expectation updated for removed header icon.",
+  "validation": {
+    "games_command": "flutter test --no-pub test/game_screen_test.dart test/widget_test.dart --name 'game room loads kid progress|game lab announces|retired quests and their empty|retiring specific quests|Quiz offers five|stale catalogue keeps five|paused Ark garden|paused action games cannot leak|an empty game search|game room adapts on a small|opens the backend-driven game room shell' --reporter expanded",
+    "games_result": "12passed, exit0",
+    "profile_command": "flutter test --no-pub test/profile_screen_test.dart --reporter expanded",
+    "profile_result": "10passed, exit0; source owned/frozen by native_liquid_glass",
+    "analysis": "Scoped Dart analyze Games source, game_screen_test.dart and widget_test.dart: no issues found."
+  },
+  "source_state": "frozen",
+  "flutter_lock": "released to streak_fire_preview for Home/streak tests"
+}

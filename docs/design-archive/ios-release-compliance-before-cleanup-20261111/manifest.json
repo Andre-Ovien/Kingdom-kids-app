@@ -1,0 +1,37 @@
+{
+  "archived_at_utc": "2026-11-11T19:13:35.814433+00:00",
+  "files": {
+    "Frontend/mobile/ios/Runner/Info.plist": {
+      "sha256": "fcbdf30150ce72145f4cbf28ad80b7bb41047a9fc80cc8974d606b9f1cd7a92f",
+      "archive": "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/docs/design-archive/ios-release-compliance-before-cleanup-20261111/Frontend/mobile/ios/Runner/Info.plist"
+    },
+    "Frontend/website/src/pages/privacy.astro": {
+      "sha256": "7f1c07d4177009b3797aa9622fb512328ee59189081f2b57325bb0d734da86a7",
+      "archive": "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/docs/design-archive/ios-release-compliance-before-cleanup-20261111/Frontend/website/src/pages/privacy.astro"
+    },
+    "Frontend/website/src/config/site.ts": {
+      "sha256": "ecfa1d85e906663717b2ea93127709b42866ad7860bc1eab568da20cbafb2add",
+      "archive": "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/docs/design-archive/ios-release-compliance-before-cleanup-20261111/Frontend/website/src/config/site.ts"
+    },
+    "Frontend/mobile/ios/Runner.xcodeproj/project.pbxproj": {
+      "sha256": "7c752289f09d53bf89adf2fd19e1ccb188be96387b3c631fa7b53065520cecef",
+      "archive": "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/docs/design-archive/ios-release-compliance-before-cleanup-20261111/Frontend/mobile/ios/Runner.xcodeproj/project.pbxproj"
+    },
+    "Frontend/mobile/lib/features/auth/presentation/auth_screen.dart": {
+      "sha256": "b05b5d991f72f03d27c96ae9cdb79cd1ba65ba4d3df929baca71c162ee100a8e",
+      "archive": "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/docs/design-archive/ios-release-compliance-before-cleanup-20261111/Frontend/mobile/lib/features/auth/presentation/auth_screen.dart"
+    },
+    "Frontend/mobile/pubspec.yaml": {
+      "sha256": "63938b830ac042a8101f294a60e32eeecd4a3258cb209a49a2d75638ce15cdd9",
+      "archive": "/Volumes/ANDRE_DEV/Projects/Kingdom-kids-app/docs/design-archive/ios-release-compliance-before-cleanup-20261111/Frontend/mobile/pubspec.yaml"
+    }
+  },
+  "new_files_without_baseline": [
+    "Frontend/mobile/ios/Runner/PrivacyInfo.xcprivacy",
+    "Frontend/mobile/lib/features/privacy/presentation/privacy_policy_screen.dart",
+    "Frontend/mobile/assets/policies/privacy-policy.json",
+    "Frontend/mobile/tool/generate_privacy_policy.py",
+    "Frontend/mobile/tool/tests/test_generate_privacy_policy.py",
+    "Frontend/mobile/test/privacy_policy_screen_test.dart"
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "restore": "Restore archived games_screen.dart and games_course_widgets.dart together to their Games presentation paths. The new games_week_carousel.dart then becomes unreferenced and can be retained for later reuse.",
+  "scope": "Games presentation only. No backend, auth, other tabs, native navigation or stored-data changes.",
+  "preserved": "All data/filter/auth/detail-return methods and the complete tall-card/static-arrow rendering remain byte-for-byte unchanged.",
+  "current": "Plural five-game seven-second single-clock banner rotation with full-pill countdown, safe current Play target, and route/lifecycle/scroll/motion/owner guards.",
+  "evidence": "validation.json and output/games-week-rotation-20261111/rotation-validation.json"
+}

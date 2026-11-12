@@ -1,0 +1,18 @@
+{
+  "Backend/Core/apps/progress/services.py": {
+    "archive": "docs/design-archive/streak-week-before-home-strip-20261111/Backend/Core/apps/progress/services.py",
+    "sha256": "0cee0fe3b1a52882face988e64eb4650ebfdc6b02ba8ea03f5316555d9e3c043"
+  },
+  "Backend/Core/apps/progress/tests.py": {
+    "archive": "docs/design-archive/streak-week-before-home-strip-20261111/Backend/Core/apps/progress/tests.py",
+    "sha256": "960a78638981979a4e5443d89c982d4549a16f8d870220241faaced7e0ccff41"
+  },
+  "Frontend/mobile/lib/features/profile/domain/progress_summary.dart": {
+    "archive": "docs/design-archive/streak-week-before-home-strip-20261111/Frontend/mobile/lib/features/profile/domain/progress_summary.dart",
+    "sha256": "45c53e33e73598c99f5b126d78817f21101a9e3038f6d075d6979765657ef8a6"
+  },
+  "Frontend/mobile/test/profile_data_test.dart": {
+    "archive": "docs/design-archive/streak-week-before-home-strip-20261111/Frontend/mobile/test/profile_data_test.dart",
+    "sha256": "992b8f5d96e278ae2dfc07fac5bf57dfe502a2996f777c240a305132fcd93067"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "Frontend/mobile/lib/features/profile/presentation/profile_screen.dart": {
+    "archive": "docs/design-archive/profile-quest-board-before-character-removal-20261111/profile_screen.dart",
+    "sha256": "ebfe13851e2b13690c5532fea08dea344828d73eb415a8c30d6e1762434b4639"
+  },
+  "Frontend/mobile/test/profile_screen_test.dart": {
+    "archive": "docs/design-archive/profile-quest-board-before-character-removal-20261111/profile_screen_test.dart",
+    "sha256": "9ad3f5ccdc40abc3785f3089bf1656b8adf758125253e86f008bae834306d908"
+  }
+}

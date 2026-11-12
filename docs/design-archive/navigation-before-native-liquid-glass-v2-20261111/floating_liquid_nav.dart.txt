@@ -1,0 +1,267 @@
+import 'package:flutter/material.dart';
+
+import '../../app/router.dart';
+import '../../features/auth/domain/kid_profile.dart';
+import '../../features/auth/presentation/kid_profile_avatar.dart';
+import '../audio/app_audio_scope.dart';
+import '../audio/app_sound_cue.dart';
+import 'liquid_glass.dart';
+
+class FloatingLiquidNav extends StatelessWidget {
+  const FloatingLiquidNav({
+    required this.selectedRoute,
+    this.activeProfile,
+    super.key,
+  });
+
+  final String selectedRoute;
+  final KidProfile? activeProfile;
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomPadding = MediaQuery.paddingOf(context).bottom;
+    return _LiquidDiscoveryNav(
+      selectedRoute: selectedRoute,
+      activeProfile: activeProfile,
+      bottomPadding: bottomPadding,
+    );
+  }
+}
+
+class _LiquidDiscoveryNav extends StatelessWidget {
+  const _LiquidDiscoveryNav({
+    required this.selectedRoute,
+    required this.activeProfile,
+    required this.bottomPadding,
+  });
+
+  final String selectedRoute;
+  final KidProfile? activeProfile;
+  final double bottomPadding;
+
+  @override
+  Widget build(BuildContext context) {
+    final profileSelected = selectedRoute == AppRoutes.profile;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(16, 0, 16, bottomPadding + 9),
+      child: Row(
+        children: [
+          Expanded(
+            child: SizedBox(
+              key: const Key('bottom-nav-main-dock'),
+              height: 69,
+              child: _NavigationGlass(
+                child: Padding(
+                  padding: const EdgeInsets.all(6),
+                  child: Row(
+                    children: [
+                      _LiquidNavItem(
+                        icon: Icons.home_rounded,
+                        label: 'Home',
+                        route: AppRoutes.home,
+                        selectedRoute: selectedRoute,
+                      ),
+                      _LiquidNavItem(
+                        icon: Icons.auto_stories_rounded,
+                        label: 'Stories',
+                        route: AppRoutes.stories,
+                        selectedRoute: selectedRoute,
+                      ),
+                      _LiquidNavItem(
+                        icon: Icons.extension_rounded,
+                        label: 'Games',
+                        route: AppRoutes.games,
+                        selectedRoute: selectedRoute,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Semantics(
+            button: true,
+            selected: profileSelected,
+            label: 'Profile',
+            child: GestureDetector(
+              key: const Key('bottom-nav-profile'),
+              behavior: HitTestBehavior.opaque,
+              onTap: profileSelected
+                  ? null
+                  : () => _openRoute(context, AppRoutes.profile, selectedRoute),
+              child: SizedBox(
+                width: 69,
+                height: 69,
+                child: _NavigationGlass(
+                  selected: profileSelected,
+                  child: Padding(
+                    padding: const EdgeInsets.all(6),
+                    child: Center(
+                      child: activeProfile == null
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(15),
+                              child: Image.asset(
+                                'assets/images/characters/kai-avatar.png',
+                                fit: BoxFit.cover,
+                              ),
+                            )
+                          : KidProfileAvatar(profile: activeProfile!, size: 54),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LiquidNavItem extends StatelessWidget {
+  const _LiquidNavItem({
+    required this.icon,
+    required this.label,
+    required this.route,
+    required this.selectedRoute,
+  });
+
+  final IconData icon;
+  final String label;
+  final String route;
+  final String selectedRoute;
+
+  @override
+  Widget build(BuildContext context) {
+    const ink = Color(0xFF263047);
+    const selectedInk = Color(0xFF1556CF);
+    final selected = route == selectedRoute;
+    return Expanded(
+      child: Semantics(
+        button: true,
+        selected: selected,
+        label: label,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(17),
+          onTap: selected
+              ? null
+              : () => _openRoute(context, route, selectedRoute),
+          child: AnimatedContainer(
+            duration: MediaQuery.disableAnimationsOf(context)
+                ? Duration.zero
+                : const Duration(milliseconds: 180),
+            curve: Curves.easeOutCubic,
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 5),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(17),
+              gradient: selected
+                  ? LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.white.withValues(alpha: 0.74),
+                        Colors.white.withValues(alpha: 0.30),
+                      ],
+                    )
+                  : null,
+              border: Border.all(
+                color: Colors.white.withValues(alpha: selected ? 0.84 : 0),
+                width: 1,
+              ),
+            ),
+            child: ExcludeSemantics(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(icon, color: selected ? selectedInk : ink, size: 23),
+                  const SizedBox(height: 2),
+                  Expanded(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        style: TextStyle(
+                          color: selected ? selectedInk : ink,
+                          fontSize: 9.5,
+                          height: 1,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.1,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NavigationGlass extends StatelessWidget {
+  const _NavigationGlass({required this.child, this.selected = false});
+
+  final Widget child;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF263047).withValues(alpha: 0.10),
+            blurRadius: 20,
+            offset: const Offset(0, 7),
+          ),
+        ],
+      ),
+      child: LiquidGlass(
+        borderRadius: 22,
+        blur: 22,
+        opacity: 0.24,
+        borderOpacity: 0.76,
+        child: AnimatedContainer(
+          duration: MediaQuery.disableAnimationsOf(context)
+              ? Duration.zero
+              : const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              stops: const [0, 0.46, 1],
+              colors: [
+                Colors.white.withValues(alpha: selected ? 0.48 : 0.38),
+                Colors.white.withValues(alpha: 0.06),
+                Colors.white.withValues(alpha: 0.20),
+              ],
+            ),
+            border: Border.all(
+              color: selected
+                  ? const Color(0xFF1556CF).withValues(alpha: 0.34)
+                  : Colors.transparent,
+              width: 1.2,
+            ),
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+void _openRoute(BuildContext context, String route, String selectedRoute) {
+  if (route == selectedRoute) return;
+  AppAudioScope.maybeOf(context)?.playEffect(AppSoundCue.select);
+  Navigator.of(context).pushReplacementNamed(
+    route,
+    arguments: TabRouteTransition(fromRoute: selectedRoute),
+  );
+}

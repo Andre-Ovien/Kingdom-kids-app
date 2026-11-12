@@ -1,0 +1,4 @@
+Previous profile picker preserved before the approved character carousel.
+To restore the former picker, copy profile_picker_screen.dart.txt back to Frontend/mobile/lib/features/auth/presentation/profile_picker_screen.dart.
+Related widgets and tests are included as exact supporting snapshots. Do not overwrite unrelated newer code unless needed for an intentional rollback.
+The new carousel source can remain unused when the old picker is restored.

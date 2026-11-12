@@ -1,0 +1,7 @@
+{
+  "files": {
+    "Frontend/mobile/lib/app/router.dart": "7f162e37b63e286000b99681b0eced1a7b063107008cf60ab0f9e2a357e596f8",
+    "Frontend/mobile/lib/features/parental_controls/presentation/parental_controls_screen.dart": "d7c2776f05a7c3226dc067a2fe851c05394ea81fbb981f2899ce926f828c05e9"
+  },
+  "scope": "Approved light subscription information screen; financial actions remain disabled. Non-Release compile-ID one-time local-session review uses separate secure marker and NORMAL lib/main.dart. No backend/payment/enforcement/native changes."
+}

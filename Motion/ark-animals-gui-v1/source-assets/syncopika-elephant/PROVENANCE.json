@@ -1,0 +1,18 @@
+{
+  "asset": "elephant-lowpoly.blend",
+  "author": "syncopika",
+  "publisher_page": "https://opengameart.org/content/low-poly-elephant-model",
+  "download_url": "https://opengameart.org/sites/default/files/elephant-lowpoly.blend",
+  "license": "CC0 1.0",
+  "license_url": "https://creativecommons.org/publicdomain/zero/1.0/legalcode.txt",
+  "sha256": "cb916973655dcd16905681c7a7df87d80e964103a02cbe585747f816bb0fd4f1",
+  "bytes": 1783420,
+  "publisher_animation_claim": [
+    "eating",
+    "sitting",
+    "getting up",
+    "idle",
+    "angry"
+  ],
+  "inspection_note": "Downloaded as data only. Not opened or executed in Blender. Walk not claimed by publisher."
+}

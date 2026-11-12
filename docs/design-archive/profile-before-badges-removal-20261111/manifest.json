@@ -1,0 +1,14 @@
+{
+  "archived_at": "2026-11-11T17:10:50.046219+01:00",
+  "scope": "Profile Mybadges UI section removal; underlying earned data preserved",
+  "files": {
+    "Frontend/mobile/lib/features/profile/presentation/profile_screen.dart": {
+      "archive": "profile_screen.dart.txt",
+      "sha256": "083e07155ca9970ff7fca6ef02eb1900e7ef4a3a2c6f45f88f813bd8307ce58f"
+    },
+    "Frontend/mobile/test/profile_screen_test.dart": {
+      "archive": "profile_screen_test.dart.txt",
+      "sha256": "8802321b1601cd48a0a910cc72fc741fd21aa443f42b9a857f50eeea7f13f144"
+    }
+  }
+}

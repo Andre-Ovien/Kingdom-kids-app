@@ -1,0 +1,1 @@
+Restore the previous Profile card rendering by copying profile_progress_carousel.dart from this directory to Frontend/mobile/lib/features/profile/presentation/profile_progress_carousel.dart. The saved version includes the seven-second carousel and all real metrics. Rebuild normally; do not uninstall or clear saved sessions.

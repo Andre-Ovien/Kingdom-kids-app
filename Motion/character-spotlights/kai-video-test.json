@@ -1,0 +1,17 @@
+{
+  "status": "Prepared; requires a connected video-generation account. No generation submitted.",
+  "reference_image": "Frontend/mobile/assets/images/mascot/mascot_wave.png",
+  "reference_policy": "Use the original intact illustration as the starting frame, not the rejected raster rig or procedural Blender model.",
+  "duration_seconds": 5,
+  "motion_prompt": "The boy gives a small, relaxed wave with his raised hand. His wrist and fingers move gently with natural follow-through. He blinks once and keeps his warm smile. His body remains comfortably balanced. He settles back into the starting pose. The camera stays still, with his entire body visible throughout. Continuous single shot.",
+  "review_before_app_integration": [
+    "Kai retains the reference face, complexion, locs, green shirt, blue jeans and green-and-cream sneakers.",
+    "Hands keep their anatomy and finger count; no fused fingers or changing clothing details.",
+    "Movement is fluid, with no mechanical joints, limb jumps or cutout seams.",
+    "Camera and framing remain steady; hands, hair and feet stay visible.",
+    "The beginning and ending poses are suitable for a loop, or the clip is rejected for looping use.",
+    "Background treatment is reviewed separately; ordinary video output does not establish transparency support."
+  ],
+  "access_note": "Runway is listed as available but was not installed or connected when this brief was prepared. Check its connected-account credit cost before submitting.",
+  "source": "https://help.runwayml.com/hc/en-us/articles/48324313115155-Image-to-Video-Prompting-Guide"
+}

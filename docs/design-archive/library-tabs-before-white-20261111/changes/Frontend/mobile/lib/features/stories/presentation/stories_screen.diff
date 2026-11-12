@@ -1,0 +1,48 @@
+--- before/Frontend/mobile/lib/features/stories/presentation/stories_screen.dart
++++ Frontend/mobile/lib/features/stories/presentation/stories_screen.dart
+@@ -211,6 +211,27 @@
+ 
+   @override
+   Widget build(BuildContext context) {
++    final theme = Theme.of(context);
++    const ink = Color(0xFF121217);
++    return Theme(
++      data: theme.copyWith(
++        brightness: Brightness.light,
++        scaffoldBackgroundColor: Colors.white,
++        colorScheme: theme.colorScheme.copyWith(
++          brightness: Brightness.light,
++          surface: Colors.white,
++          onSurface: ink,
++          primary: ink,
++          onPrimary: Colors.white,
++        ),
++        textTheme: theme.textTheme.apply(bodyColor: ink, displayColor: ink),
++        iconTheme: theme.iconTheme.copyWith(color: ink),
++      ),
++      child: Builder(builder: _buildLibrary),
++    );
++  }
++
++  Widget _buildLibrary(BuildContext context) {
+     final visibleStories = _visibleStories;
+     final featuredIndex = visibleStories.isEmpty
+         ? -1
+@@ -389,12 +410,11 @@
+   final Color mutedInk;
+ 
+   factory _StoryPalette.of(BuildContext context) {
+-    final isDark = Theme.of(context).brightness == Brightness.dark;
+-    return _StoryPalette(
+-      canvas: isDark ? const Color(0xFF8773E0) : const Color(0xFF9B87F5),
+-      paper: const Color(0xFFFFFCF5),
+-      ink: const Color(0xFF121217),
+-      mutedInk: const Color(0xFF352F45),
++    return const _StoryPalette(
++      canvas: Colors.white,
++      paper: Color(0xFFFFFCF5),
++      ink: Color(0xFF121217),
++      mutedInk: Color(0xFF352F45),
+     );
+   }
+ }

@@ -1,0 +1,10 @@
+{
+  "Frontend/mobile/lib/features/profile/presentation/profile_screen.dart": {
+    "archive": "docs/design-archive/profile-quest-board-before-home-shape-20261111/profile_screen.dart",
+    "sha256": "e0156cd8608f6cbc9c56864ceb0ed425d2305ac1f4a466d257cfbb7fd3001a00"
+  },
+  "Frontend/mobile/test/profile_screen_test.dart": {
+    "archive": "docs/design-archive/profile-quest-board-before-home-shape-20261111/profile_screen_test.dart",
+    "sha256": "9ad3f5ccdc40abc3785f3089bf1656b8adf758125253e86f008bae834306d908"
+  }
+}
