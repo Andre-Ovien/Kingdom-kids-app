@@ -15,7 +15,20 @@ services:
       - key: DJANGO_DEBUG
         value: "false"
       - key: DJANGO_EMAIL_DELIVERY_ENABLED
-        value: "false"
+        value: "true"
+      - key: DJANGO_EMAIL_BACKEND
+        value: "Core.resend_backend.EmailBackend"
+      - key: RESEND_VERIFIED_DOMAIN
+        value: "kingdom-kids.app"
+      - key: DJANGO_DEFAULT_FROM_EMAIL
+        value: "Kingdom Kids <no-reply@kingdom-kids.app>"
+      - key: DJANGO_CONTACT_RECIPIENT_EMAIL
+        value: "kingdomkidshq@gmail.com"
+      - key: DJANGO_EMAIL_TIMEOUT_SECONDS
+        value: "10"
+      # Supply the sending key privately in Render before enabling delivery.
+      - key: RESEND_API_KEY
+        sync: false
       - key: RENDER_DJANGO_SECRET_SEED
         generateValue: true
       - key: RENDER_JWT_SIGNING_SEED
