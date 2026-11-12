@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 const source = readFileSync(new URL('./static/billing/parent_checkout.js', import.meta.url));
-const { PurchaseFlow, validQuote, validAccess } = await import('data:text/javascript;base64,' + source.toString('base64'));
+const { PurchaseFlow, validQuote, validAccess, tokenizationFailure } = await import('data:text/javascript;base64,' + source.toString('base64'));
 const parent = 'parent-fixture';
 const id = 'aaaabbbb-1111-2222-3333-444455556666';
 function quote(period = 'monthly') {
@@ -99,6 +99,37 @@ test('consent revoked during tokenization cannot send payment', async () => {
     tokenize: async () => { consent = false; return 'cnon:synthetic-discarded'; } });
   await assert.rejects(flow.purchase('synthetic-password', {}));
   assert.equal(calls.length, 1); assert.equal(flow.attempted, false);
+});
+test('safe SDK field errors never include raw SDK text and preserve explicit same-intent retry', async () => {
+  for (const [field, code] of [['Card Number','card_number'],['expirationDate','expiration_date'],
+      ['CVV','security_code'],['postalCode','postal_code']]) {
+    const error = tokenizationFailure({status:'Invalid',errors:[{field,message:'private-sdk-message',detail:'private-card-value'}]});
+    assert.equal(error.code,code); assert.match(error.message,/No payment was sent/);
+    assert.equal(error.message.includes('private-'),false);
+  }
+  assert.equal(tokenizationFailure({status:'Invalid',errors:{field:'CVV'}}).code,'security_code');
+  assert.equal(tokenizationFailure({status:'Invalid',errors:[{field:'private-unknown-field'}]}).code,'card_details');
+  assert.equal(tokenizationFailure({name:'VerifyBuyerError',message:'private-verification-detail'}).code,'verification_incomplete');
+  let invalid = true;
+  const { flow, calls, count } = fixture({tokenize:async()=>{
+    if(invalid)throw tokenizationFailure({status:'Invalid',errors:[{field:'CVV'}]});
+    return 'cnon:synthetic-explicit-second-click';
+  }});
+  await assert.rejects(flow.purchase('synthetic-password',{}),{code:'security_code'});
+  assert.equal(flow.intent,id);assert.equal(flow.attempted,false);assert.equal(count(),1);
+  assert.equal(calls.filter(call=>call.method==='POST').length,1);
+  invalid=false;await flow.purchase('synthetic-password',{});
+  assert.equal(calls.filter(call=>call.path=== '/api/billing/square/checkout-intents/' && call.method==='POST').length,1);
+  assert.equal(calls.filter(call=>call.path.endsWith('/confirm/')).length,1);assert.equal(count(),2);
+});
+test('pre-POST guard refusal never tokenizes or charges and explicit retry keeps the same intent', async()=>{
+  let allowed=false;
+  const { flow,calls,count }=fixture({canCharge:()=>allowed});
+  await assert.rejects(flow.purchase('synthetic-password',{}),{code:'review_before_payment'});
+  assert.equal(flow.intent,id);assert.equal(flow.attempted,false);assert.equal(count(),0);
+  allowed=true;await flow.purchase('synthetic-password',{});
+  assert.equal(calls.filter(call=>call.path==='/api/billing/square/checkout-intents/'&&call.method==='POST').length,1);
+  assert.equal(calls.filter(call=>call.path.endsWith('/confirm/')).length,1);
 });
 test('double click cannot race two tokenizations or posts', async () => {
   let finish; const waiting = new Promise((resolve) => { finish = resolve; });

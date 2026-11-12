@@ -11,12 +11,13 @@ async function fixture(mode) {
   const elements = new Map(), staticIds = new Set();
   class Element {
     constructor(id = '') { this._id='';this.id=id;this.value='';this._text='';this.hidden=false;this.disabled=false;
-      this.checked=false;this.type='text';this.children=[];this.handlers={};this.label={hidden:false};this.parentNode=null; }
+      this.checked=false;this.type='text';this.children=[];this.handlers={};this.label={hidden:false};this.parentNode=null;this.attributes={}; }
     set id(value) { if (this._id) elements.delete(this._id); this._id=value; if(value) elements.set(value,this); }
     get id() { return this._id; }
     set textContent(value) { this._text=value; this.replaceChildren(); }
     get textContent() { return this._text; }
-    setAttribute() {}
+    setAttribute(name,value) {this.attributes[name]=value;}
+    getAttribute(name) {return this.attributes[name];}
     checkValidity() { return true; }
     closest() { return this.label; }
     addEventListener(name, fn) { this.handlers[name]=fn; }
@@ -39,7 +40,7 @@ async function fixture(mode) {
   const buttons=['monthly','yearly','pay','restart','recover','check','retry-access','stop-renewals','sign-out','login'];
   const inputs=['consent','login-password','email','purchase-password','given-name','family-name','billing-email','address','city','region','postal','country'];
   const oldAttach=deferred(), oldToken=deferred(), oldAccess=deferred();
-  let created=0, loginCount=0, accessReads=0, confirmCalls=0, destroyCalls=0;
+  let created=0, loginCount=0, accessReads=0, confirmCalls=0, destroyCalls=0, tokenizations=0, reserveCalls=0, statusCalls=0;
   const frames = () => {
     const found=[]; const visit=(element)=>{ if(element.sdkFrame) found.push(element.sdkFrame); for(const child of element.children) visit(child); };
     visit(el('card-container')); return found;
@@ -60,18 +61,34 @@ async function fixture(mode) {
       const id=++created;return{
         async attach(selector) { const mount=el(selector.slice(1)); assert.ok(mount); if(mode==='late_attach'&&id===1) await oldAttach.promise;
           const frame=new Element();frame.sdkFrame=id;mount.appendChild(frame); },
-        tokenize(){return mode==='late_token'&&id===1?oldToken.promise:Promise.resolve({status:'OK',token:'cnon:synthetic'});},
+        tokenize(){tokenizations++;
+          if(mode==='late_token'&&id===1)return oldToken.promise;
+          if(mode==='sdk_invalid'&&tokenizations===1)return Promise.resolve({status:'Invalid',
+            errors:[{field:'CVV',message:'private-sdk-message',detail:'private-card-data'}]});
+          if(mode==='sdk_thrown_invalid')return Promise.reject({name:'TokenizationError',
+            errors:[{field:'Postal Code',message:'private-sdk-message'}]});
+          if(mode==='sdk_configuration')return Promise.reject({name:'InvalidOptionError',message:'private-sdk-message'});
+          if(mode==='after_token_hidden')sandbox.document.visibilityState='hidden';
+          return Promise.resolve({status:'OK',token:'cnon:synthetic-'+tokenizations});},
         destroy(){destroyCalls++;return Promise.reject(new Error('Synthetic SDK cleanup failure'));}
       };
     }};}}},
     fetch:async(path)=>{
       if(path==='/api/accounts/login/') {loginCount++;return response({access:'synthetic-memory-'+loginCount,user:{id:'synthetic-parent-'+loginCount,email:'parent-'+loginCount+'@example.test',email_verified:true}});}
       if(path==='/api/billing/content-access/') {accessReads++; if(mode==='stale_401'&&accessReads===2)return oldAccess.promise;
-        return response({schema_version:1,parent_id:'synthetic-parent-'+loginCount,environment:'sandbox',access_state:'unpaid',
-          evaluated_at:'2026-11-12T00:00:00Z',access_until:null,checkout:{state:'available'},purchase_recovery:null});}
+        return response({schema_version:1,parent_id:'synthetic-parent-'+loginCount,environment:'sandbox',
+          access_state:mode==='uncertain_post'&&confirmCalls?'unknown':'unpaid',
+          evaluated_at:'2026-11-12T00:00:00Z',access_until:null,checkout:{state:'available'},
+          purchase_recovery:mode==='uncertain_post'&&confirmCalls?{intent_id:'11111111-1111-4111-8111-111111111111',
+            billing_period:'monthly',source_allowed:true}:null});}
       if(path==='/api/billing/square/checkout-intents/?billing_period=monthly')return response(quote);
-      if(path==='/api/billing/square/checkout-intents/')return response({id:'11111111-1111-4111-8111-111111111111',terms:quote,current_term:null});
-      if(path.endsWith('/confirm/')) {confirmCalls++;return response({});}
+      if(path==='/api/billing/square/checkout-intents/') {reserveCalls++;
+        if(mode==='before_token_hidden')sandbox.document.visibilityState='hidden';
+        if(mode==='before_token_unchecked')el('consent').checked=false;
+        return response({id:'11111111-1111-4111-8111-111111111111',terms:quote,current_term:null});}
+      if(path==='/api/billing/square/checkout-intents/11111111-1111-4111-8111-111111111111/') {
+        statusCalls++;return response({id:'11111111-1111-4111-8111-111111111111',terms:quote,current_term:null});}
+      if(path.endsWith('/confirm/')) {confirmCalls++;if(mode==='uncertain_post')throw new Error('private-confirm-reply');return response({});}
       throw new Error('Unexpected synthetic endpoint');
     }
   };
@@ -83,6 +100,45 @@ async function fixture(mode) {
   await login();assert.equal(created,1);
   assert.equal(el('account-identity').hidden,false);
   assert.ok(el('account-identity').textContent.includes('parent-1@example.test'));
+  const pay=async()=>{
+    el('consent').checked=true;el('consent').onchange();el('purchase-password').value='synthetic-password';
+    for(const [id,value]of Object.entries({'given-name':'Test','family-name':'Buyer','billing-email':'synthetic@example.test',
+      address:'1 Test Street',city:'Test',region:'NY',postal:'10001',country:'US'}))el(id).value=value;
+    el('pay').onclick();await settle();
+  };
+  if(['sdk_invalid','sdk_thrown_invalid','sdk_configuration'].includes(mode)) {
+    await pay();assert.equal(confirmCalls,0);assert.equal(reserveCalls,1);assert.equal(tokenizations,1);
+    assert.ok(el('message').textContent.startsWith('No payment was sent.'));
+    assert.equal(el('message').textContent.includes('private-'),false);
+    assert.equal(el('message').getAttribute('data-checkout-code'),{
+      sdk_invalid:'security_code',sdk_thrown_invalid:'postal_code',sdk_configuration:'verification_configuration'}[mode]);
+    await settle();assert.equal(confirmCalls,0);assert.equal(tokenizations,1);
+    if(mode==='sdk_invalid') {
+      assert.deepEqual(frames(),[1]);await pay();assert.equal(reserveCalls,1);assert.equal(statusCalls,1);
+      assert.equal(confirmCalls,1);assert.equal(tokenizations,2);
+    }
+    return {safe_fixed_diagnostic:true,no_automatic_retry:true,same_intent_preserved:true};
+  }
+  if(['before_token_hidden','before_token_unchecked','after_token_hidden'].includes(mode)) {
+    await pay();assert.equal(confirmCalls,0);assert.equal(reserveCalls,1);
+    assert.equal(tokenizations,mode==='after_token_hidden'?1:0);
+    assert.equal(el('message').getAttribute('data-checkout-code'),mode==='before_token_unchecked'?'consent_required':'page_not_visible');
+    assert.ok(el('message').textContent.startsWith('No payment was sent.'));
+    if(mode!=='after_token_hidden') {
+      sandbox.document.visibilityState='visible';await pay();assert.equal(reserveCalls,1);
+      assert.equal(statusCalls,1);assert.equal(confirmCalls,1);
+    }
+    return {visibility_and_consent_preserved:true,no_post_on_refusal:true,same_intent_manual_retry_only:true};
+  }
+  if(mode==='uncertain_post') {
+    await pay();assert.equal(confirmCalls,1);assert.equal(tokenizations,1);
+    assert.equal(el('message').getAttribute('data-checkout-code'),'payment_uncertain');
+    assert.equal(el('message').textContent.includes('No payment was sent'),false);
+    assert.equal(el('message').textContent.includes('private-confirm'),false);
+    el('check').onclick();await settle();await pay();assert.equal(confirmCalls,1);assert.equal(tokenizations,1);
+    assert.equal(reserveCalls,1);assert.equal(el('pay').disabled,true);
+    return {uncertain_post_never_claims_not_sent:true,early_status_cannot_unlock:true,no_automatic_or_manual_recharge:true};
+  }
   if(mode==='rejected_destroy') {
     assert.deepEqual(frames(),[1]);await signout();assert.deepEqual(frames(),[]);await login();assert.deepEqual(frames(),[2]);
     assert.ok(el('account-identity').textContent.includes('parent-2@example.test'));
@@ -115,6 +171,7 @@ async function fixture(mode) {
   throw new Error('Unsupported synthetic scenario');
 }
 const scenarios={};
-for(const name of ['rejected_destroy','late_attach','late_token','stale_401'])scenarios[name]=await fixture(name);
+for(const name of ['rejected_destroy','late_attach','late_token','stale_401','sdk_invalid','sdk_thrown_invalid',
+  'sdk_configuration','before_token_hidden','before_token_unchecked','after_token_hidden','uncertain_post'])scenarios[name]=await fixture(name);
 const result={source_sha256:sourceSha,fake_dom_sdk_only:true,real_network_requests:0,real_card_data:false,scenarios};
 console.log(JSON.stringify(result));

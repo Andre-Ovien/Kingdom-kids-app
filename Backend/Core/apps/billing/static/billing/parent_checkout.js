@@ -6,6 +6,50 @@ const plans = {
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const base = '/api/billing/square/checkout-intents/';
 class Refused extends Error { constructor() { super('Action not confirmed.'); } }
+const beforePaymentMessages = {
+  card_number: 'Check the card number in the secure Square form, then choose Pay again.',
+  expiration_date: 'Check the card expiration date in the secure Square form, then choose Pay again.',
+  security_code: 'Check the card security code in the secure Square form, then choose Pay again.',
+  postal_code: 'Check the billing postal code and the secure Square form, then choose Pay again.',
+  card_details: 'Check the highlighted card details in the secure Square form, then choose Pay again.',
+  billing_contact: 'Complete your billing name, email, address and postal code, then choose Pay again.',
+  consent_required: 'Accept the billing agreement and confirm your password before choosing Pay again.',
+  page_not_visible: 'Return to this checkout tab, review the agreement and choose Pay again.',
+  review_before_payment: 'Keep this checkout tab visible and accept the agreement before choosing Pay again.',
+  verification_canceled: 'Card verification was canceled. Review your details and choose Pay again.',
+  verification_incomplete: 'Complete card verification in the secure Square form, then choose Pay again.',
+  verification_configuration: 'Card verification could not start. Choose Check payment to reload the secure card form.',
+  tokenization_unavailable: 'Card verification could not finish. Choose Check payment to reload the secure card form.',
+};
+class BeforePayment extends Error {
+  constructor(code) {
+    const safe = Object.hasOwn(beforePaymentMessages, code) ? code : 'tokenization_unavailable';
+    super('No payment was sent. ' + beforePaymentMessages[safe]); this.code = safe;
+  }
+}
+export function tokenizationFailure(value) {
+  // SDK errors are untrusted. Read only bounded field/type selectors and never
+  // retain/render message, detail, token, PAN or the original error object.
+  const errors = Array.isArray(value?.errors) ? value.errors.slice(0, 16) :
+    value?.errors && typeof value.errors === 'object' ? [value.errors] : [];
+  const fields = new Set();
+  for (const error of errors) {
+    if (typeof error?.field !== 'string' || error.field.length > 64) continue;
+    const field = error.field.toLowerCase().replace(/[ _-]/g, '');
+    const names = { cardnumber: 'card_number', expirationdate: 'expiration_date', expiry: 'expiration_date',
+      cvv: 'security_code', securitycode: 'security_code', postalcode: 'postal_code', zipcode: 'postal_code' };
+    const code = Object.hasOwn(names, field) ? names[field] : '';
+    if (code) fields.add(code);
+  }
+  if (fields.size === 1) return new BeforePayment([...fields][0]);
+  if (fields.size > 1 || value?.status === 'Invalid' || value?.status === 'INVALID') return new BeforePayment('card_details');
+  if (['Abort', 'Cancel', 'ABORT', 'CANCEL'].includes(value?.status))
+    return new BeforePayment('verification_canceled');
+  if (value?.name === 'VerifyBuyerError') return new BeforePayment('verification_incomplete');
+  if (['InvalidOptionError', 'InvalidPaymentRequestError', 'InvalidConfigurationValueError'].includes(value?.name))
+    return new BeforePayment('verification_configuration');
+  return new BeforePayment('tokenization_unavailable');
+}
 export function validQuote(q, period) {
   const p = plans[period];
   return Boolean(p && q && q.environment === 'sandbox' && q.country === 'US' && q.purchasable === true &&
@@ -82,10 +126,10 @@ export class PurchaseFlow {
       } else {
         this.acceptIntent(await this.api(base + this.intent + '/', 'GET'));
       }
-      if (!this.canCharge()) throw new Refused();
+      if (!this.canCharge()) throw new BeforePayment('review_before_payment');
       token = await this.tokenize({ ...this.quote.web_tokenization, billingContact: contact });
-      if (typeof token !== 'string' || !token.startsWith('cnon:') || token.length > 16384) throw new Refused();
-      if (!this.canCharge()) throw new Refused();
+      if (typeof token !== 'string' || !token.startsWith('cnon:') || token.length > 16384) throw new BeforePayment('tokenization_unavailable');
+      if (!this.canCharge()) throw new BeforePayment('review_before_payment');
       this.attempted = true; this.sourceAllowed = false; // Before POST; never automatically retry.
       await this.api(base + this.intent + '/confirm/', 'POST', { password, charge_source_id: token });
       return await this.readAccess();
@@ -120,7 +164,9 @@ function attachPage() {
   let access = '', signedInEmail = '', flow = null, card = null, busy = false, generation = 0, selectedPeriod = 'monthly';
   let cardMount = null, mountSerial = 0;
   const active = (value) => { if (generation !== value || !access) throw new Refused(); };
-  const message = (value) => { $('message').textContent = value; };
+  const message = (value, code = '') => {
+    $('message').textContent = value; $('message').setAttribute('data-checkout-code', code);
+  };
   function sync() {
     document.querySelectorAll('button').forEach((button) => { button.disabled = busy; });
     $('monthly').disabled = busy || Boolean(flow?.intent) || Boolean(flow?.reserveAttempted);
@@ -134,10 +180,14 @@ function attachPage() {
     const scope = generation;
     busy = true; sync();
     try { await operation(); }
-    catch (_) { if (scope !== generation) return;
+    catch (error) { if (scope !== generation) return;
+      if (error instanceof BeforePayment && !flow?.attempted) {
+        message(error.message, error.code); return;
+      }
       message(!access && flow ? 'Sign in again to continue. Your existing purchase can be recovered.' : flow?.reserveAttempted || flow?.intent ?
       'Your payment is not confirmed. Check or recover the existing purchase before trying another payment.' :
-      'This action could not be confirmed. Please try again or use parent account settings in the app.'); }
+      'This action could not be confirmed. Please try again or use parent account settings in the app.',
+      flow?.attempted ? 'payment_uncertain' : 'action_unconfirmed'); }
     finally { if (scope === generation) { busy = false; update(); } }
   }
   async function api(path, method = 'GET', body) {
@@ -186,7 +236,7 @@ function attachPage() {
       addressLines: [value('address')], city: value('city'), state: value('region'),
       postalCode: value('postal'), countryCode: value('country').toUpperCase() };
     if (!data.givenName || !data.familyName || !data.email || !$('billing-email').checkValidity() ||
-        !data.addressLines[0] || !data.city || !data.postalCode || !/^[A-Z]{2}$/.test(data.countryCode)) throw new Refused();
+        !data.addressLines[0] || !data.city || !data.postalCode || !/^[A-Z]{2}$/.test(data.countryCode)) throw new BeforePayment('billing_contact');
     return data;
   }
   async function loadSdk(scope) {
@@ -272,16 +322,32 @@ function attachPage() {
       signedInEmail = result.user.email;
       flow = new PurchaseFlow({ api: async (...args) => { active(scope); const value = await api(...args); active(scope); return value; },
         parent: String(result.user.id), canCharge: () => {
-          active(scope); return $('consent').checked && document.visibilityState === 'visible';
+          active(scope);
+          if (!$('consent').checked) throw new BeforePayment('consent_required');
+          if (document.visibilityState !== 'visible') throw new BeforePayment('page_not_visible');
+          return true;
         }, tokenize: async (details) => { active(scope);
-          if (!card || !$('consent').checked) throw new Refused();
+          if (!$('consent').checked) throw new BeforePayment('consent_required');
+          if (!card) throw new BeforePayment('tokenization_unavailable');
           const tokenCard = card, tokenMount = cardMount;
           let result;
           try { result = await bounded(tokenCard.tokenize(details), 120000); }
-          catch (_) { destroyCard(tokenCard); removeMount(tokenMount);
-            if (card === tokenCard) card = null; throw new Refused(); }
+          catch (error) {
+            const issue = tokenizationFailure(error);
+            if (!['card_number', 'expiration_date', 'security_code', 'postal_code', 'card_details'].includes(issue.code)) {
+              destroyCard(tokenCard); removeMount(tokenMount); if (card === tokenCard) card = null;
+            }
+            throw issue;
+          }
           active(scope);
-          if (result.status !== 'OK') throw new Refused(); return result.token; } });
+          if (result?.status !== 'OK') {
+            const issue = tokenizationFailure(result);
+            if (['tokenization_unavailable', 'verification_configuration'].includes(issue.code)) {
+              destroyCard(tokenCard); removeMount(tokenMount); if (card === tokenCard) card = null;
+            }
+            throw issue;
+          }
+          return result.token; } });
       flow.period = selectedPeriod;
       update();
       await refresh();
@@ -295,7 +361,7 @@ function attachPage() {
   });
   $('consent').onchange = sync;
   $('pay').onclick = () => perform(async () => {
-    if (!$('consent').checked) throw new Refused();
+    if (!$('consent').checked) throw new BeforePayment('consent_required');
     await flow.purchase(takePassword('purchase-password'), contact()); await refresh();
   });
   $('check').onclick = () => perform(async () => { await refresh(); if (flow.sourceAllowed && (!flow.quote || !card)) await quote(flow.period); });
