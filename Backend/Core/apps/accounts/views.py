@@ -22,6 +22,7 @@ from .account_deletion import (
     confirm_account_deletion,
     request_account_deletion,
 )
+from .waitlist_email import ensure_waitlist_confirmation
 from .email_verification import (
     EmailAlreadyVerified,
     InvalidVerificationChallenge,
@@ -149,10 +150,17 @@ class WaitlistSignupView(NoStoreResponseMixin, APIView):
     throttle_classes = (ScopedRateThrottle,)
     throttle_scope = 'waitlist'
 
+    @sensitive_variables()
     def post(self, request):
         serializer = WaitlistSignupSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        subscriber = serializer.save()
+        if not ensure_waitlist_confirmation(subscriber.pk):
+            return Response(
+                {'code': 'waitlist_confirmation_delayed',
+                 'detail': "You're on the waitlist, but confirmation could not be sent yet. Try again to request it."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
         return Response(
             {'detail': 'Thanks. Your waitlist request has been received.'},
             status=status.HTTP_202_ACCEPTED,

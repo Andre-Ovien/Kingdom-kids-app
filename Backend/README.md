@@ -770,8 +770,9 @@ rejects cleartext SMTP and rejects enabling both modes together.
 Resend HTTPS is available through `Core.resend_backend.EmailBackend` without an
 additional SDK and works on Render Free, where SMTP ports are blocked.
 Verification, password recovery, and account-deletion emails all use that shared
-transport. The website waitlist stores an explicit signup; it does not send a
-welcome message or subscribe an address to a third-party marketing list.
+transport. An explicit website waitlist submission stores consent and requests
+one fixed confirmation email. It does not subscribe an address to a third-party
+marketing list or automatically email pre-existing rows.
 
 First verify a domain you control in the Resend dashboard. A sending subdomain
 such as `notify.kingdom-kids.app` is suitable if that is the domain you choose;
@@ -828,8 +829,16 @@ only after provider acceptance (or a silently discarded honeypot), and returns
 503 when delivery is unavailable. Provider acceptance is not inbox delivery.
 Identical contact payloads/request IDs use a stable private operation key within
 Resend's 24-hour idempotency window. No message history is stored by this endpoint.
-Waitlist signup continues to return 202 for both new and duplicate subscribers
-and records consent without sending a welcome email.
+Waitlist signup returns 202 after its confirmation is provider-accepted or was
+already accepted. A delivery/configuration failure or active send lease returns
+503 with `code: waitlist_confirmation_delayed`, while preserving the signup and
+its original consent timestamp. The website can offer an explicit confirmation
+retry. A two-minute database lease prevents overlapping dispatch; retries keep
+the same versioned subscriber operation key and exact fixed message. Resend
+deduplicates that key for24hours. An unresolved attempt older than23hours stays
+delayed for operator review rather than risking an email after that protection
+expires. No bulk/backfill sender or automatic background retry is installed.
+`confirmation_sent_at` records provider acceptance, not guaranteed inbox delivery.
 
 Before release, verify the sender in Resend, configure the backend's secrets,
 and test one explicitly authorized recipient through the real delivery path.

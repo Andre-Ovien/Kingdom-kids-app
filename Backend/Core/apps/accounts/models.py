@@ -227,6 +227,12 @@ class WaitlistSubscriber(models.Model):
         default=ConsentSource.WEBSITE_FOOTER,
         editable=False,
     )
+    # Only an explicit signup submission requests this one confirmation; adding
+    # these nullable fields never schedules mail for pre-existing subscribers.
+    confirmation_sent_at = models.DateTimeField(null=True, blank=True, editable=False)
+    confirmation_claim_id = models.UUIDField(null=True, blank=True, editable=False)
+    confirmation_lease_until = models.DateTimeField(null=True, blank=True, editable=False)
+    confirmation_first_attempt_at = models.DateTimeField(null=True, blank=True, editable=False)
 
     class Meta:
         ordering = ('-consented_at',)
@@ -331,3 +337,15 @@ class KidProfilePreferences(models.Model):
 
     def __str__(self) -> str:
         return f'{self.profile.display_name} preferences'
+
+
+class PrivateFamilyImportReceipt(models.Model):
+    """One-time administrative import proof, without email or credential data."""
+
+    id = models.UUIDField(primary_key=True, editable=False)
+    parent = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL,
+        related_name='private_family_import_receipts',
+    )
+    digest = models.CharField(max_length=64)
+    completed_at = models.DateTimeField(auto_now_add=True)

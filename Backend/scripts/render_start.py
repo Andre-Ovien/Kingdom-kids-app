@@ -176,6 +176,10 @@ def start():
         call_command('install_published_matching_release', apply=True, publish=True)
         if os.environ.get('CLOUDINARY_PRIVATE_DELIVERY_ENABLED', 'false') == 'true':
             call_command('install_private_media_release')
+        if os.environ.get('KK_TEST_FAMILY_IMPORT_ZLIB_B64'):
+            call_command('install_private_test_family', apply=True)
+            for name in ('KK_TEST_FAMILY_IMPORT_ZLIB_B64', 'KK_TEST_FAMILY_IMPORT_SHA256', 'KK_TEST_FAMILY_IMPORT_EMAIL'):
+                os.environ.pop(name, None)
     connections.close_all()
     # One synchronous worker fits the Free instance and keeps DB usage bounded.
     # Access logs omit request URLs, which can contain query parameters.

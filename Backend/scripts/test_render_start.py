@@ -150,12 +150,14 @@ class RenderStartupTests(unittest.TestCase):
                 self.fail('Must not migrate without ownership')
         connection.__exit__.assert_called_once()
 
-    def run_start(self,fail_migration=False,private_media=False,fail_bootstrap=None):
+    def run_start(self,fail_migration=False,private_media=False,fail_bootstrap=None,private_family=False):
         events=[]
         def command(name,**kwargs):
             events.append(name)
             if fail_migration and name=='migrate':raise RuntimeError('synthetic failure')
             if name==fail_bootstrap:raise RuntimeError('synthetic bootstrap failure')
+            if name=='install_private_test_family':
+                self.assertEqual(kwargs, {'apply':True})
             if name=='install_published_matching_release':
                 self.assertEqual(kwargs, {'apply':True, 'publish':True})
         @contextmanager
@@ -170,15 +172,33 @@ class RenderStartupTests(unittest.TestCase):
         old_path=list(sys.path)
         try:
             values=self.private_environment() if private_media else environment()
+            if private_family:
+                values.update(RENDER_EXTERNAL_HOSTNAME='kingdom-kids-checkout-staging.onrender.com',
+                    KK_TEST_FAMILY_IMPORT_ZLIB_B64='synthetic-private-payload',
+                    KK_TEST_FAMILY_IMPORT_SHA256='synthetic-digest', KK_TEST_FAMILY_IMPORT_EMAIL='synthetic@example.test')
             with patch.dict(os.environ,values,clear=True),patch.dict(sys.modules,modules),patch.object(startup.os,'chdir'),\
                     patch.object(startup,'migration_lock',lock),\
                     patch.object(startup,'control_socket_path',return_value='/tmp/fixture-private/control.sock'),\
-                    patch.object(startup.os,'execvp',side_effect=lambda *args:events.append(args)):
+                    patch.object(startup.os,'execvp',side_effect=lambda *args:self.record_exec(events,args,private_family)):
                 if fail_migration or fail_bootstrap:
                     with self.assertRaises(RuntimeError):startup.start()
                 else:startup.start()
         finally:sys.path[:]=old_path
         return events
+
+    def record_exec(self, events, args, private_family):
+        if private_family:
+            for key in ('KK_TEST_FAMILY_IMPORT_ZLIB_B64', 'KK_TEST_FAMILY_IMPORT_SHA256', 'KK_TEST_FAMILY_IMPORT_EMAIL'):
+                self.assertNotIn(key, os.environ)
+        events.append(args)
+
+    def test_explicit_family_import_runs_after_release_under_lock_and_secret_env_is_not_inherited(self):
+        events = self.run_start(private_media=True, private_family=True)
+        self.assertEqual(events[:9], ['setup', 'check', 'lock', 'migrate',
+            'install_published_matching_release', 'install_private_media_release',
+            'install_private_test_family', 'unlock', 'close_connections'])
+        self.assertEqual(events[9][0], 'gunicorn')
+        self.run_start(private_family=True, fail_bootstrap='install_private_test_family')
 
     def test_production_check_and_serialized_migrate_precede_port_bound_server_exec(self):
         events=self.run_start()
