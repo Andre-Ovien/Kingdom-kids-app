@@ -172,6 +172,7 @@ const currentYear = new Date().getFullYear();
             </div>
             <div class="footer-nav-group">
               <p>Privacy &amp; account</p>
+              <a href="/contact/">Contact</a>
               <a href="/privacy/" aria-current={currentPath === '/privacy/' ? 'page' : undefined}>Privacy</a>
               <a
                 href="/account-deletion/"
@@ -193,6 +194,11 @@ const currentYear = new Date().getFullYear();
       </div>
     </footer>
 
+    <script>
+      import { initWaitlistForms } from '../scripts/waitlist.mjs';
+      initWaitlistForms();
+    </script>
+
     <script is:inline>
       (() => {
         const root = document.documentElement;
@@ -202,11 +208,6 @@ const currentYear = new Date().getFullYear();
         const menuLabel = document.querySelector('[data-menu-label]');
         const navBackdrop = document.querySelector('[data-nav-backdrop]');
         const menuBackgroundRegions = document.querySelectorAll('[data-menu-background]');
-        const waitlistForm = document.querySelector('[data-waitlist-form]');
-        const waitlistEmail = document.querySelector('[data-waitlist-email]');
-        const waitlistSubmit = document.querySelector('[data-waitlist-submit]');
-        const waitlistButtonLabel = document.querySelector('[data-waitlist-button-label]');
-        const waitlistStatus = document.querySelector('[data-waitlist-status]');
         let frame = 0;
 
         const menuFocusables = () => {
@@ -260,75 +261,6 @@ const currentYear = new Date().getFullYear();
             first.focus();
           }
         });
-
-        const setWaitlistState = (state, message, buttonLabel = 'Join the waitlist', emailIsInvalid = false) => {
-          if (!(waitlistForm instanceof HTMLFormElement)) return;
-          waitlistForm.dataset.state = state;
-          waitlistForm.setAttribute('aria-busy', String(state === 'loading'));
-          if (waitlistStatus) waitlistStatus.textContent = message;
-          if (waitlistButtonLabel) waitlistButtonLabel.textContent = buttonLabel;
-          if (waitlistSubmit instanceof HTMLButtonElement) {
-            waitlistSubmit.disabled = state === 'loading' || state === 'success';
-            waitlistSubmit.setAttribute('aria-disabled', String(state === 'success'));
-          }
-          if (waitlistEmail instanceof HTMLInputElement) {
-            waitlistEmail.disabled = state === 'loading' || state === 'success';
-            waitlistEmail.setAttribute('aria-invalid', String(emailIsInvalid));
-          }
-        };
-
-        if (waitlistForm instanceof HTMLFormElement && waitlistEmail instanceof HTMLInputElement) {
-          waitlistEmail.addEventListener('input', () => {
-            if (waitlistForm.dataset.state === 'error') setWaitlistState('idle', '');
-          });
-          waitlistForm.addEventListener('submit', async (event) => {
-            event.preventDefault();
-            if (waitlistForm.dataset.state === 'success') return;
-            if (!waitlistEmail.value.trim()) {
-              setWaitlistState('error', 'Enter an email address to join the waitlist.', 'Join the waitlist', true);
-              waitlistEmail.focus();
-              return;
-            }
-            if (!waitlistEmail.validity.valid) {
-              setWaitlistState('error', 'Enter a valid email address, such as name@example.com.', 'Join the waitlist', true);
-              waitlistEmail.focus();
-              return;
-            }
-            if (!navigator.onLine) {
-              setWaitlistState('error', 'You appear to be offline. Reconnect and try again.');
-              return;
-            }
-
-            setWaitlistState('loading', 'Sending your request…', 'Joining…');
-            const controller = new AbortController();
-            const requestTimeout = window.setTimeout(() => controller.abort(), 12000);
-            try {
-              const response = await fetch(waitlistForm.action, {
-                method: 'POST',
-                headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: waitlistEmail.value.trim() }),
-                signal: controller.signal,
-              });
-              if (response.ok) {
-                setWaitlistState('success', 'You’re on the list. We’ll let you know when the Android beta is ready.', 'Joined');
-              } else if (response.status === 400) {
-                setWaitlistState('error', 'Enter a valid email address, such as name@example.com.', 'Join the waitlist', true);
-                waitlistEmail.focus();
-              } else if (response.status === 429) {
-                setWaitlistState('error', 'Too many attempts just now. Wait a moment, then try again.');
-              } else {
-                setWaitlistState('error', 'We couldn’t join the waitlist just now. Please try again.');
-              }
-            } catch {
-              const message = navigator.onLine
-                ? 'We couldn’t join the waitlist just now. Please try again.'
-                : 'You appear to be offline. Reconnect and try again.';
-              setWaitlistState('error', message);
-            } finally {
-              window.clearTimeout(requestTimeout);
-            }
-          });
-        }
 
         const render = () => {
           frame = 0;

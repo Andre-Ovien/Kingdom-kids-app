@@ -1,0 +1,31 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/api/accounts/waitlist/",
+      "destination": "https://kingdom-kids-checkout-staging.onrender.com/api/accounts/waitlist/"
+    },
+    {
+      "source": "/api/accounts/contact/",
+      "destination": "https://kingdom-kids-checkout-staging.onrender.com/api/accounts/contact/"
+    },
+    {
+      "source": "/api/accounts/account-deletion/request/",
+      "destination": "https://kingdom-kids-checkout-staging.onrender.com/api/accounts/account-deletion/request/"
+    },
+    {
+      "source": "/api/accounts/account-deletion/confirm/",
+      "destination": "https://kingdom-kids-checkout-staging.onrender.com/api/accounts/account-deletion/confirm/"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/:path*",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store" },
+        { "key": "CDN-Cache-Control", "value": "no-store" },
+        { "key": "Vercel-CDN-Cache-Control", "value": "no-store" }
+      ]
+    }
+  ]
+}

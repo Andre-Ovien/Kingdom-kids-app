@@ -747,3 +747,23 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Match the existing public form fields for longer contact messages. */
+.form-field textarea {
+  width: 100%;
+  min-height: 180px;
+  border: 1.5px solid rgba(16, 36, 62, 0.42);
+  border-radius: 14px;
+  padding: 14px 15px;
+  background: #fff;
+  color: var(--public-ink);
+  font: inherit;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.form-field textarea:focus-visible {
+  outline: 0;
+  border-color: #245788;
+  box-shadow: 0 0 0 4px rgba(73, 139, 199, 0.2);
+}

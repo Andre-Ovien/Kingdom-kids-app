@@ -66,8 +66,28 @@ def qualify_private_media(environ):
 
 def prepare_environment(environ):
     """Validate only explicit staging inputs; no environment values enter errors."""
-    if environ.get('DJANGO_DEBUG') != 'false' or environ.get('DJANGO_EMAIL_DELIVERY_ENABLED') != 'false':
-        raise StartupRejected('Explicit production mode and disabled email are required.')
+    if environ.get('DJANGO_DEBUG') != 'false':
+        raise StartupRejected('Explicit production mode is required.')
+    email_enabled = environ.get('DJANGO_EMAIL_DELIVERY_ENABLED')
+    if email_enabled not in {'true', 'false'}:
+        raise StartupRejected('Email delivery must be explicitly enabled or disabled.')
+    if email_enabled == 'true':
+        from email.utils import parseaddr
+        try:
+            sender = environ.get('DJANGO_DEFAULT_FROM_EMAIL', '')
+            address = parseaddr(sender, strict=True)[1]
+            domain = environ.get('RESEND_VERIFIED_DOMAIN', '')
+            key = environ.get('RESEND_API_KEY', '')
+            if (environ.get('DJANGO_EMAIL_BACKEND') != 'Core.resend_backend.EmailBackend'
+                    or not re.fullmatch(r'[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+', address)
+                    or any(ord(c) < 32 or ord(c) == 127 for c in sender)
+                    or domain in {'', 'localhost', 'resend.dev'}
+                    or address.rsplit('@', 1)[1].lower() != domain
+                    or not 16 <= len(key) <= 256 or not key.isascii()
+                    or any(ord(c) <= 32 or ord(c) == 127 for c in key)):
+                raise ValueError
+        except (ValueError, TypeError):
+            raise StartupRejected('Enabled email requires configured Resend HTTPS and a verified sender domain.') from None
     if any(environ.get(flag, 'false') != 'false' for flag in DISABLED_FLAGS):
         raise StartupRejected('Financial, paid enforcement and parent checkout features must stay disabled.')
     qualify_private_media(environ)

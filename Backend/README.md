@@ -767,7 +767,8 @@ rejects cleartext SMTP and rejects enabling both modes together.
 
 ### Resend transactional email
 
-The existing Django SMTP transport supports Resend without an additional SDK.
+Resend HTTPS is available through `Core.resend_backend.EmailBackend` without an
+additional SDK and works on Render Free, where SMTP ports are blocked.
 Verification, password recovery, and account-deletion emails all use that shared
 transport. The website waitlist stores an explicit signup; it does not send a
 welcome message or subscribe an address to a third-party marketing list.
@@ -783,29 +784,31 @@ monitored privacy/support inbox.
 Configure the backend process with:
 
 ```dotenv
-DJANGO_EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
-DJANGO_EMAIL_HOST=smtp.resend.com
-DJANGO_EMAIL_PORT=587
-DJANGO_EMAIL_HOST_USER=resend
-DJANGO_EMAIL_HOST_PASSWORD=
-DJANGO_EMAIL_USE_TLS=true
-DJANGO_EMAIL_USE_SSL=false
+DJANGO_EMAIL_DELIVERY_ENABLED=true
+DJANGO_EMAIL_BACKEND=Core.resend_backend.EmailBackend
+RESEND_VERIFIED_DOMAIN=YOUR_VERIFIED_SENDING_DOMAIN
 DJANGO_EMAIL_TIMEOUT_SECONDS=10
 DJANGO_DEFAULT_FROM_EMAIL=Kingdom Kids <no-reply@YOUR_VERIFIED_SENDING_DOMAIN>
+DJANGO_CONTACT_RECIPIENT_EMAIL=YOUR_MONITORED_SUPPORT_INBOX
 ```
 
 Store a sending-only, domain-scoped Resend key as the backend's `RESEND_API_KEY`
-secret. The SMTP settings consume that key only for `smtp.resend.com`. An
+secret. The HTTPS backend sends only to `https://api.resend.com/emails`, does not
+follow redirects or automatically retry, bounds request/response sizes, closes
+each connection and sanitizes delivery failures. The configured sending domain
+must exactly match the sender address; this is an operator assertion after DNS
+verification, not an automatic provider/domain verification check. An
 explicit `DJANGO_EMAIL_HOST_PASSWORD` takes precedence for compatibility with
-existing SMTP deployments. Do not put either secret in Astro `PUBLIC_*`
+existing SMTP deployments (which can still use the built-in SMTP backend with
+`smtp.resend.com`). Do not put either secret in Astro `PUBLIC_*`
 variables, Flutter definitions, source files, logs, or a browser bundle.
 Development with the console backend remains unchanged. Selecting Resend without
-a key, a valid non-local sender, or a matching encrypted port fails at startup;
+a key or a matching verified-domain sender fails at startup;
 this checks configuration, not actual account authorization or inbox delivery.
 
 With those environment values injected, `python Core/manage.py check_resend_email`
-checks configuration without network access. Add `--connect` to verify encrypted
-SMTP authentication without submitting any message or recipient. Its output is
+checks configuration without network access. `--connect` is supported only by
+the optional SMTP backend; HTTPS deliberately refuses a network check. Its output is
 sanitized; neither mode proves that the sender domain is verified or that mail
 will arrive in an inbox.
 
@@ -815,6 +818,19 @@ Environment files are not automatically loaded; inject these values into the
 actual backend process and coordinate its restart rather than changing the
 currently running phone-review server unexpectedly.
 
+The website contact endpoint is `POST /api/accounts/contact/` with `title`
+(2–120 characters, single line), `email` (at most 254), `message` (10–5000),
+an optional empty `website` honeypot, and optional UUID `request_id` retained for
+retries of the same submission. It sends only to the configured operator
+inbox and uses the visitor address as Reply-To, never as a caller-chosen recipient.
+HTML is escaped; the endpoint permits five requests per hour per IP, returns 202
+only after provider acceptance (or a silently discarded honeypot), and returns
+503 when delivery is unavailable. Provider acceptance is not inbox delivery.
+Identical contact payloads/request IDs use a stable private operation key within
+Resend's 24-hour idempotency window. No message history is stored by this endpoint.
+Waitlist signup continues to return 202 for both new and duplicate subscribers
+and records consent without sending a welcome email.
+
 Before release, verify the sender in Resend, configure the backend's secrets,
 and test one explicitly authorized recipient through the real delivery path.
 Provider acceptance does not guarantee inbox placement. Do not send real test
@@ -822,10 +838,12 @@ emails or submit deletion flows as a configuration smoke test without specific
 authorization. The isolated mocked transport tests are:
 
 ```sh
-DJANGO_DEBUG=true .venv/bin/python Core/manage.py test apps.accounts.test_resend_email
+DJANGO_DEBUG=true .venv/bin/python Core/manage.py test apps.accounts.test_resend_email apps.accounts.test_resend_https
 ```
 
 Official setup references: [Resend SMTP](https://resend.com/docs/send-with-smtp)
+and [Resend HTTPS send API](https://resend.com/docs/api-reference/emails/send-email),
+[idempotency keys](https://resend.com/docs/dashboard/emails/idempotency-keys),
 and [verified sending domains](https://resend.com/docs/dashboard/domains/introduction).
 The static website also needs its production `/api/*` reverse proxy to reach
 the deployed Django server; connecting Resend does not configure website routing.

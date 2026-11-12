@@ -1,0 +1,55 @@
+---
+import PublicPageLayout from '../layouts/PublicPageLayout.astro';
+---
+
+<PublicPageLayout
+  title="Contact us"
+  description="Send the Kingdom Kids team a question or a message."
+  canonicalPath="/contact/"
+>
+  <header class="public-hero deletion-hero">
+    <p class="public-eyebrow">For grown-ups</p>
+    <h1>Let’s talk.</h1>
+    <p class="public-lead">Have a question about Kingdom Kids? Send our team a message.</p>
+  </header>
+
+  <article class="deletion-card" aria-labelledby="contact-title">
+    <h2 id="contact-title">Send a message</h2>
+    <p id="contact-help">Please don’t include passwords, verification codes, payment details, or a child’s personal information.</p>
+    <form class="deletion-form" action="/contact/" method="post" novalidate
+      aria-describedby="contact-help" aria-busy="false" data-contact-form>
+      <fieldset disabled data-contact-fields>
+        <div class="form-field">
+          <label for="contact-subject">Subject</label>
+          <input id="contact-subject" type="text" minlength="2" maxlength="120" required
+            aria-describedby="contact-status" data-contact-title />
+        </div>
+        <div class="form-field">
+          <label for="contact-email">Your email address</label>
+          <input id="contact-email" type="email" inputmode="email" autocomplete="email"
+            maxlength="254" required aria-describedby="contact-status" data-contact-email />
+        </div>
+        <div class="form-field">
+          <label for="contact-message">Message</label>
+          <textarea id="contact-message" rows="7" minlength="10" maxlength="5000" required
+            aria-describedby="contact-status" data-contact-message></textarea>
+          <small>At least 10 characters. We’ll use your email address to reply to your message.</small>
+        </div>
+        <div hidden aria-hidden="true">
+          <label for="contact-website">Leave this field empty</label>
+          <input id="contact-website" type="text" maxlength="200" tabindex="-1" autocomplete="off" data-contact-website />
+        </div>
+        <button class="delete-button" type="submit" data-contact-submit>Send message</button>
+      </fieldset>
+      <p class="form-status" id="contact-status" role="status" aria-live="polite" aria-atomic="true"
+        tabindex="-1" data-contact-status></p>
+      <noscript><p>JavaScript is required to send this form. Enable it, then reload this page.</p></noscript>
+    </form>
+    <p class="deletion-help">Read our <a href="/privacy/">privacy policy</a>. For an account deletion request, use the <a href="/account-deletion/">account deletion page</a>.</p>
+  </article>
+
+  <script>
+    import { initContactForms } from '../scripts/contact.mjs';
+    initContactForms();
+  </script>
+</PublicPageLayout>

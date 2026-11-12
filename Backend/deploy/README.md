@@ -60,8 +60,10 @@ endpoint. Prefer an authenticated TLS cache URL. If a chosen internal cache uses
 `redis://`, explicitly review its private-network boundary and auth before setting
 `DJANGO_CACHE_ALLOW_INSECURE=true`; it remains false in this preparation.
 
-The current email implementation uses SMTP. Render Free web services block
-outbound 465/587 (and 25 is blocked for all services), lack pre-deploy commands,
+For email on Render Free, use `Core.resend_backend.EmailBackend` with the
+server-only Resend sending key and exact verified sender domain; the HTTPS
+transport does not require SMTP ports. SMTP remains optional on other hosts.
+Render Free web services block outbound 465/587 (and 25 is blocked for all services), lack pre-deploy commands,
 and spin down when idle. Free Postgres expires after 30 days without backups;
 Free Key Value loses state on restart. These do not qualify as the production
 stack described here. No paid plan has been authorized or created by this work.

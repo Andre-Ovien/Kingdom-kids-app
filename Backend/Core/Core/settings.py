@@ -492,6 +492,7 @@ REST_FRAMEWORK = {
         'verification_confirm': '20/minute',
         'verification_resend': '10/hour',
         'waitlist': '10/hour',
+        'contact': '5/hour',
         'profile_write': '60/hour',
         'game_submit': '300/hour',
         'activity_write': '300/hour',
@@ -713,6 +714,9 @@ if not EMAIL_DELIVERY_ENABLED:
     EMAIL_USE_SSL = False
     EMAIL_TIMEOUT = 10
     USING_RESEND_SMTP = False
+    USING_RESEND_HTTPS = False
+    RESEND_API_KEY = ''
+    RESEND_VERIFIED_DOMAIN = ''
 else:
     EMAIL_BACKEND = os.environ.get('DJANGO_EMAIL_BACKEND')
     DEFAULT_FROM_EMAIL = os.environ.get(
@@ -752,6 +756,9 @@ else:
         EMAIL_BACKEND == 'django.core.mail.backends.smtp.EmailBackend'
         and EMAIL_HOST.casefold() == 'smtp.resend.com'
     )
+    USING_RESEND_HTTPS = EMAIL_BACKEND == 'Core.resend_backend.EmailBackend'
+    RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '') if USING_RESEND_HTTPS else ''
+    RESEND_VERIFIED_DOMAIN = os.environ.get('RESEND_VERIFIED_DOMAIN', '') if USING_RESEND_HTTPS else ''
     if USING_RESEND_SMTP:
         if not EMAIL_HOST_USER.strip():
             EMAIL_HOST_USER = 'resend'
@@ -816,6 +823,33 @@ else:
             'Resend SMTP requires STARTTLS on port 25, 587, or 2587, '
             'or implicit TLS on port 465 or 2465.'
         )
+    if USING_RESEND_HTTPS:
+        # Validate without importing configured Django settings recursively or
+        # contacting Resend. This is an operator assertion, not a DNS check.
+        from django.core.exceptions import ValidationError
+        from django.core.validators import validate_email
+        try:
+            address = parseaddr(DEFAULT_FROM_EMAIL, strict=True)[1]
+            validate_email(address)
+            if (not 16 <= len(RESEND_API_KEY) <= 256 or not RESEND_API_KEY.isascii()
+                    or any(ord(c) <= 32 or ord(c) == 127 for c in RESEND_API_KEY)
+                    or not RESEND_VERIFIED_DOMAIN or RESEND_VERIFIED_DOMAIN in {'localhost', 'resend.dev'}
+                    or address.rsplit('@', 1)[1].lower() != RESEND_VERIFIED_DOMAIN
+                    or any(ord(c) < 32 or ord(c) == 127 for c in DEFAULT_FROM_EMAIL)):
+                raise ValueError
+        except (ValueError, ValidationError):
+            raise RuntimeError('Resend HTTPS requires a server sending key and matching verified sender domain.') from None
+
+CONTACT_RECIPIENT_EMAIL = os.environ.get('DJANGO_CONTACT_RECIPIENT_EMAIL', '').strip()
+if CONTACT_RECIPIENT_EMAIL:
+    from django.core.exceptions import ValidationError
+    from django.core.validators import validate_email
+    try:
+        validate_email(CONTACT_RECIPIENT_EMAIL)
+        if any(ord(c) <= 32 or ord(c) == 127 for c in CONTACT_RECIPIENT_EMAIL):
+            raise ValueError
+    except (ValueError, ValidationError):
+        raise RuntimeError('DJANGO_CONTACT_RECIPIENT_EMAIL must be one valid operator inbox.') from None
 
 
 LOG_LEVEL = os.environ.get('DJANGO_LOG_LEVEL', 'INFO').upper()

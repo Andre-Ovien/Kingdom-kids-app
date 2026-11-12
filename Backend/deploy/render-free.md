@@ -8,7 +8,7 @@ repository's `main` branch. It creates exactly three Free resources in Virginia:
 
 Render supplies the exact public hostname; no wildcard or guessed URL is used.
 The Docker command `python scripts/render_start.py` validates strict production
-settings, disabled email/financial actions and qualified private-media configuration,
+settings, explicit email configuration, disabled financial actions and qualified private-media configuration,
 takes a PostgreSQL session advisory lock,
 runs `check --deploy`, migrations and the reviewed five-game matching installer
 before one Gunicorn worker, then binds `$PORT`. When private delivery is enabled,
@@ -39,9 +39,15 @@ startup guard to Render `red-*` internal names. Render terminates public HTTPS;
 the deployment trusts its forwarded HTTPS header and sets one proxy for throttling.
 Verify actual ingress behavior before broad public usage.
 
-Email delivery is deliberately **disabled**: signup and email verification/reset/
-email-code deletion return safe503 without issuing challenges. Verified-parent
-login and password-based account deletion remain available. All Square, paid
+The Blueprint initially disables email: signup and email verification/reset/
+email-code deletion return safe503 without issuing challenges. After a sender
+domain is verified, explicitly enable `DJANGO_EMAIL_DELIVERY_ENABLED=true` with
+`DJANGO_EMAIL_BACKEND=Core.resend_backend.EmailBackend`, server-only
+`RESEND_API_KEY`, matching `RESEND_VERIFIED_DOMAIN` and
+`DJANGO_DEFAULT_FROM_EMAIL`. Render startup accepts this HTTPS transport without
+relaxing any financial guards. Configure `DJANGO_CONTACT_RECIPIENT_EMAIL` as the
+monitored operator inbox for the contact form. SMTP is not a fallback on Free.
+Verified-parent login and password-based account deletion remain available. All Square, paid
 enforcement and parent checkout/status switches stay OFF. Square Sandbox
 credentials may be held privately for later qualification; storing credentials
 does not enable a provider call, financial worker or charge.

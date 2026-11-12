@@ -67,3 +67,24 @@ for (const forbidden of [
 }
 
 console.log('Built account-deletion email-verification fallback is inert.');
+
+const contactPage = await readFile(new URL('../dist/contact/index.html', import.meta.url), 'utf8');
+const contactForm = contactPage.match(/<form[^>]+data-contact-form[^>]*>/)?.[0];
+if (!contactForm?.includes('method="post"') || !contactForm.includes('action="/contact/"')) {
+  throw new Error('Contact form must have a same-page POST fallback.');
+}
+if (!/<fieldset[^>]+disabled[^>]+data-contact-fields/.test(contactPage)) {
+  throw new Error('Contact fields must be inert in static HTML until the handler is ready.');
+}
+for (const marker of ['title', 'email', 'message', 'website']) {
+  const tag = contactPage.match(new RegExp(`<[^>]+data-contact-${marker}[^>]*>`))?.[0];
+  if (!tag || /\sname=/.test(tag)) throw new Error('Contact fields must not leak through native serialization.');
+}
+if (!builtScripts.some((script) => script.includes('/api/accounts/contact/'))) {
+  throw new Error('Built contact handler is missing its same-origin endpoint.');
+}
+for (const path of ['index.html', 'privacy/index.html', 'account-deletion/index.html']) {
+  const html = await readFile(new URL(`../dist/${path}`, import.meta.url), 'utf8');
+  if (!html.includes('href="/contact/"')) throw new Error('Public footer must expose the contact page.');
+}
+console.log('Built contact form fallback is inert; public footers expose Contact.');

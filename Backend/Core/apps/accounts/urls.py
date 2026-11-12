@@ -1,5 +1,6 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
+from .contact import ContactView
 
 from .views import (
     AccountDeletionConfirmView,
@@ -28,6 +29,7 @@ router.register('kid-profiles', KidProfileViewSet, basename='kid-profile')
 urlpatterns = [
     path('register/', RegisterView.as_view(), name='register'),
     path('waitlist/', WaitlistSignupView.as_view(), name='waitlist'),
+    path('contact/', ContactView.as_view(), name='contact'),
     path(
         'email-verification/confirm/',
         EmailVerificationConfirmView.as_view(),

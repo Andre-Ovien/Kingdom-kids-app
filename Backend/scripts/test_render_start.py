@@ -27,6 +27,19 @@ def environment():
 
 
 class RenderStartupTests(unittest.TestCase):
+    def test_explicit_resend_https_email_is_allowed_without_relaxing_other_guards(self):
+        values = environment()
+        values.update(DJANGO_EMAIL_DELIVERY_ENABLED='true', DJANGO_EMAIL_BACKEND='Core.resend_backend.EmailBackend',
+                      DJANGO_DEFAULT_FROM_EMAIL='Kingdom Kids <support@notify.kingdom.test>',
+                      RESEND_VERIFIED_DOMAIN='notify.kingdom.test', RESEND_API_KEY='re_synthetic-not-a-real-secret')
+        self.assertEqual(startup.prepare_environment(values), '10000')
+        for name, value in [('RESEND_API_KEY', ''), ('RESEND_VERIFIED_DOMAIN', 'other.test'),
+                            ('DJANGO_EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend'),
+                            ('SQUARE_SANDBOX_ENABLED', 'true')]:
+            invalid = dict(values); invalid[name] = value
+            with self.subTest(name=name), self.assertRaises(startup.StartupRejected):
+                startup.prepare_environment(invalid)
+
     def private_environment(self):
         values = environment()
         release = json.loads(startup.PRIVATE_MEDIA_MAP.read_text())

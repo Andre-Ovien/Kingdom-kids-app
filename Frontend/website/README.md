@@ -1,6 +1,6 @@
 # Kingdom Kids website
 
-Static Astro website for Kingdom Kids, including the launch waitlist, public privacy policy, and self-service account deletion.
+Static Astro website for Kingdom Kids, including the launch waitlist, contact form, public privacy policy, and self-service account deletion.
 
 Use the Node.js version pinned in `.node-version` for local, CI, and release
 builds. `package.json` also fails unsupported runtime ranges explicitly.
@@ -10,6 +10,7 @@ builds. `package.json` also fails unsupported runtime ranges explicitly.
 ```sh
 npm ci
 npm run dev
+npm test
 npm run check
 npm run build
 npm run verify:security
@@ -33,28 +34,47 @@ uncached at the reverse proxy and recheck the advisory before adding server
 rendering or authenticated remote images. See the
 [upstream advisory](https://github.com/advisories/GHSA-ch52-4w7c-c8xp).
 
-## Production routing requirement
+## Production routing
 
-The generated site is static. The production host/CDN **must** reverse-proxy same-origin requests from:
-
-```text
-https://kingdom-kids.app/api/*
-```
-
-to the HTTPS Django API while preserving the path, HTTP method, JSON body, `Authorization` header, and correct forwarded host/protocol. This route supports:
+The public site is hosted on Vercel. Set its project root to `Frontend/website`,
+build command to `npm run build`, and output directory to `dist`.
+`vercel.json` proxies only these four same-origin public paths to the verified
+HTTPS backend `https://kingdom-kids-checkout-staging.onrender.com`, preserving
+each path rather than sending visitors to a developer machine:
 
 - `POST /api/accounts/waitlist/`
+- `POST /api/accounts/contact/`
 - `POST /api/accounts/account-deletion/request/`
 - `POST /api/accounts/account-deletion/confirm/`
 
-Do not cache `/api/*` responses. Do not log email-verification codes or deletion request bodies. Keep backend throttling enabled. A direct cross-origin API hostname requires an explicit, narrow CORS allowlist and should not replace the same-origin route without a reviewed deployment change.
+The API paths have explicit browser/CDN `no-store` headers. No login, paid
+checkout, admin, or arbitrary API routes are exposed by this configuration.
+If the production backend changes, update the four reviewed destinations and
+the routing test together. Keep backend throttling enabled and do not log
+form bodies or email-verification codes. Vercel documents external rewrites
+as reverse proxies: <https://vercel.com/docs/routing/rewrites>.
 
-Resend is configured on the Django server, not in this static site. See the
-backend's Resend setup instructions. A working sender/API key does not repair a
-missing production reverse proxy: a GET to either POST-only public API route
-should reach Django and return method-not-allowed, not a static-host 404.
-Choose the actual deployed HTTPS backend before adding the production host's
-rewrite; do not send visitors to the developer Mac or commit a guessed origin.
+Waitlist registration records the address and consent; it does not send a
+confirmation email. Its duplicate-safe acknowledgement is HTTP `202` JSON.
+The contact form at `/contact/` sends `{title, email, message, website,
+request_id?}` to Django. Resend credentials, sender and fixed recipient are
+server-only. A visitor's email is Reply-To, not a caller-selected recipient.
+Contact delivery remains unavailable until the backend email configuration
+and verified sender are ready; the page shows an error and retains the text.
+
+Shared form handlers require the expected `202` JSON acknowledgement, so a
+static host's HTML page cannot appear as a successful submission. They block
+overlapping submissions, allow an explicit retry after errors, and use one
+bounded 60-second request (including the response body) without automatic
+retries. Contact retries of an unchanged message retain an in-memory UUID;
+editing the message starts a new submission. Nothing is persisted to browser
+storage. This client guard does not replace backend idempotency or throttles.
+
+After deployment, a GET to each POST-only public API route should reach Django
+and return method-not-allowed, rather than Vercel `NOT_FOUND`. Only an actual
+consented form submission plus delivery confirmation qualifies working email.
+No Resend key or SMTP credential belongs in Astro environment variables or
+browser assets.
 
 ## HTTPS and security headers
 
@@ -89,8 +109,8 @@ https://kingdom-kids.app/account-deletion/
 
 Run these against the deployed production origin, not only `astro preview`:
 
-1. Confirm `/`, `/privacy/`, and `/account-deletion/` return `200`, canonical URLs use HTTPS, and legal links are reachable without the app.
-2. Submit a valid and invalid waitlist address through the deployed same-origin `/api` path and confirm responses are not cached.
+1. Confirm `/`, `/contact/`, `/privacy/`, and `/account-deletion/` return `200`, canonical URLs use HTTPS, and legal links are reachable without the app.
+2. Submit a consented valid and invalid waitlist address through the deployed same-origin `/api` path and confirm responses are not cached. Test the contact form with an operator-approved recipient/test message; confirm `202` and actual inbox delivery, then test mail-disabled `503` without losing the entered message.
 3. Create a disposable parent account with child activity. On `/account-deletion/`, verify an unknown email receives the same request response and a wrong, expired, or over-attempted code cannot delete anything.
 4. Complete the emailed-code flow and explicit final confirmation; confirm the page reports success, subsequent login fails, associated child/profile activity is gone, and any same-email waitlist row is gone.
 5. Inspect cookies, local storage, session storage, browser logs, proxy logs, and analytics/network tooling to confirm challenge handles and email codes were not persisted or logged.

@@ -14,6 +14,19 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        if getattr(settings, 'USING_RESEND_HTTPS', False):
+            from Core.resend_backend import validate_configuration
+            try:
+                validate_configuration()
+            except Exception:
+                raise CommandError('Resend HTTPS sending configuration is incomplete.') from None
+            if options['connect']:
+                raise CommandError('Resend HTTPS checks are local only; no email or provider request was sent.')
+            self.stdout.write(self.style.SUCCESS(
+                'Resend HTTPS configuration is valid. No network connection or email was sent. '
+                'Verify the sender domain and actual delivery separately.'
+            ))
+            return
         if not settings.USING_RESEND_SMTP:
             raise CommandError(
                 'Select the SMTP backend and smtp.resend.com before checking Resend.'
