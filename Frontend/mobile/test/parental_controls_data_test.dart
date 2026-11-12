@@ -6,6 +6,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:mobile/core/errors/app_exception.dart';
+import 'package:mobile/core/network/feature_read_cache.dart';
 import 'package:mobile/features/auth/data/auth_repository.dart';
 import 'package:mobile/features/auth/data/auth_session_store.dart';
 import 'package:mobile/features/auth/domain/auth_session.dart';
@@ -388,6 +389,8 @@ void main() {
       );
 
       final onlineSettings = await repository.fetchSettings(profileId: 'kid-1');
+      // Exercise the durable fallback after the short-lived read cache is gone.
+      featureReadCache.invalidate();
       api.fetchError = const AppException(
         'No connection.',
         code: 'network_error',

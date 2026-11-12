@@ -34,6 +34,7 @@ class GameCoverImage extends StatefulWidget {
 
 class _GameCoverImageState extends State<GameCoverImage> {
   Future<Object?> Function()? _refreshSource;
+  ContentMediaFetcher? _scopedFetcher;
 
   @override
   void initState() {
@@ -47,6 +48,8 @@ class _GameCoverImageState extends State<GameCoverImage> {
     if (oldWidget.game.id != widget.game.id ||
         oldWidget.game.slug != widget.game.slug ||
         oldWidget.game.coverImageUrl != widget.game.coverImageUrl ||
+        !identical(oldWidget.mediaFetcher, widget.mediaFetcher) ||
+        !identical(oldWidget.mediaPolicy, widget.mediaPolicy) ||
         !identical(oldWidget.authRepository, widget.authRepository) ||
         !identical(oldWidget.gameRepository, widget.gameRepository)) {
       _configureScope();
@@ -54,6 +57,7 @@ class _GameCoverImageState extends State<GameCoverImage> {
   }
 
   void _configureScope() {
+    _scopedFetcher = null;
     final original = widget.game;
     if (!canRefreshPrivateImageSource(original.coverImageUrl)) {
       _refreshSource = null;
@@ -61,10 +65,18 @@ class _GameCoverImageState extends State<GameCoverImage> {
     }
     final auth = widget.authRepository ?? AuthRepository();
     final scope = MediaAccessScope(auth);
+    if (widget.mediaFetcher == null &&
+        identical(widget.mediaPolicy, AppConfig.contentMediaPolicy)) {
+      _scopedFetcher = ScopedContentMediaFetcher(
+        authRepository: auth,
+        accessScope: scope,
+      );
+    }
     final repository =
         widget.gameRepository ?? RemoteGameRepository(authRepository: auth);
     _refreshSource = () async {
       final identity = await scope.requireCurrent();
+      auth.invalidateFeatureReads();
       final fresh = await repository.fetchGame(
         original.slug,
         profileId: identity.childId,
@@ -100,7 +112,7 @@ class _GameCoverImageState extends State<GameCoverImage> {
       child: ContentMediaImage(
         source: game.coverImageUrl,
         mediaPolicy: widget.mediaPolicy,
-        mediaFetcher: widget.mediaFetcher,
+        mediaFetcher: widget.mediaFetcher ?? _scopedFetcher,
         sourceRefresher: _refreshSource,
         fit: widget.fit,
         alignment: widget.game.imageAlignment,

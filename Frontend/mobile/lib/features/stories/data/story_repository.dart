@@ -1,4 +1,5 @@
 import '../../../core/errors/app_exception.dart';
+import '../../../core/network/feature_read_cache.dart';
 import '../../auth/data/auth_repository.dart';
 import '../domain/story_availability.dart';
 import '../domain/story_detail.dart';
@@ -18,27 +19,27 @@ class RemoteStoryRepository implements StoryRepository {
     StoryCatalogueCache? catalogueCache,
   }) : _authRepository = authRepository ?? AuthRepository(),
        _api = api ?? _sharedApi,
-       _catalogueCache = catalogueCache ?? _sharedCatalogueCache;
+       _cacheNamespace = catalogueCache ?? _sharedApi;
 
   static final StoryApi _sharedApi = HttpStoryApi();
-  static final _sharedCatalogueCache = StoryCatalogueCache();
 
   final AuthRepository _authRepository;
   final StoryApi _api;
-  final StoryCatalogueCache _catalogueCache;
+  final Object _cacheNamespace;
 
   @override
   Future<List<StoryDetail>> fetchStories({String? search, String? category}) {
     return _authRepository
-        .withAccessToken(
-          (accessToken) => _catalogueCache.fetch(
-            (_api, accessToken, search ?? '', category ?? ''),
-            () => _api.fetchStories(
-              accessToken,
-              search: search,
-              category: category,
-            ),
+        .withCachedFeatureRead(
+          (_api, _cacheNamespace, 'stories', search ?? '', category ?? ''),
+          (accessToken) => _api.fetchStories(
+            accessToken,
+            search: search,
+            category: category,
           ),
+          expiresAt: (stories) =>
+              featureMediaExpiry(stories.expand(_storyMedia)),
+          progressIndependent: true,
         )
         .then(
           (stories) => List<StoryDetail>.unmodifiable(
@@ -58,9 +59,20 @@ class RemoteStoryRepository implements StoryRepository {
         ),
       );
     }
-    return _authRepository.withAccessToken(
+    return _authRepository.withCachedFeatureRead(
+      (_api, 'story', slug),
       (accessToken) => _api.fetchStory(slug, accessToken),
+      expiresAt: (story) => featureMediaExpiry(_storyMedia(story)),
+      progressIndependent: true,
     );
+  }
+}
+
+Iterable<String?> _storyMedia(StoryDetail story) sync* {
+  yield story.coverImageUrl;
+  for (final narration in story.narrations) {
+    yield narration.audioUrl;
+    yield narration.sampleUrl;
   }
 }
 

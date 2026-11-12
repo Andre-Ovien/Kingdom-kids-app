@@ -10,7 +10,9 @@ abstract interface class ProfileRepository {
 class RemoteProfileRepository implements ProfileRepository {
   RemoteProfileRepository({AuthRepository? authRepository, ProfileApi? api})
     : _authRepository = authRepository ?? AuthRepository(),
-      _api = api ?? HttpProfileApi();
+      _api = api ?? _sharedApi;
+
+  static final ProfileApi _sharedApi = HttpProfileApi();
 
   final AuthRepository _authRepository;
   final ProfileApi _api;
@@ -33,12 +35,28 @@ class RemoteProfileRepository implements ProfileRepository {
         code: 'active_kid_changed',
       );
     }
-    return _authRepository.withAccessToken(
-      (accessToken) => _api.fetchSummary(
-        accessToken: accessToken,
-        profileId: activeKid.id,
-        timezoneOffsetMinutes: DateTime.now().timeZoneOffset.inMinutes,
-      ),
+    final summary = await _authRepository.withCachedFeatureRead(
+      (_api, 'summary', activeKid.id, DateTime.now().timeZoneOffset.inMinutes),
+      (accessToken) async {
+        if ((await _authRepository.currentKid())?.id != activeKid.id) {
+          throw const AppException(
+            'The active kid profile changed.',
+            code: 'active_kid_changed',
+          );
+        }
+        return _api.fetchSummary(
+          accessToken: accessToken,
+          profileId: activeKid.id,
+          timezoneOffsetMinutes: DateTime.now().timeZoneOffset.inMinutes,
+        );
+      },
     );
+    if ((await _authRepository.currentKid())?.id != activeKid.id) {
+      throw const AppException(
+        'The active kid profile changed.',
+        code: 'active_kid_changed',
+      );
+    }
+    return summary;
   }
 }

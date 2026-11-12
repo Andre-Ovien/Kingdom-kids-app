@@ -1,4 +1,5 @@
 import '../../../core/errors/app_exception.dart';
+import '../../../core/network/feature_read_cache.dart';
 import '../../auth/data/auth_repository.dart';
 import '../domain/mini_game.dart';
 import 'game_api.dart';
@@ -26,7 +27,9 @@ abstract interface class GameRepository {
 class RemoteGameRepository implements GameRepository {
   RemoteGameRepository({AuthRepository? authRepository, GameApi? api})
     : _authRepository = authRepository ?? AuthRepository(),
-      _api = api ?? HttpGameApi();
+      _api = api ?? _sharedApi;
+
+  static final GameApi _sharedApi = HttpGameApi();
 
   final AuthRepository _authRepository;
   final GameApi _api;
@@ -34,19 +37,28 @@ class RemoteGameRepository implements GameRepository {
   @override
   Future<List<MiniGame>> fetchGames({required String profileId}) async {
     final activeProfileId = await _requireCurrentProfile(profileId);
-    return _authRepository.withAccessToken((accessToken) async {
-      await _requireCurrentProfile(activeProfileId);
-      return _api.fetchGames(accessToken, profileId: activeProfileId);
-    });
+    return _authRepository.withCachedFeatureRead(
+      (_api, 'games', activeProfileId),
+      (accessToken) async {
+        await _requireCurrentProfile(activeProfileId);
+        return _api.fetchGames(accessToken, profileId: activeProfileId);
+      },
+      expiresAt: (games) =>
+          featureMediaExpiry(games.map((game) => game.coverImageUrl)),
+    );
   }
 
   @override
   Future<MiniGame> fetchGame(String slug, {required String profileId}) async {
     final activeProfileId = await _requireCurrentProfile(profileId);
-    return _authRepository.withAccessToken((accessToken) async {
-      await _requireCurrentProfile(activeProfileId);
-      return _api.fetchGame(slug, accessToken, profileId: activeProfileId);
-    });
+    return _authRepository.withCachedFeatureRead(
+      (_api, 'game', slug, activeProfileId),
+      (accessToken) async {
+        await _requireCurrentProfile(activeProfileId);
+        return _api.fetchGame(slug, accessToken, profileId: activeProfileId);
+      },
+      expiresAt: (game) => featureMediaExpiry([game.coverImageUrl]),
+    );
   }
 
   @override
@@ -58,7 +70,9 @@ class RemoteGameRepository implements GameRepository {
     required Map<String, dynamic> result,
   }) async {
     final activeProfileId = await _requireCurrentProfile(profileId);
-    return _authRepository.withAccessToken((accessToken) async {
+    final submission = await _authRepository.withAccessToken((
+      accessToken,
+    ) async {
       // Token refresh can outlive a profile switch. Keep this attempt bound
       // to its original child and operation, or stop before another POST.
       await _requireCurrentProfile(activeProfileId);
@@ -71,6 +85,8 @@ class RemoteGameRepository implements GameRepository {
         accessToken: accessToken,
       );
     });
+    _authRepository.invalidateFeatureReads(includeMedia: false);
+    return submission;
   }
 
   Future<String> _requireCurrentProfile(String requestedProfileId) async {

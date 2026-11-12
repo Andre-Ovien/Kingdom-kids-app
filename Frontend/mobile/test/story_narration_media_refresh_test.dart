@@ -9,13 +9,16 @@ import 'package:just_audio/just_audio.dart';
 import 'package:mobile/core/config/app_config.dart';
 import 'package:mobile/core/errors/app_exception.dart';
 import 'package:mobile/core/media/content_media_fetcher.dart';
+import 'package:mobile/core/network/feature_read_cache.dart';
 import 'package:mobile/features/auth/data/auth_repository.dart';
+import 'package:mobile/features/auth/data/auth_session_store.dart';
 import 'package:mobile/features/auth/domain/auth_session.dart';
 import 'package:mobile/features/auth/domain/kid_profile.dart';
 import 'package:mobile/features/auth/domain/parent_account.dart';
 import 'package:mobile/features/stories/data/story_narration_metadata_refresher.dart';
 import 'package:mobile/features/stories/data/story_narration_service.dart';
 import 'package:mobile/features/stories/data/story_repository.dart';
+import 'package:mobile/features/stories/data/story_api.dart';
 import 'package:mobile/features/stories/domain/story_detail.dart';
 
 const body = 'Jonah listened.';
@@ -56,6 +59,126 @@ StoryDetail story({String text = body, List<StoryNarration>? voices}) =>
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  test(
+    'same scoped narration reuses bytes across services and cleans each local file',
+    () async {
+      featureReadCache.invalidate();
+      addTearDown(featureReadCache.invalidate);
+      final cache = ScopedStoryAudioCache();
+      var fetched = 0;
+      final client = MockClient((_) async {
+        fetched++;
+        return http.Response.bytes(
+          [1, 2, 3],
+          200,
+          headers: {'content-type': 'audio/mpeg'},
+        );
+      });
+      addTearDown(client.close);
+      final fetcher = HttpContentMediaFetcher(policy: policy, client: client);
+      Future<void> playAndDispose() async {
+        final player = _FakePlayer();
+        final service = HostedStoryNarrationService(
+          audioPlayer: player,
+          mediaPolicy: policy,
+          mediaFetcher: fetcher,
+          scopeValidator: () async {},
+          cacheScopeResolver: () async =>
+              ('backend', 'parent', 'child', 'lion', 1),
+          audioCache: cache,
+        );
+        await service.speak(text: body, narration: narration(freshUrl));
+        expect(player.playCalls, 1);
+        final file = File(player.loadedFiles.single);
+        expect(await file.exists(), true);
+        await service.dispose();
+        expect(await file.exists(), false);
+      }
+
+      await playAndDispose();
+      await playAndDispose();
+      expect(fetched, 1);
+      featureReadCache.invalidate();
+      await playAndDispose();
+      expect(fetched, 2);
+    },
+  );
+
+  test(
+    'real metadata resolver and repository preserve valid narration reuse across readers',
+    () async {
+      featureReadCache.invalidate();
+      addTearDown(featureReadCache.invalidate);
+      const child = KidProfile(
+        id: 'synthetic-child',
+        parentId: 'synthetic-parent',
+        displayName: 'Kid',
+        avatarKey: 'lion',
+      );
+      final store = MemoryAuthSessionStore();
+      await store.writeSession(
+        const AuthSession(
+          parent: ParentAccount(
+            id: 'synthetic-parent',
+            email: 'parent@example.test',
+          ),
+          accessToken: 'synthetic-token',
+          profiles: [child],
+        ),
+      );
+      await store.writeSelectedKidId(child.id);
+      final auth = AuthRepository(sessionStore: store);
+      final edition = story(voices: [narration(freshUrl)]);
+      final api = _NarrationApi(edition);
+      final repository = RemoteStoryRepository(authRepository: auth, api: api);
+      final cache = ScopedStoryAudioCache();
+      var downloads = 0;
+      final client = MockClient((_) async {
+        downloads++;
+        return http.Response.bytes(
+          [1, 2, 3],
+          200,
+          headers: {'content-type': 'audio/mpeg'},
+        );
+      });
+      addTearDown(client.close);
+      final fetcher = HttpContentMediaFetcher(policy: policy, client: client);
+      Future<void> openReader() async {
+        final resolver = StoryNarrationMetadataRefresher(
+          story: edition,
+          authRepository: auth,
+          storyRepository: repository,
+        );
+        final player = _FakePlayer();
+        final service = HostedStoryNarrationService(
+          audioPlayer: player,
+          mediaPolicy: policy,
+          mediaFetcher: fetcher,
+          metadataResolver: resolver.resolve,
+          scopeValidator: resolver.validateScope,
+          cacheScopeResolver: auth.featureCacheScope,
+          audioCache: cache,
+        );
+        await service.speak(text: body, narration: edition.narrations.single);
+        expect(player.playCalls, 1);
+        await service.dispose();
+      }
+
+      await openReader();
+      await openReader();
+      expect(api.calls, 1);
+      expect(downloads, 1);
+      auth.invalidateFeatureReads(includeMedia: false);
+      await openReader();
+      expect(api.calls, 1);
+      expect(downloads, 1);
+      auth.invalidateFeatureReads();
+      await openReader();
+      expect(api.calls, 2);
+      expect(downloads, 2);
+    },
+  );
 
   test(
     'unprepared expired track uses fresh authorized same-edition voice; resume stays local',
@@ -313,6 +436,27 @@ class _Repo implements StoryRepository {
     String? search,
     String? category,
   }) async => [fresh];
+}
+
+class _NarrationApi implements StoryApi {
+  _NarrationApi(this.edition);
+  final StoryDetail edition;
+  int calls = 0;
+
+  @override
+  Future<StoryDetail> fetchStory(String slug, String accessToken) async {
+    calls++;
+    // The hosted API can mint a different bearer URL on each metadata read.
+    // A progress-only write must preserve still-valid static metadata too.
+    return story(voices: [narration('$freshUrl&issued=$calls')]);
+  }
+
+  @override
+  Future<List<StoryDetail>> fetchStories(
+    String accessToken, {
+    String? search,
+    String? category,
+  }) async => [edition];
 }
 
 final class _FakePlayer extends AudioPlayer {

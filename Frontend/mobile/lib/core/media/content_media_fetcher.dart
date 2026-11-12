@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
 import '../config/app_config.dart';
+import '../network/feature_read_cache.dart';
 
 /// The validated, bounded result of one child-facing media download.
 class FetchedContentMedia {
@@ -190,7 +191,9 @@ final class HttpContentMediaFetcher implements ContentMediaFetcher {
 }
 
 /// Shares validated cover downloads and bounds their retained encoded bytes.
-/// Non-image responses and failures are never retained.
+/// Unscoped query URLs bypass storage and sharing. Private images can reuse
+/// bytes only through [fetchScoped], before signed expiry and within the same
+/// media generation. Public and scoped entries share one byte and entry budget.
 final class CachedContentMediaFetcher implements ContentMediaFetcher {
   CachedContentMediaFetcher({
     required this.fetcher,
@@ -209,9 +212,10 @@ final class CachedContentMediaFetcher implements ContentMediaFetcher {
   final int maxEntries;
   final Duration maxAge;
   final DateTime Function() _now;
-  final _entries = <String, _CachedMedia>{};
-  final _pending = <String, Future<FetchedContentMedia>>{};
+  final _entries = <Object, _CachedMedia>{};
+  final _pending = <Object, Future<FetchedContentMedia>>{};
   int _retainedBytes = 0;
+  int _scopedGeneration = -1;
 
   @override
   Future<FetchedContentMedia> fetch(Object? source) {
@@ -221,54 +225,109 @@ final class CachedContentMediaFetcher implements ContentMediaFetcher {
         const ContentMediaFetchException('untrusted_media_uri'),
       );
     }
+    if (Uri.parse(key).hasQuery) {
+      return Future<FetchedContentMedia>.sync(() => fetcher.fetch(key));
+    }
+    return _fetchValidated(key, key: key);
+  }
+
+  /// The caller must establish and recheck its current authenticated scope.
+  /// Unknown query expiry is never retained or shared, even within that scope.
+  Future<FetchedContentMedia> fetchScoped(
+    Object? source, {
+    required Object scope,
+  }) async {
+    final trusted = policy.sanitize(source);
+    if (trusted == null) {
+      throw const ContentMediaFetchException('untrusted_media_uri');
+    }
+    final generation = featureReadCache.mediaGeneration;
+    if (_scopedGeneration != generation) {
+      for (final key in _entries.keys.where((key) => key is! String).toList()) {
+        _retainedBytes -= _entries.remove(key)!.media.bytes.length;
+      }
+      _pending.removeWhere((key, _) => key is! String);
+      _scopedGeneration = generation;
+    }
+    final expiry = featureMediaExpiry([trusted]);
+    final media = await _fetchValidated(
+      trusted,
+      key: (scope, generation, trusted),
+      scopedGeneration: generation,
+      sharePending: expiry == null || _now().isBefore(expiry),
+    );
+    if (generation != featureReadCache.mediaGeneration) {
+      throw const ContentMediaFetchException('media_request_stale');
+    }
+    return media;
+  }
+
+  Future<FetchedContentMedia> _fetchValidated(
+    String source, {
+    required Object key,
+    int? scopedGeneration,
+    bool sharePending = true,
+  }) {
     final cached = _entries.remove(key);
     if (cached != null) {
       _retainedBytes -= cached.media.bytes.length;
-      if (_now().difference(cached.savedAt) < maxAge) {
+      if (_now().isBefore(cached.expiresAt)) {
         _entries[key] = cached;
         _retainedBytes += cached.media.bytes.length;
         return Future.value(cached.media);
       }
     }
-    final pending = _pending[key];
+    final pending = sharePending ? _pending[key] : null;
     if (pending != null) return pending;
 
     Future<FetchedContentMedia> loadAndStore() async {
-      try {
-        final media = await Future<FetchedContentMedia>.sync(
-          () => fetcher.fetch(key),
-        );
-        if (media.contentType?.startsWith('image/') == true &&
-            media.bytes.length <= maxBytes) {
-          _entries[key] = _CachedMedia(media, _now());
-          _retainedBytes += media.bytes.length;
-          while (_retainedBytes > maxBytes || _entries.length > maxEntries) {
-            _retainedBytes -= _entries
-                .remove(_entries.keys.first)!
-                .media
-                .bytes
-                .length;
-          }
-        }
-        return media;
-      } finally {
-        _pending.remove(key);
+      final media = await Future<FetchedContentMedia>.sync(
+        () => fetcher.fetch(source),
+      );
+      var expiry = _now().add(maxAge);
+      final providerExpiry = featureMediaExpiry([
+        source,
+        media.finalUri.toString(),
+      ]);
+      if (providerExpiry != null && providerExpiry.isBefore(expiry)) {
+        expiry = providerExpiry;
       }
+      if ((scopedGeneration == null
+              ? !media.finalUri.hasQuery
+              : scopedGeneration == featureReadCache.mediaGeneration) &&
+          media.contentType?.startsWith('image/') == true &&
+          media.bytes.length <= maxBytes &&
+          _now().isBefore(expiry)) {
+        final replaced = _entries.remove(key);
+        if (replaced != null) _retainedBytes -= replaced.media.bytes.length;
+        _entries[key] = _CachedMedia(media, expiry);
+        _retainedBytes += media.bytes.length;
+        while (_retainedBytes > maxBytes || _entries.length > maxEntries) {
+          _retainedBytes -= _entries
+              .remove(_entries.keys.first)!
+              .media
+              .bytes
+              .length;
+        }
+      }
+      return media;
     }
 
     final request = loadAndStore();
-    _pending[key] = request;
-    return request;
+    if (sharePending && _pending.length < maxEntries) _pending[key] = request;
+    return request.whenComplete(() {
+      if (identical(_pending[key], request)) _pending.remove(key);
+    });
   }
 }
 
 final class _CachedMedia {
-  const _CachedMedia(this.media, this.savedAt);
+  const _CachedMedia(this.media, this.expiresAt);
   final FetchedContentMedia media;
-  final DateTime savedAt;
+  final DateTime expiresAt;
 }
 
-final ContentMediaFetcher defaultContentMediaFetcher =
+final CachedContentMediaFetcher defaultContentMediaFetcher =
     CachedContentMediaFetcher(
       policy: AppConfig.contentMediaPolicy,
       fetcher: HttpContentMediaFetcher(policy: AppConfig.contentMediaPolicy),

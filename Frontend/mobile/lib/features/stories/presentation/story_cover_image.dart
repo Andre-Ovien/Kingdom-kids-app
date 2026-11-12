@@ -34,6 +34,7 @@ class StoryCoverImage extends StatefulWidget {
 
 class _StoryCoverImageState extends State<StoryCoverImage> {
   Future<Object?> Function()? _refreshSource;
+  ContentMediaFetcher? _scopedFetcher;
 
   @override
   void initState() {
@@ -47,6 +48,8 @@ class _StoryCoverImageState extends State<StoryCoverImage> {
     if (oldWidget.story.id != widget.story.id ||
         oldWidget.story.slug != widget.story.slug ||
         oldWidget.story.coverImageUrl != widget.story.coverImageUrl ||
+        !identical(oldWidget.mediaFetcher, widget.mediaFetcher) ||
+        !identical(oldWidget.mediaPolicy, widget.mediaPolicy) ||
         !identical(oldWidget.authRepository, widget.authRepository) ||
         !identical(oldWidget.storyRepository, widget.storyRepository)) {
       _configureScope();
@@ -54,6 +57,7 @@ class _StoryCoverImageState extends State<StoryCoverImage> {
   }
 
   void _configureScope() {
+    _scopedFetcher = null;
     final original = widget.story;
     if (!canRefreshPrivateImageSource(original.coverImageUrl)) {
       _refreshSource = null;
@@ -61,10 +65,18 @@ class _StoryCoverImageState extends State<StoryCoverImage> {
     }
     final auth = widget.authRepository ?? AuthRepository();
     final scope = MediaAccessScope(auth);
+    if (widget.mediaFetcher == null &&
+        identical(widget.mediaPolicy, AppConfig.contentMediaPolicy)) {
+      _scopedFetcher = ScopedContentMediaFetcher(
+        authRepository: auth,
+        accessScope: scope,
+      );
+    }
     final repository =
         widget.storyRepository ?? RemoteStoryRepository(authRepository: auth);
     _refreshSource = () async {
       await scope.requireCurrent();
+      auth.invalidateFeatureReads();
       final fresh = await repository.fetchStory(original.slug);
       await scope.requireCurrent();
       if (!mounted ||
@@ -87,7 +99,7 @@ class _StoryCoverImageState extends State<StoryCoverImage> {
     final image = ContentMediaImage(
       source: story.coverImageUrl,
       mediaPolicy: widget.mediaPolicy,
-      mediaFetcher: widget.mediaFetcher,
+      mediaFetcher: widget.mediaFetcher ?? _scopedFetcher,
       sourceRefresher: _refreshSource,
       fit: fit,
       alignment: story.imageAlignment,

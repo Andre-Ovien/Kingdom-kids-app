@@ -35,7 +35,7 @@ class RemoteStreakRepository implements StreakRepository {
       );
     }
 
-    return _authRepository.withAccessToken((accessToken) async {
+    final receipt = await _authRepository.withAccessToken((accessToken) async {
       final latestProfile = await _authRepository.currentKid();
       if (latestProfile?.id != activeProfile.id ||
           latestProfile?.parentId != activeProfile.parentId) {
@@ -50,5 +50,9 @@ class RemoteStreakRepository implements StreakRepository {
         timezoneOffsetMinutes: DateTime.now().timeZoneOffset.inMinutes,
       );
     });
+    if (receipt.xpAwarded > 0 || receipt.levelMilestone != null) {
+      _authRepository.invalidateFeatureReads(includeMedia: false);
+    }
+    return receipt;
   }
 }

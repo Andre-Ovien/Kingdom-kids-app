@@ -8,10 +8,156 @@ import 'package:just_audio/just_audio.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/media/content_media_fetcher.dart';
+import '../../../core/network/feature_read_cache.dart';
 import '../domain/story_detail.dart';
 
 typedef HostedNarrationMetadataResolver =
     Future<StoryNarration> Function(StoryNarration original, String fullText);
+typedef StoryAudioCacheScopeResolver = Future<Object?> Function();
+
+/// Bounded bytes only: local player files still belong to one service and are
+/// deleted on disposal. A cache hit needs the same explicitly validated family,
+/// child, avatar and sign-in scope, exact URL, and current media generation.
+class ScopedStoryAudioCache {
+  ScopedStoryAudioCache({
+    this.maxBytes = 32 * 1024 * 1024,
+    this.maxEntries = 4,
+    this.maxAge = const Duration(minutes: 1),
+    DateTime Function()? now,
+  }) : assert(maxBytes > 0),
+       assert(maxEntries > 0),
+       _now = now ?? DateTime.now;
+
+  final int maxBytes;
+  final int maxEntries;
+  final Duration maxAge;
+  final DateTime Function() _now;
+  final _entries = <Object, _StoryAudioEntry>{};
+  final _pending = <Object, Future<FetchedContentMedia>>{};
+  int _generation = -1;
+  int _retainedBytes = 0;
+
+  Future<FetchedContentMedia> fetch({
+    required String source,
+    required ContentMediaPolicy policy,
+    required ContentMediaFetcher fetcher,
+    StoryAudioCacheScopeResolver? scopeResolver,
+    Future<void> Function()? scopeValidator,
+  }) async {
+    final trusted = policy.sanitize(source);
+    if (trusted == null) {
+      throw const ContentMediaFetchException('untrusted_media_uri');
+    }
+    // Never infer identity from a signed URL, and never put private bytes into
+    // the public image cache when the caller cannot establish a current scope.
+    if (scopeResolver == null || scopeValidator == null) {
+      return fetcher.fetch(trusted);
+    }
+    await scopeValidator();
+    final scope = await scopeResolver();
+    if (scope == null) return fetcher.fetch(trusted);
+    final generation = featureReadCache.mediaGeneration;
+    if (_generation != generation) {
+      _generation = generation;
+      _entries.clear();
+      _pending.clear();
+      _retainedBytes = 0;
+    }
+    final key = (
+      scope,
+      policy.apiBaseUrl,
+      policy.configuredHosts,
+      policy.requireHttps,
+      trusted,
+      generation,
+    );
+    Future<void> requireCurrent() async {
+      await scopeValidator();
+      if (scope != await scopeResolver() ||
+          generation != featureReadCache.mediaGeneration) {
+        throw const AppException(
+          'The active profile changed. Open this story again to continue.',
+          code: 'active_kid_changed',
+        );
+      }
+    }
+
+    final sourceExpiry = featureMediaExpiry([trusted]);
+    final mayReuse = sourceExpiry == null || _now().isBefore(sourceExpiry);
+    final cached = _entries.remove(key);
+    if (cached != null) {
+      _retainedBytes -= cached.media.bytes.length;
+      if (mayReuse && _now().isBefore(cached.expiresAt)) {
+        await requireCurrent();
+        if (_now().isBefore(cached.expiresAt)) {
+          _entries[key] = cached;
+          _retainedBytes += cached.media.bytes.length;
+          return cached.media;
+        }
+      }
+    }
+    final pending = mayReuse ? _pending[key] : null;
+    if (pending != null) {
+      final media = await pending;
+      await requireCurrent();
+      final expiry = featureMediaExpiry([trusted, media.finalUri.toString()]);
+      if (expiry != null && !_now().isBefore(expiry)) {
+        final fresh = await fetcher.fetch(trusted);
+        await requireCurrent();
+        return fresh;
+      }
+      return media;
+    }
+    Future<FetchedContentMedia> load() async {
+      final media = await fetcher.fetch(trusted);
+      await requireCurrent();
+      var expiry = _now().add(maxAge);
+      final providerExpiry = featureMediaExpiry([
+        trusted,
+        media.finalUri.toString(),
+      ]);
+      if (providerExpiry != null && providerExpiry.isBefore(expiry)) {
+        expiry = providerExpiry;
+      }
+      if (media.contentType?.startsWith('audio/') == true &&
+          media.bytes.length <= maxBytes &&
+          _now().isBefore(expiry)) {
+        final replaced = _entries.remove(key);
+        if (replaced != null) _retainedBytes -= replaced.media.bytes.length;
+        _entries[key] = _StoryAudioEntry(media, expiry);
+        _retainedBytes += media.bytes.length;
+        while (_retainedBytes > maxBytes || _entries.length > maxEntries) {
+          _retainedBytes -= _entries
+              .remove(_entries.keys.first)!
+              .media
+              .bytes
+              .length;
+        }
+      }
+      return media;
+    }
+
+    final request = load();
+    if (mayReuse &&
+        !Uri.parse(trusted).hasQuery &&
+        _pending.length < maxEntries) {
+      _pending[key] = request;
+    }
+    try {
+      return await request;
+    } finally {
+      if (identical(_pending[key], request)) _pending.remove(key);
+    }
+  }
+}
+
+class _StoryAudioEntry {
+  const _StoryAudioEntry(this.media, this.expiresAt);
+  final FetchedContentMedia media;
+  final DateTime expiresAt;
+}
+
+final _storyAudioCache = ScopedStoryAudioCache();
 
 typedef NarrationErrorCallback = void Function(String message);
 typedef NarrationProgressCallback =
@@ -58,12 +204,14 @@ class CharacterStoryNarrationService implements StoryNarrationService {
     StoryNarrationService? hostedService,
     HostedNarrationMetadataResolver? hostedMetadataResolver,
     Future<void> Function()? hostedScopeValidator,
+    StoryAudioCacheScopeResolver? hostedCacheScopeResolver,
   }) : _device = deviceService ?? DeviceStoryNarrationService(),
        _hosted =
            hostedService ??
            HostedStoryNarrationService(
              metadataResolver: hostedMetadataResolver,
              scopeValidator: hostedScopeValidator,
+             cacheScopeResolver: hostedCacheScopeResolver,
            );
 
   final StoryNarrationService _device;
@@ -162,7 +310,11 @@ class HostedStoryNarrationService implements StoryNarrationService {
     ContentMediaFetcher? mediaFetcher,
     HostedNarrationMetadataResolver? metadataResolver,
     Future<void> Function()? scopeValidator,
+    StoryAudioCacheScopeResolver? cacheScopeResolver,
+    ScopedStoryAudioCache? audioCache,
   }) : _scopeValidator = scopeValidator,
+       _cacheScopeResolver = cacheScopeResolver,
+       _audioCache = audioCache ?? _storyAudioCache,
        _metadataResolver = metadataResolver,
        _player = audioPlayer ?? AudioPlayer(),
        _mediaPolicy = mediaPolicy {
@@ -184,6 +336,8 @@ class HostedStoryNarrationService implements StoryNarrationService {
 
   final HostedNarrationMetadataResolver? _metadataResolver;
   final Future<void> Function()? _scopeValidator;
+  final StoryAudioCacheScopeResolver? _cacheScopeResolver;
+  final ScopedStoryAudioCache _audioCache;
   final AudioPlayer _player;
   late final Stream<Duration> _positionUpdates;
   final ContentMediaPolicy _mediaPolicy;
@@ -362,7 +516,13 @@ class HostedStoryNarrationService implements StoryNarrationService {
       return;
     }
     await _deletePreparedSource();
-    final media = await _mediaFetcher.fetch(source);
+    final media = await _audioCache.fetch(
+      source: source,
+      policy: _mediaPolicy,
+      fetcher: _mediaFetcher,
+      scopeResolver: _cacheScopeResolver,
+      scopeValidator: _scopeValidator,
+    );
     if (!_isCurrent(requestId)) return;
     final directory = await Directory.systemTemp.createTemp(
       'kingdom_kids_story_',

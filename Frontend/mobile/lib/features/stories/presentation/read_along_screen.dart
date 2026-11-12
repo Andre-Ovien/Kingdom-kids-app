@@ -163,6 +163,7 @@ class _ReadAlongScreenState extends State<ReadAlongScreen>
         CharacterStoryNarrationService(
           hostedMetadataResolver: metadata!.resolve,
           hostedScopeValidator: metadata.validateScope,
+          hostedCacheScopeResolver: _authRepository.featureCacheScope,
         );
     _settingsRepository =
         widget.settingsRepository ??

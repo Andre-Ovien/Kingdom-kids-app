@@ -137,7 +137,10 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
         body: SafeArea(
           child: RefreshIndicator(
             color: const Color(0xFFFF7043),
-            onRefresh: _load,
+            onRefresh: () async {
+              _authRepository.invalidateFeatureReads();
+              await _load();
+            },
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [

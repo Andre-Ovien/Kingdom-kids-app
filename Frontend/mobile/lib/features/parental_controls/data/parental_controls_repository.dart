@@ -21,10 +21,11 @@ class RemoteParentalControlsRepository implements ParentalControlsRepository {
     ParentalControlsApi? api,
     ParentSettingsStore? settingsStore,
   }) : _authRepository = authRepository ?? AuthRepository(),
-       _api = api ?? HttpParentalControlsApi(),
+       _api = api ?? _sharedApi,
        _settingsStore = settingsStore ?? SecureParentSettingsStore();
 
   final AuthRepository _authRepository;
+  static final ParentalControlsApi _sharedApi = HttpParentalControlsApi();
   final ParentalControlsApi _api;
   final ParentSettingsStore _settingsStore;
 
@@ -32,12 +33,17 @@ class RemoteParentalControlsRepository implements ParentalControlsRepository {
   Future<ParentSettings> fetchSettings({required String profileId}) async {
     final activeKid = await _requireActiveKid(profileId);
     try {
-      final settings = await _authRepository.withAccessToken(
-        (accessToken) => _api.fetchSettings(
-          accessToken: accessToken,
-          profileId: activeKid.id,
-        ),
+      final settings = await _authRepository.withCachedFeatureRead(
+        (_api, 'preferences', activeKid.id),
+        (accessToken) async {
+          await _requireActiveKid(activeKid.id);
+          return _api.fetchSettings(
+            accessToken: accessToken,
+            profileId: activeKid.id,
+          );
+        },
       );
+      await _requireActiveKid(activeKid.id);
       final matchingSettings = _requireMatchingProfile(settings, activeKid.id);
       await _writeCachedSettings(matchingSettings);
       return matchingSettings;
@@ -72,6 +78,7 @@ class RemoteParentalControlsRepository implements ParentalControlsRepository {
       );
     });
     final matchingSettings = _requireMatchingProfile(settings, activeKid.id);
+    _authRepository.invalidateFeatureReads();
     await _writeCachedSettings(matchingSettings);
     return matchingSettings;
   }

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import '../../../shared/widgets/scoped_feature_page.dart';
 
 import '../../../app/router.dart';
 import '../../../core/errors/app_exception.dart';
@@ -33,6 +34,8 @@ class _StoriesScreenState extends State<StoriesScreen> {
   String _category = 'All';
   String? _errorMessage;
   bool _isLoading = true;
+  Map<String, Object?>? _viewMemory;
+  FeatureScrollController? _scrollController;
 
   @override
   void initState() {
@@ -46,7 +49,24 @@ class _StoriesScreenState extends State<StoriesScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_scrollController != null) return;
+    _viewMemory = FeatureViewMemory.maybeOf(context);
+    _query = _viewMemory?['query'] as String? ?? '';
+    _category = _viewMemory?['category'] as String? ?? 'All';
+    _searchController.text = _query;
+    _scrollController = FeatureScrollController(_viewMemory);
+  }
+
+  @override
   void dispose() {
+    _viewMemory?.addAll({
+      'query': _query,
+      'category': _category,
+      'scroll': _scrollController?.rememberedOffset ?? 0.0,
+    });
+    _scrollController?.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -77,6 +97,7 @@ class _StoriesScreenState extends State<StoriesScreen> {
           _category = 'All';
         }
       });
+      _scrollController?.restoreAfterLoad();
     } on AppException catch (error) {
       if (mounted && returnToSignInIfSessionExpired(context, error)) {
         return;
@@ -254,9 +275,13 @@ class _StoriesScreenState extends State<StoriesScreen> {
           children: [
             RefreshIndicator(
               color: const Color(0xFFFF5F56),
-              onRefresh: _loadLibrary,
+              onRefresh: () async {
+                _authRepository.invalidateFeatureReads();
+                await _loadLibrary();
+              },
               child: CustomScrollView(
                 key: const Key('story-library-scroll'),
+                controller: _scrollController,
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
                   SliverPadding(

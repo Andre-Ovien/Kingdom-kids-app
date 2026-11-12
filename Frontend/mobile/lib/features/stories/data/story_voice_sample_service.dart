@@ -6,6 +6,7 @@ import 'package:just_audio/just_audio.dart';
 
 import '../../../core/config/app_config.dart';
 import '../../../core/media/content_media_fetcher.dart';
+import 'story_narration_service.dart';
 
 typedef VoiceSampleErrorCallback = void Function(String message);
 
@@ -33,7 +34,14 @@ class HostedStoryVoiceSampleService implements StoryVoiceSampleService {
     AudioPlayer? audioPlayer,
     ContentMediaPolicy mediaPolicy = AppConfig.contentMediaPolicy,
     ContentMediaFetcher? mediaFetcher,
-  }) : _player = audioPlayer ?? AudioPlayer() {
+    StoryAudioCacheScopeResolver? cacheScopeResolver,
+    Future<void> Function()? scopeValidator,
+    ScopedStoryAudioCache? audioCache,
+  }) : _player = audioPlayer ?? AudioPlayer(),
+       _mediaPolicy = mediaPolicy,
+       _cacheScopeResolver = cacheScopeResolver,
+       _scopeValidator = scopeValidator,
+       _audioCache = audioCache ?? _voiceSampleAudioCache {
     if (mediaFetcher != null) {
       _mediaFetcher = mediaFetcher;
     } else {
@@ -46,6 +54,10 @@ class HostedStoryVoiceSampleService implements StoryVoiceSampleService {
   }
 
   final AudioPlayer _player;
+  final ContentMediaPolicy _mediaPolicy;
+  final StoryAudioCacheScopeResolver? _cacheScopeResolver;
+  final Future<void> Function()? _scopeValidator;
+  final ScopedStoryAudioCache _audioCache;
   late final ContentMediaFetcher _mediaFetcher;
   HttpContentMediaFetcher? _ownedMediaFetcher;
   late final StreamSubscription<PlayerState> _stateSubscription;
@@ -84,7 +96,13 @@ class HostedStoryVoiceSampleService implements StoryVoiceSampleService {
     try {
       await _player.stop();
       await _deletePreparedSample();
-      final media = await _mediaFetcher.fetch(sampleUrl);
+      final media = await _audioCache.fetch(
+        source: sampleUrl,
+        policy: _mediaPolicy,
+        fetcher: _mediaFetcher,
+        scopeResolver: _cacheScopeResolver,
+        scopeValidator: _scopeValidator,
+      );
       if (_disposed || requestId != _playRequestId) return;
       final directory = await Directory.systemTemp.createTemp(
         'kingdom_kids_voice_',
@@ -99,6 +117,8 @@ class HostedStoryVoiceSampleService implements StoryVoiceSampleService {
       }
       _preparedSampleDirectory = directory;
       await _player.setFilePath(sampleFile.path);
+      if (_disposed || requestId != _playRequestId) return;
+      await _scopeValidator?.call();
       if (_disposed || requestId != _playRequestId) return;
       unawaited(_playPreparedSample(requestId));
     } on PlayerException catch (error) {
@@ -184,6 +204,8 @@ class HostedStoryVoiceSampleService implements StoryVoiceSampleService {
     if (directory != null) await _deleteDirectory(directory);
   }
 }
+
+final _voiceSampleAudioCache = ScopedStoryAudioCache(maxBytes: 8 * 1024 * 1024);
 
 String _audioExtension(String? contentType) {
   return switch (contentType) {

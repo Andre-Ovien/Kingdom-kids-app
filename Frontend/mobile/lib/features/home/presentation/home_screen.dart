@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../../shared/widgets/scoped_feature_page.dart';
 
 import '../../../app/app_route_observer.dart';
 import '../../../app/router.dart';
@@ -98,6 +99,8 @@ class _HomeScreenState extends State<HomeScreen>
   int _streakPresentationCycle = 0;
   bool _appIsActive = true;
   ModalRoute<dynamic>? _observedRoute;
+  Map<String, Object?>? _viewMemory;
+  FeatureScrollController? _scrollController;
 
   @override
   void initState() {
@@ -130,6 +133,11 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (_scrollController == null) {
+      _viewMemory = FeatureViewMemory.maybeOf(context);
+      _selectedCategory = _viewMemory?['category'] as String? ?? 'All';
+      _scrollController = FeatureScrollController(_viewMemory);
+    }
     final route = ModalRoute.of(context);
     if (identical(route, _observedRoute)) return;
     if (_observedRoute != null) {
@@ -167,6 +175,11 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   void dispose() {
+    _viewMemory?.addAll({
+      'category': _selectedCategory,
+      'scroll': _scrollController?.rememberedOffset ?? 0.0,
+    });
+    _scrollController?.dispose();
     if (_observedRoute != null) {
       appRouteObserver.unsubscribe(this);
     }
@@ -673,6 +686,7 @@ class _HomeScreenState extends State<HomeScreen>
           _selectedCategory = 'All';
         }
       });
+      _scrollController?.restoreAfterLoad();
     } catch (error) {
       if (!mounted) return;
       if (error is AppException &&
@@ -736,6 +750,7 @@ class _HomeScreenState extends State<HomeScreen>
               children: [
                 CustomScrollView(
                   key: const Key('home-scroll'),
+                  controller: _scrollController,
                   slivers: [
                     SliverPadding(
                       padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),

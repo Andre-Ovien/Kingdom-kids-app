@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import '../../../shared/widgets/scoped_feature_page.dart';
 
 import '../../../app/router.dart';
 import '../../../core/errors/app_exception.dart';
@@ -35,6 +36,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoading = true;
   bool _isSwitching = false;
   bool _requiresSignIn = false;
+  Map<String, Object?>? _viewMemory;
+  FeatureScrollController? _scrollController;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_scrollController != null) return;
+    _viewMemory = FeatureViewMemory.maybeOf(context);
+    _scrollController = FeatureScrollController(_viewMemory);
+  }
+
+  @override
+  void dispose() {
+    _viewMemory?['scroll'] = _scrollController?.rememberedOffset ?? 0.0;
+    _scrollController?.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -47,6 +65,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadProfile({bool isRefresh = false}) async {
+    if (isRefresh) _authRepository.invalidateFeatureReads();
     if (!isRefresh) {
       setState(() {
         _isLoading = true;
@@ -70,7 +89,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return;
       }
 
-      final profile = await _authRepository.refreshCurrentKid();
+      final profile = isRefresh
+          ? await _authRepository.refreshCurrentKid()
+          : await _authRepository.currentKid();
       final refreshedSession = await _authRepository.restoreSession();
       final profiles = refreshedSession?.profiles ?? const <KidProfile>[];
       if (profile == null) {
@@ -97,6 +118,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _requiresSignIn = false;
         _errorMessage = null;
       });
+      _scrollController?.restoreAfterLoad();
     } on AppException catch (error) {
       if (mounted && returnToSignInIfSessionExpired(context, error)) return;
       if (!mounted) return;
@@ -226,6 +248,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 onRefresh: () => _loadProfile(isRefresh: true),
                 child: CustomScrollView(
                   key: const Key('profile-scroll'),
+                  controller: _scrollController,
                   physics: const AlwaysScrollableScrollPhysics(),
                   slivers: [
                     SliverPadding(

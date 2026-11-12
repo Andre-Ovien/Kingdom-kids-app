@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../app/router.dart';
 import '../../../core/errors/app_exception.dart';
+import '../../../shared/widgets/scoped_feature_page.dart';
 import '../../../shared/audio/app_audio_scope.dart';
 import '../../../shared/audio/app_sound_cue.dart';
 import '../../../shared/widgets/floating_liquid_nav.dart';
@@ -50,7 +51,9 @@ class GamesScreen extends StatefulWidget {
 
 class _GamesScreenState extends State<GamesScreen> {
   final _searchController = TextEditingController();
-  final _scrollController = ScrollController();
+  late FeatureScrollController _scrollController;
+  Map<String, Object?>? _viewMemory;
+  bool _viewRestored = false;
   late final AuthRepository _authRepository;
   late final GameRepository _repository;
   List<MiniGame> _games = const [];
@@ -72,7 +75,26 @@ class _GamesScreenState extends State<GamesScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_viewRestored) return;
+    _viewRestored = true;
+    _viewMemory = FeatureViewMemory.maybeOf(context);
+    _query = _viewMemory?['query'] as String? ?? '';
+    _searchController.text = _query;
+    _filter = _viewMemory?['filter'] as GameCategory?;
+    _showSearch = _viewMemory?['search'] as bool? ?? false;
+    _scrollController = FeatureScrollController(_viewMemory);
+  }
+
+  @override
   void dispose() {
+    _viewMemory?.addAll({
+      'query': _query,
+      'filter': _filter,
+      'search': _showSearch,
+      'scroll': _scrollController.rememberedOffset,
+    });
     _searchController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -113,6 +135,7 @@ class _GamesScreenState extends State<GamesScreen> {
             _filter = null;
           }
         });
+        _scrollController.restoreAfterLoad();
       }
     } on AppException catch (error) {
       if (mounted && returnToSignInIfSessionExpired(context, error)) return;
@@ -127,6 +150,11 @@ class _GamesScreenState extends State<GamesScreen> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<void> _refresh() async {
+    _authRepository.invalidateFeatureReads();
+    await _load();
   }
 
   List<MiniGame> get _visibleGames {
@@ -307,7 +335,7 @@ class _GamesScreenState extends State<GamesScreen> {
         children: [
           RefreshIndicator(
             color: _gameInk,
-            onRefresh: _load,
+            onRefresh: _refresh,
             child: CustomScrollView(
               key: const Key('games-scroll'),
               controller: _scrollController,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import '../shared/widgets/scoped_feature_page.dart';
 
 import '../features/auth/presentation/auth_screen.dart';
 import '../features/auth/domain/email_verification.dart';
@@ -93,7 +94,7 @@ class AppRouter {
     final tabTransition = settings.arguments is TabRouteTransition
         ? settings.arguments! as TabRouteTransition
         : null;
-    final Widget screen = switch (settings.name) {
+    final Widget destination = switch (settings.name) {
       AppRoutes.splash => SplashScreen(
         destinationResolver:
             splashDestinationResolver ??
@@ -197,6 +198,10 @@ class AppRouter {
               ),
       _ => const HomeScreen(),
     };
+
+    final screen = AppRoutes.isTabRoute(settings.name)
+        ? ScopedFeaturePage(route: settings.name!, child: destination)
+        : destination;
 
     if (tabTransition != null && AppRoutes.isTabRoute(settings.name)) {
       return TabGlideRoute(
