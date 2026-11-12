@@ -43,6 +43,7 @@ PRODUCTION_ONLY_FLAGS = (
 SANDBOX_ONLY_FLAGS = tuple(flag for flag in DISABLED_FLAGS if flag not in {
     'PAID_CONTENT_ENFORCEMENT_ENABLED', 'PARENT_CONTENT_ACCESS_STATUS_ENABLED'}) + (
     'SQUARE_SANDBOX_RECONCILIATION_JOBS_ENABLED', 'SQUARE_SANDBOX_RENEWAL_JOBS_ENABLED',
+    'SQUARE_SANDBOX_HOSTED_SUBSCRIPTIONS_ENABLED',
 )
 PRODUCTION_QUALIFICATION_FLAGS = PRODUCTION_ONLY_FLAGS + (
     'PAID_CONTENT_ENFORCEMENT_ENABLED', 'PARENT_CONTENT_ACCESS_STATUS_ENABLED',
@@ -62,11 +63,27 @@ CONTROLLED_PRODUCTION_DISABLED_FLAGS = (
     'PAID_CONTENT_ENFORCEMENT_ENABLED', 'SQUARE_PRODUCTION_RENEWALS_ENABLED',
     'SQUARE_PRODUCTION_RECONCILIATION_JOBS_ENABLED', 'SQUARE_PRODUCTION_RENEWAL_JOBS_ENABLED',
 )
+HOSTED_PRODUCTION_FLAGS = (
+    'SQUARE_PRODUCTION_ENABLED', 'SQUARE_PRODUCTION_HTTP_TRANSPORT_ENABLED',
+    'SQUARE_PRODUCTION_HOSTED_SUBSCRIPTIONS_ENABLED', 'SQUARE_HOSTED_RELEASE_QUALIFIED',
+    'PARENT_CONTENT_ACCESS_STATUS_ENABLED', 'PAID_CONTENT_ENFORCEMENT_ENABLED',
+    'DJANGO_EMAIL_DELIVERY_ENABLED', 'CLOUDINARY_PRIVATE_DELIVERY_ENABLED',
+)
+HOSTED_PRODUCTION_DISABLED_FLAGS = (
+    'RENDER_PRODUCTION_CHECKOUT_QUALIFICATION_ENABLED', 'RENDER_PRODUCTION_OPERATIONS_QUALIFIED',
+    'RENDER_PRODUCTION_CUSTOM_DOMAIN_VERIFIED', 'RENDER_CONTROLLED_PRODUCTION_CHECKOUT_ENABLED',
+    'SQUARE_PRODUCTION_RELEASE_QUALIFIED', 'SQUARE_PRODUCTION_CHECKOUT_ENABLED',
+    'PARENT_CHECKOUT_PRODUCTION_ENABLED', 'SQUARE_PRODUCTION_TERM_BILLING_ENABLED',
+    'SQUARE_PRODUCTION_TERM_RECONCILIATION_ENABLED', 'SQUARE_PRODUCTION_CONTROLLED_CHECKOUT_ENABLED',
+    'SQUARE_PRODUCTION_RENEWALS_ENABLED', 'SQUARE_PRODUCTION_RECONCILIATION_JOBS_ENABLED',
+    'SQUARE_PRODUCTION_RENEWAL_JOBS_ENABLED',
+)
 SANDBOX_CONFIGURATION_SLOTS = (
     'SQUARE_SANDBOX_ACCESS_TOKEN', 'SQUARE_SANDBOX_MERCHANT_ID', 'SQUARE_SANDBOX_LOCATION_ID',
     'SQUARE_SANDBOX_APPLICATION_ID', 'SQUARE_SANDBOX_WEBHOOK_SIGNATURE_KEY',
     'SQUARE_SANDBOX_WEBHOOK_NOTIFICATION_URL', 'SQUARE_SANDBOX_PLAN_VARIATION_ID',
     'SQUARE_SANDBOX_TEST_PARENT_IDS',
+    'SQUARE_SANDBOX_HOSTED_MONTHLY_VARIATION_ID', 'SQUARE_SANDBOX_HOSTED_YEARLY_VARIATION_ID',
 )
 SANDBOX_IMPORT_SLOTS = (
     'KK_TEST_FAMILY_IMPORT_ZLIB_B64', 'KK_TEST_FAMILY_IMPORT_SHA256', 'KK_TEST_FAMILY_IMPORT_EMAIL',
@@ -139,6 +156,9 @@ def production_checkout_checks(environ):
         'controlled_checkout_disabled': environ.get('RENDER_CONTROLLED_PRODUCTION_CHECKOUT_ENABLED', 'false') == 'false'
             and environ.get('SQUARE_PRODUCTION_CONTROLLED_CHECKOUT_ENABLED', 'false') == 'false'
             and environ.get('SQUARE_PRODUCTION_CONTROLLED_PARENT_IDS', '') == '',
+        'hosted_checkout_disabled': all(environ.get(name, 'false') == 'false' for name in (
+            'RENDER_HOSTED_PRODUCTION_CHECKOUT_ENABLED', 'SQUARE_PRODUCTION_HOSTED_SUBSCRIPTIONS_ENABLED',
+            'SQUARE_HOSTED_RELEASE_QUALIFIED')),
     }
 
 
@@ -183,6 +203,39 @@ def qualify_controlled_production_checkout(environ):
         raise StartupRejected('Controlled production checkout requires the exact existing HTTPS origin, enrolled parents, production configuration and disabled public-release, enforcement, jobs and renewal gates.')
 
 
+def hosted_production_checkout_checks(environ):
+    """Provider-owned recurring billing, without an app renewal scheduler.
+
+    This is distinct from both old app-scheduled recurring terms and restricted
+    one-period qualification. Canonical plan/payment/ownership proof remains a
+    separate application/provider check, never inferred from local shapes.
+    """
+    base = controlled_production_checkout_checks(environ)
+    names = ('SQUARE_PRODUCTION_HOSTED_MONTHLY_VARIATION_ID', 'SQUARE_PRODUCTION_HOSTED_YEARLY_VARIATION_ID')
+    variations = [environ.get(name, '') for name in names]
+    valid_variations = all(isinstance(value, str) and 1 <= len(value) <= 192 and value.isascii()
+        and not value.lower().startswith('sandbox') and all(32 < ord(char) < 127 for char in value)
+        for value in variations)
+    return {
+        'hosted_startup_opt_in': environ.get('RENDER_HOSTED_PRODUCTION_CHECKOUT_ENABLED') == 'true',
+        'provider_hosted_and_security_flags': all(environ.get(flag) == 'true' for flag in HOSTED_PRODUCTION_FLAGS),
+        'old_checkout_terms_operations_and_jobs_disabled': all(
+            environ.get(flag, 'false') == 'false' for flag in HOSTED_PRODUCTION_DISABLED_FLAGS),
+        'controlled_enrollment_absent': environ.get('SQUARE_PRODUCTION_CONTROLLED_PARENT_IDS', '') == '',
+        'two_distinct_bounded_production_plan_variations': valid_variations and variations[0] != variations[1],
+        'bounded_hosted_provider_timeout': environ.get('SQUARE_HTTP_TIMEOUT_SECONDS', '5') in {'1', '2', '3', '4', '5'},
+        **{key: base[key] for key in ('exact_existing_https_origin_and_callback',
+            'production_environment_and_entitlement', 'reviewed_provider_api_version',
+            'production_public_application_id', 'production_credential_shapes', 'sandbox_flags_disabled',
+            'sandbox_configuration_absent', 'reviewed_render_proxy')},
+    }
+
+
+def qualify_hosted_production_checkout(environ):
+    if not all(hosted_production_checkout_checks(environ).values()):
+        raise StartupRejected('Hosted production checkout requires the exact approved HTTPS origin, reviewed production plans and disabled old checkout, term-dispatch, enrollment and job profiles.')
+
+
 def qualify_production_checkout(environ):
     if not all(production_checkout_checks(environ).values()):
         raise StartupRejected('Production checkout requires an approved isolated origin, complete production configuration and explicitly qualified billing operations.')
@@ -194,14 +247,23 @@ def qualify_checkout(environ):
     production = environ.get('RENDER_PRODUCTION_CHECKOUT_QUALIFICATION_ENABLED', 'false')
     controlled = environ.get('RENDER_CONTROLLED_PRODUCTION_CHECKOUT_ENABLED', 'false')
     controlled_core = environ.get('SQUARE_PRODUCTION_CONTROLLED_CHECKOUT_ENABLED', 'false')
+    hosted = environ.get('RENDER_HOSTED_PRODUCTION_CHECKOUT_ENABLED', 'false')
+    hosted_flags = tuple(environ.get(name, 'false') for name in (
+        'SQUARE_PRODUCTION_HOSTED_SUBSCRIPTIONS_ENABLED', 'SQUARE_SANDBOX_HOSTED_SUBSCRIPTIONS_ENABLED',
+        'SQUARE_HOSTED_RELEASE_QUALIFIED'))
     operations = environ.get('RENDER_PRODUCTION_OPERATIONS_QUALIFIED', 'false')
     custom_verified = environ.get('RENDER_PRODUCTION_CUSTOM_DOMAIN_VERIFIED', 'false')
     handoff = environ.get('PARENT_CHECKOUT_HANDOFF_ENABLED', 'false')
     if any(not isinstance(value, str) or value not in {'true', 'false'}
-            for value in (sandbox, production, controlled, controlled_core, operations, handoff, custom_verified)):
+            for value in (sandbox, production, controlled, controlled_core, hosted, *hosted_flags, operations, handoff, custom_verified)):
         raise StartupRejected('Checkout and operations qualification must be explicitly enabled or disabled.')
-    if sum(value == 'true' for value in (sandbox, production, controlled)) > 1:
+    if sum(value == 'true' for value in (sandbox, production, controlled, hosted)) > 1:
         raise StartupRejected('Checkout startup profiles must be mutually exclusive.')
+    if hosted == 'true':
+        qualify_hosted_production_checkout(environ)
+        return
+    if any(value != 'false' for value in hosted_flags):
+        raise StartupRejected('Hosted subscription checkout must remain disabled without its explicit startup qualification.')
     if controlled == 'true':
         qualify_controlled_production_checkout(environ)
         return
@@ -227,8 +289,10 @@ def production_preflight_report(environ):
     Original Django production checks, DB/cache readiness, backups, scheduler
     heartbeats and canonical provider qualification remain separate evidence.
     """
+    hosted = environ.get('RENDER_HOSTED_PRODUCTION_CHECKOUT_ENABLED', 'false') != 'false'
     controlled = environ.get('RENDER_CONTROLLED_PRODUCTION_CHECKOUT_ENABLED', 'false') != 'false'
-    checks = controlled_production_checkout_checks(environ) if controlled else production_checkout_checks(environ)
+    checks = hosted_production_checkout_checks(environ) if hosted else (
+        controlled_production_checkout_checks(environ) if controlled else production_checkout_checks(environ))
     local_shape = False
     if all(checks.values()):
         try:
@@ -243,9 +307,12 @@ def production_preflight_report(environ):
         and environ.get('RENDER_PRODUCTION_CUSTOM_DOMAIN_VERIFIED', 'false') == 'false'
         and environ.get('RENDER_CONTROLLED_PRODUCTION_CHECKOUT_ENABLED', 'false') == 'false'
         and environ.get('SQUARE_PRODUCTION_CONTROLLED_CHECKOUT_ENABLED', 'false') == 'false'
-        and environ.get('SQUARE_PRODUCTION_CONTROLLED_PARENT_IDS', '') == '')
+        and environ.get('SQUARE_PRODUCTION_CONTROLLED_PARENT_IDS', '') == ''
+        and all(environ.get(name, 'false') == 'false' for name in (
+            'RENDER_HOSTED_PRODUCTION_CHECKOUT_ENABLED', 'SQUARE_PRODUCTION_HOSTED_SUBSCRIPTIONS_ENABLED',
+            'SQUARE_HOSTED_RELEASE_QUALIFIED')))
     return {'schema_version': 1, 'kind': 'offline_production_checkout_configuration',
-        'profile': 'controlled_production' if controlled else 'full_public_production',
+        'profile': 'provider_hosted_production' if hosted else 'controlled_production' if controlled else 'full_public_production',
         'status': 'local_configuration_valid' if all(checks.values()) else 'disabled_draft' if disabled_draft else 'blocked',
         'local_configuration_valid': all(checks.values()), 'public_release_ready': False,
         'activation_performed': False, 'provider_operations': 0, 'database_operations': 0,
@@ -254,12 +321,18 @@ def production_preflight_report(environ):
             environ.get('RENDER_PRODUCTION_APPROVED_ORIGIN') == PRODUCTION_CUSTOM_ORIGIN else 'not_selected',
         'failed_checks': sorted(name for name, passed in checks.items() if not passed),
         'automatic_renewals_enabled': False if controlled else None,
-        'scheduled_jobs_claimed': False if controlled else None,
+        'scheduled_jobs_claimed': False if controlled or hosted else None,
+        'renewal_controller': 'square_hosted_subscriptions' if hosted else 'app_owned_terms',
         'runtime_qualification_required': [
             'original_django_production_checks', 'existing_database_and_cache_readiness',
             'canonical_production_merchant_and_location', 'signed_webhook_delivery',
             'explicit_parent_enrollment_and_manual_canonical_recovery',
-            'nonrenewing_controlled_checkout_policy'] if controlled else [
+            'nonrenewing_controlled_checkout_policy'] if controlled and not hosted else [
+            'original_django_production_checks', 'existing_database_and_cache_readiness',
+            'canonical_production_merchant_location_and_two_plan_variations',
+            'signed_subscription_invoice_payment_refund_webhook_delivery',
+            'owned_canonical_reconciliation_and_cancellation',
+            'approved_storefront_parental_gate_privacy_and_distribution_release'] if hosted else [
             'original_django_production_checks', 'qualified_non_sleeping_hosting',
             'custom_domain_dns_mapping_and_certificate_if_selected',
             'durable_database_restore_test_and_cache', 'canonical_production_merchant_and_location',

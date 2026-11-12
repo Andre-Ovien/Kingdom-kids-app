@@ -6,6 +6,7 @@ from .views import (SquareCheckoutCancelView, SquareCheckoutConfirmView, SquareC
                     SquareCheckoutRestartView, SquareSandboxWebhookView)
 
 urlpatterns = [
+    path('square/hosted-checkout/', include('apps.billing.hosted_urls')),
     path('', include('apps.billing.handoff_urls')),
     path('content-access/', ParentContentAccessView.as_view(), name='parent-content-access'),
     path('square/webhook/', SquareSandboxWebhookView.as_view(), name='square-sandbox-webhook'),

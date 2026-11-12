@@ -1,3 +1,4 @@
+import { createPageNotifications } from './page_notifications.js';
 // Parent checkout. Credentials, JWTs and single-use card sources stay in memory.
 const plans = {
   monthly: { amount: 999, cadence: 'DAYS_30', rule: 'elapsed_days_30', label: 'Monthly plan', unit: 'USD every 30 days' },
@@ -84,15 +85,16 @@ export class PurchaseFlow {
     this.environment = environment; this.purpose = purpose;
     this.period = 'monthly'; this.quote = null; this.intent = ''; this.attempted = false;
     this.reserveAttempted = false; this.sourceAllowed = false; this.access = null;
-    this.canCharge = canCharge; this.busy = false;
+    this.canCharge = canCharge; this.busy = false; this.readRevision = 0;
   }
   setQuote(quote, period) {
     if (this.purpose !== 'purchase' || !validQuote(quote, period, this.environment, this.billingMode) || (this.intent && this.period !== period)) throw new Refused();
     this.period = period; this.quote = quote;
   }
-  async readAccess() {
-    const result = await this.api('/api/billing/content-access/', 'GET');
-    if (!validAccess(result, this.parent, this.environment)) throw new Refused();
+  async readAccess({ timeoutMs } = {}) {
+    const revision = ++this.readRevision;
+    const result = await this.api('/api/billing/content-access/', 'GET', undefined, { timeoutMs });
+    if (revision !== this.readRevision || !validAccess(result, this.parent, this.environment)) throw new Refused();
     this.access = result;
     const recovery = this.purpose === 'manage' ? result.management_recovery || result.purchase_recovery : result.purchase_recovery;
     this.recovery = recovery;
@@ -175,11 +177,43 @@ function attachPage() {
   let access = '', signedInEmail = '', flow = null, card = null, busy = false, generation = 0;
   let selectedPeriod = requestedPeriod || 'monthly', planChosen = manageOnly || Boolean(requestedPeriod);
   let cardMount = null, mountSerial = 0, handoffModule = null;
+  const notifications = createPageNotifications(document);
+  let announcedPaid = false, pollTimer, pollSerial = 0, polling = false;
   let handoffPending = Boolean(location.hash && location.hash !== '#main');
   const active = (value) => { if (generation !== value || !access) throw new Refused(); };
   const message = (value, code = '') => {
     $('message').textContent = value; $('message').setAttribute('data-checkout-code', code);
+    if (value) notifications.show(value, { source: $('message'), tone:
+      code === 'payment_confirmed' ? 'success' : ['payment_pending', ''].includes(code) ? 'info' : 'error' });
   };
+  function stopPolling() { pollSerial++; clearTimeout(pollTimer); polling = false; }
+  function startPolling() {
+    if (polling || !access || !flow?.attempted || flow.access?.access_state === 'paid' || document.visibilityState !== 'visible') return;
+    const scope = generation, ticket = ++pollSerial, deadline = Date.now() + 90000;
+    let reads = 0; polling = true; update();
+    const current = () => scope === generation && ticket === pollSerial && Boolean(access) && document.visibilityState === 'visible';
+    const expired = () => {
+      if (scope === generation && ticket === pollSerial) {
+        stopPolling(); update();
+        if (!access) message('Sign in again to check your existing payment. Do not start another payment.', 'payment_pending');
+      }
+    };
+    const tick = async () => {
+      if (!current()) { expired(); return; }
+      try { await refresh({ quiet: true, timeoutMs: Math.max(1, Math.min(15000, deadline - Date.now())) }); }
+      catch (_) { /* Unknown stays pending; never submit another source. */ }
+      if (!current()) { expired(); return; }
+      reads++;
+      if (flow.access?.access_state === 'paid' || reads >= 6 || Date.now() >= deadline) {
+        stopPolling();
+        if (flow.access?.access_state !== 'paid') message('Your payment is still being checked. Keep this purchase and check again; do not start another payment.', 'payment_pending');
+        update(); return;
+      }
+      pollTimer = setTimeout(tick, Math.min(8000, 1000 * 2 ** (reads - 1)));
+      pollTimer?.unref?.(); // A browser timer is numeric; isolated Node tests need no background process.
+    };
+    void tick();
+  }
   function sync() {
     document.querySelectorAll('button').forEach((button) => { button.disabled = busy; });
     for (const period of ['monthly', 'yearly']) if ($(period))
@@ -190,6 +224,8 @@ function attachPage() {
   }
   async function perform(operation) {
     if (busy) return;
+    stopPolling();
+    if (flow) flow.readRevision++; // A prior automatic GET cannot replace this action's newer status.
     const scope = generation;
     busy = true; sync();
     try { await operation(); }
@@ -201,12 +237,12 @@ function attachPage() {
       'Your payment is not confirmed. Check or recover the existing purchase before trying another payment.' :
       'This action could not be confirmed. Please try again or use parent account settings in the app.',
       flow?.attempted ? 'payment_uncertain' : 'action_unconfirmed'); }
-    finally { if (scope === generation) { busy = false; update(); } }
+    finally { if (scope === generation) { busy = false; update(); startPolling(); } }
   }
-  async function api(path, method = 'GET', body) {
+  async function api(path, method = 'GET', body, { timeoutMs = 40000 } = {}) {
     if (!path.startsWith('/api/') || path.startsWith('//')) throw new Refused();
     const requestGeneration = generation, requestAccess = access;
-    const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 40000);
+    const controller = new AbortController(), timer = setTimeout(() => controller.abort(), Math.max(1, Math.min(timeoutMs, 40000)));
     try {
       const headers = { Accept: 'application/json' };
       if (body !== undefined) headers['Content-Type'] = 'application/json';
@@ -224,7 +260,13 @@ function attachPage() {
       const value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(buffer));
       chunks = [];
       if (response.status === 401 && path !== '/api/accounts/login/' &&
-          requestGeneration === generation && requestAccess === access) access = '';
+          requestGeneration === generation && requestAccess === access) {
+        // Expiry owns the same cleanup as logout. A later parent must receive
+        // a fresh SDK frame, never the previous parent's hidden card form.
+        clear({ silent: true });
+        message('Sign in again to check your existing payment. Your app session is unchanged.', 'payment_pending');
+        update();
+      }
       if (!response.ok) throw new Refused();
       return value;
     } finally { clearTimeout(timer); }
@@ -317,8 +359,10 @@ function attachPage() {
     $('password-area').hidden = !ready && !(pending && flow?.intent);
     $('pay').hidden = !ready;
     $('recovery').hidden = !pending;
+    $('recovery').setAttribute('aria-busy', String(polling));
     $('recovery-copy').textContent = restart ? 'This payment was unsuccessful. Review the agreement before starting again.' :
       'Your payment is not confirmed yet. Check or recover this same payment.';
+    if ($('payment-progress')) $('payment-progress').hidden = !polling || paid;
     $('recover').hidden = !pending || !flow?.intent || restart;
     $('restart').hidden = !restart;
     $('retry-access').hidden = !access || paid || pending || (ready && (Boolean(card) || busy));
@@ -333,9 +377,14 @@ function attachPage() {
     $('secure-note').hidden = !ready;
     sync();
   }
-  async function refresh() {
-    const result = await flow.readAccess();
-    message(result.access_state === 'paid' ? '' :
+  async function refresh({ quiet = false, timeoutMs } = {}) {
+    const result = await flow.readAccess({ timeoutMs });
+    if (result.access_state === 'paid') {
+      if (!announcedPaid) { announcedPaid = true; message('Payment confirmed. Your access is active.', 'payment_confirmed'); }
+      return;
+    }
+    if (quiet) return;
+    message(
       result.checkout.state !== 'available' ? 'Checkout is unavailable at this address. Parent account settings in the app remain accessible.' :
       result.access_state === 'unpaid' || flow.sourceAllowed ? '' :
       'Access could not yet be confirmed. Your account is still signed in. Check or recover an existing purchase.');
@@ -419,6 +468,7 @@ function attachPage() {
     message('Future renewals are stopped. Already-paid access keeps its original end.');
   });
   function clear({ silent = false } = {}) {
+    stopPolling(); notifications.clear(); announcedPaid = false;
     handoffModule?.revokeHandoff(access);
     handoffPending = false;
     generation++; access = ''; signedInEmail = ''; flow = null; busy = false;
@@ -432,6 +482,10 @@ function attachPage() {
   }
   $('sign-out').onclick = () => clear();
   window.addEventListener('pagehide', () => clear({ silent: true }));
+  document.addEventListener?.('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') { stopPolling(); update(); }
+    else startPolling();
+  });
   async function bootstrapHandoff() {
     const fragment = location.hash;
     if (!fragment || fragment === '#main') return;

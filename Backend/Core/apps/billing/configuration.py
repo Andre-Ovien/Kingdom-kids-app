@@ -46,7 +46,8 @@ def require_controlled_production():
     required = ('SQUARE_PRODUCTION_ENABLED', 'SQUARE_PRODUCTION_CHECKOUT_ENABLED',
         'SQUARE_PRODUCTION_TERM_BILLING_ENABLED', 'SQUARE_PRODUCTION_TERM_RECONCILIATION_ENABLED',
         'PARENT_CHECKOUT_PRODUCTION_ENABLED', 'PARENT_CONTENT_ACCESS_STATUS_ENABLED')
-    disabled = ('SQUARE_PRODUCTION_RELEASE_QUALIFIED', 'PAID_CONTENT_ENFORCEMENT_ENABLED',
+    disabled = ('SQUARE_PRODUCTION_HOSTED_SUBSCRIPTIONS_ENABLED','SQUARE_SANDBOX_HOSTED_SUBSCRIPTIONS_ENABLED',
+        'SQUARE_HOSTED_RELEASE_QUALIFIED','SQUARE_PRODUCTION_RELEASE_QUALIFIED', 'PAID_CONTENT_ENFORCEMENT_ENABLED',
         'SQUARE_PRODUCTION_RENEWALS_ENABLED', 'SQUARE_PRODUCTION_RECONCILIATION_JOBS_ENABLED',
         'SQUARE_PRODUCTION_RENEWAL_JOBS_ENABLED', 'SQUARE_SANDBOX_RECONCILIATION_JOBS_ENABLED',
         'SQUARE_SANDBOX_RENEWAL_JOBS_ENABLED', 'SQUARE_SANDBOX_ENABLED', 'SQUARE_SANDBOX_CHECKOUT_ENABLED',
@@ -98,7 +99,8 @@ def assert_client_environment(client, *, environment='sandbox'):
 
 
 def require_production_qualified():
-    if (controlled_production_checkout() or getattr(settings, 'SQUARE_PRODUCTION_RELEASE_QUALIFIED', False) is not True
+    if (getattr(settings,'SQUARE_PRODUCTION_HOSTED_SUBSCRIPTIONS_ENABLED',False) is True
+            or controlled_production_checkout() or getattr(settings, 'SQUARE_PRODUCTION_RELEASE_QUALIFIED', False) is not True
             or getattr(settings, 'PAID_CONTENT_ENFORCEMENT_ENABLED', False) is not True
             or getattr(settings, 'PARENT_CONTENT_ACCESS_STATUS_ENABLED', False) is not True
             or getattr(settings, 'PAID_CONTENT_ENTITLEMENT_ENVIRONMENT', '') != 'production'):
@@ -106,6 +108,8 @@ def require_production_qualified():
 
 
 def require_checkout_enabled(*, environment='sandbox'):
+    if getattr(settings,environment_prefix(environment)+'_HOSTED_SUBSCRIPTIONS_ENABLED',False) is True:
+        raise SquareDisabled('App-owned payment creation is paused while hosted subscriptions are selected.')
     if environment == 'production':
         require_production_billing_profile()
         if (getattr(settings, 'SQUARE_PRODUCTION_CHECKOUT_ENABLED', False) is not True

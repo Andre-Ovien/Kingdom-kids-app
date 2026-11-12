@@ -87,6 +87,11 @@ def verified_paid_coverage_until(parent, *, environment, at=None):
     with closing(candidates.iterator(chunk_size=100)) as rows:
         for row in rows:
             if valid_proof_identifier(row.provider_account_id) and valid_proof_identifier(row.source_reference):
+                if row.provider == 'square' and row.source_reference.startswith('square-hosted:'):
+                    from .hosted_checkout import valid_entitlement
+                    if not valid_entitlement(row,parent):
+                        continue
+                    return min(row.valid_until,row.revoked_at) if row.revoked_at else row.valid_until
                 if environment == 'production' and row.provider == 'square' and not _production_square_proof(row, parent):
                     continue
                 return min(row.valid_until, row.revoked_at) if row.revoked_at else row.valid_until

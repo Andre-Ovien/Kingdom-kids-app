@@ -4,10 +4,27 @@ from unittest import TestCase
 from unittest.mock import patch
 
 from Backend.scripts import production_checkout_preflight as preflight
-from Backend.scripts.test_render_start import environment, production_environment, controlled_production_environment
+from Backend.scripts.test_render_start import environment, production_environment, controlled_production_environment, hosted_production_environment
 
 
 class ProductionPreflightTests(TestCase):
+    def test_hosted_profile_is_noncharging_without_app_scheduler_or_paid_hosting_requirement(self):
+        values, output = hosted_production_environment(), []
+        original = dict(values)
+        self.assertEqual(preflight.main(values, output.append), 0)
+        report = json.loads(output[0]); self.assertEqual(values, original)
+        self.assertEqual(report['profile'], 'provider_hosted_production')
+        self.assertEqual(report['renewal_controller'], 'square_hosted_subscriptions')
+        for name in ('public_release_ready', 'activation_performed', 'scheduled_jobs_claimed'): self.assertFalse(report[name])
+        self.assertIsNone(report['automatic_renewals_enabled'])
+        self.assertEqual((report['database_operations'], report['provider_operations'], report['environment_mutations']), (0, 0, 0))
+        self.assertNotIn('qualified_non_sleeping_hosting', report['runtime_qualification_required'])
+        self.assertNotIn('scheduled_reconciliation_and_renewal_heartbeats', report['runtime_qualification_required'])
+        self.assertIn('owned_canonical_reconciliation_and_cancellation', report['runtime_qualification_required'])
+        self.assertNotIn(values['SQUARE_PRODUCTION_ACCESS_TOKEN'], output[0])
+        values['SQUARE_PRODUCTION_RENEWALS_ENABLED'] = 'true'
+        self.assertEqual(preflight.main(values, lambda _: None), 2)
+
     def test_controlled_profile_is_noncharging_nonrenewing_and_not_public_release(self):
         values, output = controlled_production_environment(), []
         original = dict(values)

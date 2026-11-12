@@ -73,6 +73,11 @@ def checkout_capability(parent, *, purpose='purchase'):
     from .configuration import active_billing_environment, parent_allowed, controlled_production_checkout
     from .models import SquareContentAgreement
     environment = active_billing_environment()
+    from .hosted_provider import hosted_enabled
+    from .hosted_models import SquareHostedAttempt
+    if hosted_enabled(environment) or (environment=='production' and SquareHostedAttempt.objects.filter(parent=parent,environment=environment).exists()):
+        from .hosted_checkout import capability
+        return capability(parent)
     result = {'state': 'unavailable', 'reason_code': 'not_configured',
               'management_state': 'unavailable', 'management_reason_code': 'no_owned_purchase',
               'handoff_available': False, 'management_handoff_available': False,

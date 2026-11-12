@@ -2,6 +2,7 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Payment · Kingdom Kids</title>
 <link rel="stylesheet" href="{% static 'billing/parent_checkout.css' %}">
+<link rel="stylesheet" href="{% static 'billing/page_notifications.css' %}">
 <script type="module" src="{% static 'billing/parent_checkout.js' %}"></script>
 </head><body>
 <header class="page-header"><a class="brand" href="#main">Kingdom Kids</a></header>
@@ -14,7 +15,7 @@
 </div><button id="proceed" type="button" class="primary">Proceed</button>
 </section>{% endif %}
 <div id="selected-plan" class="plan-summary" hidden><span id="plan-name">Monthly plan</span><span><strong id="price">$9.99</strong><small id="unit">USD every 30 days</small></span></div>
-<p id="message" class="message" role="status" aria-live="polite"></p>
+<p id="message" class="message notification-source" role="status" aria-live="polite" aria-atomic="true" tabindex="-1"></p>
 <noscript><p>JavaScript is required for secure checkout.</p></noscript>
 <form id="login-form" method="post" action="/parent/checkout/" autocomplete="off" hidden>
 <p class="hint">Sign in with your verified parent account.</p>
@@ -34,6 +35,7 @@
 </fieldset>
 </div>
 <section id="recovery" class="recovery" hidden><p id="recovery-copy">Check your existing payment before trying again.</p>
+<p id="payment-progress" class="payment-progress" role="status" aria-live="polite" hidden><span class="payment-spinner" aria-hidden="true"></span>Checking your existing payment…</p>
 <button id="check" type="button" class="secondary">Check payment</button></section>
 <div id="authorization" hidden>
 <details id="agreement"><summary>Billing agreement</summary><p id="terms"></p></details>

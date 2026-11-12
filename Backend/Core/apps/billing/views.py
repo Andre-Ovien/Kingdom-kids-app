@@ -54,7 +54,25 @@ class SquareSandboxWebhookView(APIView):
             return self.reply({'detail': 'Invalid signed event.'}, 400)
         except SquareWebhookConflict:
             return self.reply({'detail': 'Event conflict.'}, 409)
-        # This acknowledges durable receipt only. No entitlement/status change.
+        # Hosted Square renewals need no app-owned charging scheduler. Apply
+        # only bounded canonical reads after durable signed receipt, and ask
+        # Square to retry an uncertain observation instead of acknowledging it.
+        from .hosted_provider import hosted_enabled
+        from .hosted_models import SquareHostedAttempt
+        if hosted_enabled(config.environment) or SquareHostedAttempt.objects.filter(
+                environment=config.environment,merchant_id=config.merchant_id).exists():
+            from .parsing import strict_json
+            from .models import SquareWebhookReceipt
+            from .hosted_receipts import process_hosted_receipt
+            try:
+                event_id=strict_json(raw)['event_id']
+                receipt=SquareWebhookReceipt.objects.get(environment=config.environment,
+                    merchant_id=config.merchant_id,event_id=event_id)
+                result=process_hosted_receipt(receipt_id=receipt.pk)
+                if result not in {'processed','ignored'}:
+                    return self.reply({'received':True,'reconciliation':'pending'},503)
+            except Exception:
+                return self.reply({'received':True,'reconciliation':'pending'},503)
         return self.reply({'received': True, 'duplicate': not created}, 200)
 
     def reply(self, data, status):

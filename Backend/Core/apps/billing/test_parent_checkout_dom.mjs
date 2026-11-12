@@ -3,10 +3,11 @@ import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
-const source = await readFile(new URL('./static/billing/parent_checkout.js', import.meta.url), 'utf8');
+const originalSource = await readFile(new URL('./static/billing/parent_checkout.js', import.meta.url), 'utf8');
+const source = originalSource.replace("import { createPageNotifications } from './page_notifications.js';", "const createPageNotifications = () => ({ show() {}, clear() {} });");
 const helperSource = await readFile(new URL('./static/billing/checkout_handoff.js', import.meta.url));
 const handoffModule = await import('data:text/javascript;base64,' + helperSource.toString('base64'));
-const sourceSha = createHash('sha256').update(source).digest('hex');
+const sourceSha = createHash('sha256').update(originalSource).digest('hex');
 const later = () => new Promise((resolve) => setTimeout(resolve, 0));
 const deferred = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return {promise, resolve, reject}; };
 async function fixture(mode) {
@@ -35,7 +36,7 @@ async function fixture(mode) {
   for(const id of ['monthly','yearly','proceed','pay','restart','recover','check','retry-access','stop-renewals','setup','sign-out','login','message',
     'checkout-runtime','plan-name','price','unit','login-form','recovery','recovery-copy','plan-step','selected-plan','page-title',
     'complete','payment-area','authorization','password-area','manage-plan','agreement','consent','card-container','contact','access-date','account-identity','secure-note',
-    'terms','login-password','email','purchase-password','manage-password','given-name','family-name','address','city','region','country']) {
+    'payment-progress','terms','login-password','email','purchase-password','manage-password','given-name','family-name','address','city','region','country']) {
     staticIds.add(id); new Element(id);
   }
   el('consent').type='checkbox';el('country').value='US';
@@ -45,7 +46,9 @@ async function fixture(mode) {
   const inputs=['consent','login-password','email','purchase-password','manage-password','given-name','family-name','address','city','region','country'];
   const oldAttach=deferred(), oldToken=deferred(), oldAccess=deferred();
   let quoteCalls=0, cancelCalls=0, redeemCalls=0, historyClears=0;
-  const windowHandlers = {};
+  const windowHandlers = {}, queuedPolls = new Map();
+  const schedule=(callback,ms)=>{if(mode==='poll_budget'&&[1000,2000,4000,8000].includes(ms)){const key={unref(){}};queuedPolls.set(key,callback);return key;}return setTimeout(callback,ms);};
+  const unschedule=(key)=>{if(!queuedPolls.delete(key))clearTimeout(key);};
   let created=0, loginCount=0, accessReads=0, confirmCalls=0, destroyCalls=0, tokenizations=0, reserveCalls=0, statusCalls=0;
   const frames = () => {
     const found=[]; const visit=(element)=>{ if(element.sdkFrame) found.push(element.sdkFrame); for(const child of element.children) visit(child); };
@@ -63,7 +66,7 @@ async function fixture(mode) {
   const response=(data,status=200)=>{ const raw=new TextEncoder().encode(JSON.stringify(data));let done=false;
     return{status,ok:status===200,headers:{get:()=> 'application/json'},body:{getReader(){return{
       async read(){if(done)return{done:true};done=true;return{done:false,value:raw};},releaseLock(){}};}}}; };
-  const sandbox={ TextDecoder,TextEncoder,Uint8Array,AbortController,setTimeout,clearTimeout,__handoffModule:handoffModule,
+  const sandbox={ TextDecoder,TextEncoder,Uint8Array,AbortController,setTimeout:schedule,clearTimeout:unschedule,__handoffModule:handoffModule,
     history:{replaceState(_state,_title,path){historyClears++;sandbox.location.hash='';assert.equal(path,'/parent/checkout/?plan=monthly');}},
     document:{getElementById:el,visibilityState:'visible',createElement:()=>new Element(),
       querySelectorAll:(selector)=>(selector==='button'?buttons:inputs).map(el)},
@@ -101,9 +104,11 @@ async function fixture(mode) {
       if(path==='/api/billing/checkout-handoffs/revoke/')return response({});
       if(path==='/api/accounts/login/') {loginCount++;return response({access:'synthetic-memory-'+loginCount,user:{id:'synthetic-parent-'+loginCount,email:'parent-'+loginCount+'@example.test',email_verified:true}});}
       if(path==='/api/billing/content-access/') {accessReads++; if(mode==='stale_401'&&accessReads===2)return oldAccess.promise;
-        const paid=mode==='paid_parent'||mode==='manage_paid'||(mode==='payment_success'&&confirmCalls>0);
+        const paid=mode==='paid_parent'||mode==='manage_paid'||(['payment_success','lost_reply_paid'].includes(mode)&&confirmCalls>0)||(mode==='delayed_verify'&&accessReads>=4);
+        if(mode==='poll_logout_race'&&accessReads===2)return oldAccess.promise;
+        if(mode==='poll_401'&&accessReads===2)return response({detail:'Private expired'},401);
         return response({schema_version:1,parent_id:handoff?'41':'synthetic-parent-'+loginCount,environment,
-          access_state:paid?'paid':mode==='manage_unknown'||mode==='uncertain_post'&&confirmCalls?'unknown':'unpaid',
+          access_state:paid?'paid':mode==='manage_unknown'||['uncertain_post','delayed_verify','poll_budget'].includes(mode)&&confirmCalls?'unknown':'unpaid',
           evaluated_at:'2026-11-12T00:00:00Z',access_until:paid?'2026-12-12T00:00:00Z':null,checkout:{state:manage?'unavailable':'available',management_state:'available'},
           purchase_recovery:(paid||mode==='manage_unknown')?{intent_id:'11111111-1111-4111-8111-111111111111',billing_period:serverPeriod,
             source_allowed:false,renewals_enabled:true,setup_required:false}:
@@ -118,7 +123,7 @@ async function fixture(mode) {
       if(path==='/api/billing/square/checkout-intents/11111111-1111-4111-8111-111111111111/') {
         statusCalls++;return response({id:'11111111-1111-4111-8111-111111111111',terms:quoteFor(serverPeriod),current_term:null});}
       if(path.endsWith('/cancel/')) {cancelCalls++;return response({renewals_enabled:false});}
-      if(path.endsWith('/confirm/')) {if(manage)assert.deepEqual(Object.keys(JSON.parse(options.body)),['password']);confirmCalls++;if(mode==='uncertain_post')throw new Error('private-confirm-reply');return response({});}
+      if(path.endsWith('/confirm/')) {if(manage)assert.deepEqual(Object.keys(JSON.parse(options.body)),['password']);confirmCalls++;if(['uncertain_post','lost_reply_paid','poll_logout_race','poll_budget','poll_401'].includes(mode))throw new Error('private-confirm-reply');return response({});}
       throw new Error('Unexpected synthetic endpoint');
     }
   };
@@ -212,9 +217,42 @@ async function fixture(mode) {
     await pay();assert.equal(confirmCalls,1);assert.equal(tokenizations,1);
     assert.equal(el('page-title').textContent,'Payment confirmed');assert.equal(el('complete').hidden,false);
     for(const id of ['selected-plan','payment-area','pay','recovery','recover','password-area','authorization'])assert.equal(el(id).hidden,true);
-    assert.equal(Boolean(el('manage-plan').open),false);assert.equal(el('message').textContent,'');
+    assert.equal(Boolean(el('manage-plan').open),false);assert.equal(el('message').getAttribute('data-checkout-code'),'payment_confirmed');
     await pay();assert.equal(confirmCalls,1);assert.equal(tokenizations,1);
     return {canonical_paid_success_only:true,no_duplicate_plan_password_pay_or_recovery:true,no_second_charge:true};
+  }
+  if(mode==='poll_budget') {
+    await pay();
+    for(let i=0;i<5;i++){assert.equal(queuedPolls.size,1);const [key,callback]=queuedPolls.entries().next().value;queuedPolls.delete(key);await callback();await settle();}
+    assert.equal(queuedPolls.size,0);assert.equal(accessReads,7);assert.equal(confirmCalls,1);assert.equal(tokenizations,1);
+    assert.equal(el('payment-progress').hidden,true);assert.equal(el('complete').hidden,true);assert.equal(el('recovery').hidden,false);
+    assert.equal(el('pay').disabled,true);assert.equal(el('message').getAttribute('data-checkout-code'),'payment_pending');
+    return {automatic_reads_bounded_at_six:true,pending_retained_after_budget:true,no_confirm_post_or_new_source:true};
+  }
+  if(mode==='poll_401') {
+    await pay();assert.equal(el('login-form').hidden,false);assert.deepEqual(frames(),[]);assert.equal(destroyCalls,1);
+    assert.equal(confirmCalls,1);assert.equal(el('complete').hidden,true);
+    await login();assert.deepEqual(frames(),[2]);assert.ok(el('account-identity').textContent.includes('parent-2@example.test'));
+    return {expired_poll_clears_card_and_parent_identity:true,next_parent_gets_new_frame:true,no_recharge:true};
+  }
+  if(['lost_reply_paid','delayed_verify'].includes(mode)) {
+    await pay();await settle();
+    assert.equal(confirmCalls,1);assert.equal(tokenizations,1);assert.equal(reserveCalls,1);
+    assert.equal(el('complete').hidden,false);assert.equal(el('payment-progress').hidden,true);
+    for(const id of ['pay','recover','password-area','recovery'])assert.equal(el(id).hidden,true);
+    assert.equal(el('message').getAttribute('data-checkout-code'),'payment_confirmed');
+    await pay();assert.equal(confirmCalls,1);assert.equal(tokenizations,1);
+    return {canonical_read_poll_without_second_click:true,lost_reply_or_delayed_proof_recovered:true,no_automatic_confirm_post_or_recharge:true};
+  }
+  if(mode==='poll_logout_race') {
+    await pay();assert.equal(confirmCalls,1);assert.equal(el('payment-progress').hidden,false);
+    await signout();await login();const before=el('message').textContent;
+    oldAccess.resolve(response({schema_version:1,parent_id:'synthetic-parent-1',environment,access_state:'paid',
+      evaluated_at:'2026-11-12T00:00:00Z',access_until:'2026-12-12T00:00:00Z',checkout:{state:'available'}}));await settle();
+    assert.equal(el('complete').hidden,true);assert.equal(el('message').textContent,before);
+    assert.ok(el('account-identity').textContent.includes('parent-2@example.test'));
+    assert.equal(el('payment-progress').hidden,true);assert.equal(confirmCalls,1);
+    return {late_poll_cannot_publish_paid_for_new_parent:true,no_recovery_post:true};
   }
   if(['sdk_invalid','sdk_thrown_invalid','sdk_configuration'].includes(mode)) {
     await pay();assert.equal(confirmCalls,0);assert.equal(reserveCalls,1);assert.equal(tokenizations,1);
@@ -284,6 +322,6 @@ async function fixture(mode) {
 const scenarios={};
 for(const name of ['rejected_destroy','late_attach','late_token','stale_401','sdk_invalid','sdk_thrown_invalid',
   'sdk_configuration','before_token_hidden','before_token_unchecked','after_token_hidden','uncertain_post',
-  'plan_step','paid_parent','yearly_card','payment_success','manage_paid','manage_unknown','production_card','controlled_card','handoff_success','handoff_late','handoff_wrong_plan'])scenarios[name]=await fixture(name);
+  'poll_budget','poll_401','lost_reply_paid','delayed_verify','poll_logout_race','plan_step','paid_parent','yearly_card','payment_success','manage_paid','manage_unknown','production_card','controlled_card','handoff_success','handoff_late','handoff_wrong_plan'])scenarios[name]=await fixture(name);
 const result={source_sha256:sourceSha,fake_dom_sdk_only:true,real_network_requests:0,real_card_data:false,scenarios};
 console.log(JSON.stringify(result));

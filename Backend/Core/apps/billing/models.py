@@ -473,3 +473,5 @@ class SquarePaymentCardBinding(EnvironmentBoundModel):
 
 from .job_models import SquareBillingJobState  # noqa: E402,F401
 from .handoff_models import ParentCheckoutHandoff  # noqa: E402,F401
+from .hosted_models import SquareHostedAttempt, SquareHostedPaymentProof  # noqa: E402,F401
+from .hosted_models import SquareHostedCancellation  # noqa: E402,F401

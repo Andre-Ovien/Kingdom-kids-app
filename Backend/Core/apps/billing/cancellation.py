@@ -27,6 +27,8 @@ def enqueue_account_cancellations(parent):
     # App-owned recurring contracts stop in this same transaction. Their frozen
     # terms retain only provider/evidence refs for an already in-flight payment;
     # no autonomous remote subscription exists for this mode.
+    from .hosted_checkout import enqueue_parent_cancellations
+    enqueue_parent_cancellations(parent)
     SquareContentAgreement.objects.filter(parent=parent).update(renewals_enabled=False,
         canceled_at=timezone.now(), outcome_code='account_deleted', customer_id='', card_id='')
     query = SquareCheckoutIntent.objects.select_for_update().filter(parent=parent, environment='sandbox').exclude(checkout_mode='payments')

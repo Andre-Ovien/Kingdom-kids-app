@@ -1,5 +1,12 @@
 # Production checkout startup qualification
 
+The selected automatic-renewal flow is now the separate
+[Square-hosted production profile](hosted-production-checkout.md), available to
+active verified parents on the existing Free service. Square owns financial
+renewal scheduling; the old app-scheduled release and restricted one-period
+profiles below remain separate, mutually exclusive historical alternatives.
+Neither a paid upgrade nor a custom domain is required for hosted checkout.
+
 Square production checkout can run on the existing Free backend. A paid Render
 plan or custom domain is not required to call Square's production API. There
 are two separate default-OFF startup profiles: restricted, explicitly enrolled

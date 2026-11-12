@@ -1,0 +1,81 @@
+.form-toast {
+  --notice-accent: #17634f;
+  position: fixed;
+  z-index: 1000;
+  top: max(16px, calc(env(safe-area-inset-top, 0px) + 12px));
+  left: 50%;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 30px;
+  align-items: center;
+  gap: 12px;
+  width: min(560px, calc(100vw - 28px));
+  padding: 18px 16px 21px;
+  overflow: hidden;
+  border: 1px solid #d5e6dd;
+  border-radius: 20px;
+  background: #fffef9;
+  color: #123f3e;
+  box-shadow: 0 8px 24px #123f3e14, 0 22px 64px #123f3e24;
+  transform: translateX(-50%);
+  animation: form-toast-arrive 180ms ease-out both;
+}
+
+.form-toast[hidden] { display: none; }
+.form-toast[data-tone="info"] { --notice-accent: #1457ff; border-color: #d8e1f8; }
+.form-toast[data-tone="info"] .form-toast__icon { background: #edf2ff; }
+.form-toast.is-leaving { opacity: 0; transition: opacity 180ms ease-out; animation: none; }
+.form-toast[data-tone="error"] { --notice-accent: #9c4c14; border-color: #ecd8bd; }
+
+.form-toast__icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #e5f2e9;
+  color: var(--notice-accent);
+  font-size: 21px;
+  font-weight: 750;
+}
+
+.form-toast[data-tone="error"] .form-toast__icon { background: #fff0dc; }
+.form-toast__message { margin: 0; font-size: 16px; font-weight: 550; line-height: 1.45; overflow-wrap: anywhere; }
+
+.form-toast__close {
+  display: grid;
+  place-items: center;
+  align-self: start;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #58716b;
+  font-size: 27px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.form-toast__close:hover { background: #edf3eb; }
+.form-toast__close:focus-visible { outline: 2px solid var(--notice-accent); outline-offset: 2px; }
+.form-toast__progress {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 4px;
+  background: var(--notice-accent);
+  transform-origin: left center;
+}
+
+@keyframes form-toast-countdown { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+@keyframes form-toast-arrive {
+  from { opacity: 0; transform: translate(-50%, -10px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .form-toast { animation: none; transition: none; }
+  .form-toast__progress { animation: none !important; }
+}

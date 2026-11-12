@@ -1,0 +1,82 @@
+// Shared by our public forms, payment return page and parent management page.
+// Callers supply fixed UI copy, never raw provider/API error bodies.
+export const TOAST_DURATION_MS = 5000;
+export const TOAST_FADE_MS = 180;
+
+export function createToastClock(dismiss, {
+  duration = TOAST_DURATION_MS, now = () => performance.now(),
+  setTimer = setTimeout, clearTimer = clearTimeout,
+} = {}) {
+  let remaining = duration, started = now(), cancelled = false;
+  const pauses = new Set();
+  const expire = () => { if (!cancelled) { cancelled = true; dismiss(); } };
+  let timer = setTimer(expire, remaining);
+  return {
+    pause(reason) {
+      if (cancelled || pauses.has(reason)) return;
+      if (!pauses.size) { clearTimer(timer); remaining = Math.max(0, remaining - (now() - started)); }
+      pauses.add(reason);
+    },
+    resume(reason) {
+      if (cancelled || !pauses.delete(reason) || pauses.size) return;
+      started = now(); timer = setTimer(expire, remaining);
+    },
+    cancel() { cancelled = true; clearTimer(timer); pauses.clear(); },
+    get paused() { return pauses.size > 0; },
+  };
+}
+
+export function createPageNotifications(doc = globalThis.document, options = {}) {
+  if (!doc?.body) return { show() {}, clear() {}, dispose() {} };
+  const setTimer = options.setTimer ?? setTimeout, clearTimer = options.clearTimer ?? clearTimeout;
+  const toast = doc.createElement('div');
+  toast.className = 'form-toast'; toast.hidden = true;
+  // The caller's persistent status region provides the announcement once.
+  toast.setAttribute('aria-live', 'off');
+  const icon = doc.createElement('span'); icon.className = 'form-toast__icon'; icon.setAttribute('aria-hidden', 'true');
+  const message = doc.createElement('p'); message.className = 'form-toast__message';
+  const close = doc.createElement('button'); close.className = 'form-toast__close'; close.type = 'button';
+  close.setAttribute('aria-label', 'Dismiss notification'); close.textContent = '×';
+  const progress = doc.createElement('div'); progress.className = 'form-toast__progress'; progress.setAttribute('aria-hidden', 'true');
+  toast.append(icon, message, close, progress); doc.body.append(toast);
+  let clock, fadeTimer, source, serial = 0, disposed = false;
+  const clear = () => {
+    serial++; clock?.cancel(); clearTimer(fadeTimer); toast.hidden = true;
+    toast.classList.remove('is-leaving');
+    if (toast.contains(doc.activeElement)) {
+      const target = source?.closest?.('form')?.querySelector?.('input:not(:disabled), button:not(:disabled)') ?? source;
+      target?.focus?.();
+    }
+  };
+  const fade = () => {
+    const own = serial; toast.classList.add('is-leaving');
+    fadeTimer = setTimer(() => { if (own === serial) clear(); }, TOAST_FADE_MS);
+  };
+  const pause = (reason) => { clock?.pause(reason); progress.style.animationPlayState = 'paused'; };
+  const resume = (reason) => {
+    clock?.resume(reason); progress.style.animationPlayState = clock?.paused ? 'paused' : 'running';
+  };
+  const visibility = () => doc.hidden ? pause('hidden') : resume('hidden');
+  close.addEventListener('click', clear);
+  toast.addEventListener('mouseenter', () => pause('hover'));
+  toast.addEventListener('mouseleave', () => resume('hover'));
+  toast.addEventListener('focusin', () => pause('focus'));
+  toast.addEventListener('focusout', (event) => { if (!toast.contains(event.relatedTarget)) resume('focus'); });
+  doc.addEventListener('visibilitychange', visibility);
+  return {
+    show(text, { tone = 'info', source: noticeSource } = {}) {
+      if (disposed || typeof text !== 'string' || !text.trim()) { clear(); return; }
+      clear(); source = noticeSource; toast.dataset.tone = ['success', 'error'].includes(tone) ? tone : 'info';
+      icon.textContent = tone === 'success' ? '✓' : tone === 'error' ? '!' : 'i';
+      message.textContent = text; toast.hidden = false;
+      progress.style.animation = 'none'; void progress.offsetWidth;
+      progress.style.animation = `form-toast-countdown ${TOAST_DURATION_MS}ms linear forwards`;
+      clock = createToastClock(fade, { ...options, setTimer, clearTimer });
+      if (toast.matches?.(':hover')) pause('hover');
+      if (toast.contains(doc.activeElement)) pause('focus');
+      visibility();
+    },
+    clear,
+    dispose() { if (disposed) return; clear(); disposed = true; doc.removeEventListener('visibilitychange', visibility); toast.remove(); },
+  };
+}

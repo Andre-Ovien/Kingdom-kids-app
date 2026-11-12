@@ -85,6 +85,15 @@ The full public recurring-release profile remains separate and still requires
 its approved origin and qualified reconciliation/renewal operations. Both paths
 retain every original security/startup guard; this Blueprint activates neither.
 
+The selected recurring checkout is now the distinct
+[Square-hosted subscription profile](hosted-production-checkout.md). It admits
+active verified parents without an allowlist, enables canonical paid enforcement
+and signed provider reconciliation, and leaves old app checkout/term dispatch,
+all billing jobs and the restricted one-period profile OFF. Square schedules
+renewal charges, so no paid Render worker/cron/upgrade is required. The same exact
+existing HTTPS backend origin and original strict settings remain. The website
+return page only opens the app; native authenticated verification decides success.
+
 The approved Cloudinary delivery switch is now enabled in the Blueprint, with
 `DJANGO_CONTENT_MEDIA_HOSTS=api.cloudinary.com`, TTL300 and frozen map SHA256
 `70e57ac281c330383db3e3a8c899c80d1816a41f400dae6a9a269b46c6436876`.

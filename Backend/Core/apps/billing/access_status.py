@@ -28,7 +28,7 @@ def _base(parent, now):
                          'management_state': 'unavailable', 'management_reason_code': 'not_qualified',
                          'handoff_available': False, 'management_handoff_available': False,
                          'controlled_parent_eligible': False},
-            'purchase_recovery': None, 'management_recovery': None}
+            'purchase_recovery': None, 'management_recovery': None, 'hosted_checkout_recovery': None}
 
 
 def _owned_recovery(parent, *, environment='sandbox'):
@@ -77,7 +77,8 @@ def parent_content_access(parent, *, at=None):
     if (environment not in {'sandbox', 'production'} or not parent.is_authenticated
             or not parent.is_active or not parent.is_email_verified):
         return result
-    if environment == 'sandbox' and not sandbox_parent_allowed(parent):
+    from .hosted_provider import hosted_enabled
+    if environment == 'sandbox' and not hosted_enabled(environment) and not sandbox_parent_allowed(parent):
         result['reason_code'] = 'not_enrolled'
         result['checkout']['reason_code'] = 'not_enrolled'
         try:
@@ -103,6 +104,11 @@ def parent_content_access(parent, *, at=None):
         from .parent_checkout_web import checkout_capability
         result['checkout'] = checkout_capability(parent)
         result['management_recovery'] = result['checkout'].pop('management_recovery', None)
+        if hosted_enabled(environment) or result['checkout'].get('provider')=='square_hosted':
+            from .hosted_checkout import recovery
+            result['hosted_checkout_recovery'] = recovery(parent,environment)
+            if result['access_state'] != 'paid' and result['hosted_checkout_recovery'] and result['hosted_checkout_recovery']['state'] in {'creating','pending','review_required'}:
+                result.update(access_state='unknown',reason_code='purchase_requires_recovery')
         result['parent_plan_routing_enabled'] = bool(
             (environment == 'sandbox' and result['checkout']['state'] == 'available')
             or (environment == 'production' and active_billing_environment() == 'production'

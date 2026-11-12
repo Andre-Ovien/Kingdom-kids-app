@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 const source = readFileSync(new URL('./static/billing/parent_checkout.js', import.meta.url));
-const { PurchaseFlow, validQuote, validAccess, tokenizationFailure } = await import('data:text/javascript;base64,' + source.toString('base64'));
+const { PurchaseFlow, validQuote, validAccess, tokenizationFailure } = await import('data:text/javascript;base64,' + Buffer.from(source.toString().replace("import { createPageNotifications } from './page_notifications.js';", '')).toString('base64'));
 const parent = 'parent-fixture';
 const id = 'aaaabbbb-1111-2222-3333-444455556666';
 function quote(period = 'monthly') {
@@ -58,6 +58,14 @@ test('SDK success without a canonical paid proof never grants', async () => {
   const { flow } = fixture({ api: async (path) => path === '/api/billing/content-access/' ? access('unknown') :
     { id, terms: quote(), current_term: null } });
   assert.equal((await flow.purchase('synthetic-password', {})).access_state, 'unknown');
+});
+test('a late old paid read cannot replace a newer canonical unknown result', async () => {
+  const resolves = [];
+  const { flow } = fixture({ api: async () => new Promise((resolve) => resolves.push(resolve)) });
+  const older = flow.readAccess(), newer = flow.readAccess();
+  resolves[1](access('unknown')); await newer;
+  resolves[0](access('paid')); await assert.rejects(older);
+  assert.equal(flow.access.access_state, 'unknown');
 });
 test('uncertain confirmation stays locked and manual recovery sends no new source', async () => {
   let uncertain = true;
