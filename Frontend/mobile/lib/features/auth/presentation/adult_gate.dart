@@ -17,6 +17,8 @@ class AdultGate extends StatefulWidget {
     this.title = 'Parent check',
     this.reason = 'Enter the parent password to continue.',
     this.authorizationDuration = const Duration(minutes: 5),
+    this.showBackButton = true,
+    this.actions,
   });
 
   final WidgetBuilder protectedBuilder;
@@ -24,6 +26,8 @@ class AdultGate extends StatefulWidget {
   final String title;
   final String reason;
   final Duration authorizationDuration;
+  final bool showBackButton;
+  final Widget? actions;
 
   @override
   State<AdultGate> createState() => _AdultGateState();
@@ -87,6 +91,8 @@ class _AdultGateState extends State<AdultGate> with WidgetsBindingObserver {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: const Text('For parents'),
+        automaticallyImplyLeading: widget.showBackButton,
+        actions: widget.actions == null ? null : [widget.actions!],
       ),
       body: SafeArea(
         child: Center(

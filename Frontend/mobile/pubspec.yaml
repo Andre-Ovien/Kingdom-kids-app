@@ -98,7 +98,6 @@ flutter:
   assets:
     - assets/policies/privacy-policy.json
     - assets/images/
-    - assets/images/subscription/
     - assets/images/characters/
     - assets/images/home/
     - assets/images/characters/poses/

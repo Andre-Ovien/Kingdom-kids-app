@@ -8,5 +8,7 @@
   "HOSTED_RETURN_SCHEME_ONLY_PREVIEW": false,
   "PAYMENT_ENVIRONMENT": "production",
   "PAYMENT_API_BASE_URL": "https://kingdom-kids-checkout-staging.onrender.com/api",
-  "PAYMENT_CHECKOUT_URL": "https://kingdom-kids-checkout-staging.onrender.com/parent/checkout/"
+  "PAYMENT_CHECKOUT_URL": "https://kingdom-kids-checkout-staging.onrender.com/parent/checkout/",
+  "APP_STORE_BUNDLE_ID": "app.kingdom-kids.kingdomkids",
+  "APP_STORE_TEAM_ID": "GG228DP7G6"
 }

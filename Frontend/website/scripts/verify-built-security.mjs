@@ -92,10 +92,10 @@ console.log('Built contact form fallback is inert; public footers expose Contact
 const returnPage = await readFile(new URL('../dist/payments/return/index.html', import.meta.url), 'utf8');
 const association = JSON.parse(await readFile(new URL('../dist/.well-known/apple-app-site-association', import.meta.url), 'utf8'));
 const claimed = association.applinks?.details;
-if (claimed?.length !== 1 || claimed[0].appIDs?.length !== 1 ||
-    claimed[0].appIDs[0] !== 'VTV9889TNF.com.andreovien.kingdomkids' ||
+const reviewedAppIDs = ['GG228DP7G6.app.kingdom-kids.kingdomkids', 'VTV9889TNF.com.andreovien.kingdomkids'];
+if (claimed?.length !== 1 || JSON.stringify(claimed[0].appIDs) !== JSON.stringify(reviewedAppIDs) ||
     claimed[0].components?.length !== 1 || claimed[0].components[0]['/'] !== '/payments/return/') {
-  throw new Error('Built AASA must claim only the exact payment return path and reviewed development app.');
+  throw new Error('Built AASA must claim only the exact payment return path and reviewed client/development apps.');
 }
 if (!/name="referrer" content="no-referrer"/.test(returnPage) ||
     !returnPage.includes("history.replaceState(null, '', '/payments/return/')")) {

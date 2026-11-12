@@ -4,7 +4,7 @@ import '../domain/hosted_subscription.dart';
 import 'hosted_parent_authorization.dart';
 import 'subscription_screen.dart';
 import '../../../app/router.dart';
-import 'subscription_access_screen.dart';
+import 'subscription_account_actions.dart';
 
 class HostedSubscriptionParentView extends StatefulWidget {
   const HostedSubscriptionParentView({required this.controller, super.key});
@@ -18,25 +18,13 @@ class _HostedSubscriptionParentViewState
     extends State<HostedSubscriptionParentView> {
   late final HostedParentAuthorization _authorize;
   late final HostedCancellationAuthorization _cancel;
-  bool get _prepared =>
-      ModalRoute.of(context)?.settings.arguments ==
-      HostedPlansBackStack.prepared;
-
   void _closePlans() {
+    if (!widget.controller.canBrowse) return;
     final navigator = Navigator.of(context);
-    if (!widget.controller.canBrowse && !_prepared) {
-      navigator.pushNamedAndRemoveUntil(
-        AppRoutes.subscriptionRequired,
-        (_) => false,
-      );
-    } else if (navigator.canPop()) {
+    if (navigator.canPop()) {
       navigator.pop();
     } else {
-      navigator.pushReplacementNamed(
-        widget.controller.canBrowse
-            ? AppRoutes.home
-            : AppRoutes.subscriptionRequired,
-      );
+      navigator.pushReplacementNamed(AppRoutes.home);
     }
   }
 
@@ -85,14 +73,18 @@ class _HostedSubscriptionParentViewState
   }
 
   @override
-  Widget build(BuildContext context) => PopScope(
-    canPop: _prepared || widget.controller.canBrowse,
-    onPopInvokedWithResult: (didPop, _) {
-      if (!didPop) _closePlans();
-    },
-    child: SubscriptionScreen(
-      sandboxCheckout: widget.controller,
-      onClose: _closePlans,
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: widget.controller,
+    builder: (context, _) => PopScope(
+      canPop: widget.controller.canBrowse,
+      child: SubscriptionScreen(
+        sandboxCheckout: widget.controller,
+        showClose: widget.controller.canBrowse,
+        onClose: _closePlans,
+        accountActions: widget.controller.canBrowse
+            ? null
+            : const SubscriptionAccountActions(),
+      ),
     ),
   );
 }

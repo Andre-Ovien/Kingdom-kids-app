@@ -1,9 +1,6 @@
 import 'dart:async';
-import 'dart:io';
-import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -35,9 +32,11 @@ import 'package:mobile/features/subscription/data/hosted_subscription_controller
 import 'package:mobile/features/subscription/data/hosted_subscription_repository.dart';
 import 'package:mobile/features/subscription/data/sandbox_checkout.dart';
 import 'package:mobile/features/subscription/presentation/hosted_paid_route_boundary.dart';
-import 'package:mobile/features/subscription/presentation/hosted_parent_authorization.dart';
 import 'package:mobile/features/subscription/presentation/hosted_subscription_scope.dart';
 import 'package:mobile/features/subscription/presentation/subscription_parent_screen.dart';
+import 'package:mobile/features/subscription/presentation/subscription_screen.dart';
+import 'package:mobile/features/privacy/presentation/privacy_policy_screen.dart';
+import 'package:mobile/features/auth/presentation/password_reset_screen.dart';
 import 'package:mobile/features/videos/presentation/video_watch_screen.dart';
 import 'package:mobile/features/videos/presentation/videos_screen.dart';
 import 'package:mobile/shared/widgets/liquid_navigation_controller.dart';
@@ -105,7 +104,7 @@ class _Store implements HostedCheckoutPendingStore {
 class _Repository extends Fake implements HostedSubscriptionRepository {
   SandboxAccessState state = SandboxAccessState.unpaid;
   DateTime? until;
-  bool offline = false;
+  bool offline = false, complimentary = false;
   int reads = 0;
   @override
   Future<({SandboxContentAccess access, Map<String, dynamic>? recovery})>
@@ -120,6 +119,7 @@ class _Repository extends Fake implements HostedSubscriptionRepository {
         accessUntil: until,
         enforcementEnabled: true,
         routingEnabled: true,
+        complimentaryAccess: complimentary,
       ),
       recovery: null,
     );
@@ -226,6 +226,8 @@ Future<_Harness> _fixture({
   DateTime? until,
   bool offline = false,
   bool restored = false,
+  bool complimentary = false,
+  bool signedIn = true,
 }) async {
   final sessions = MemoryAuthSessionStore();
   await sessions.writeSession(_session);
@@ -242,17 +244,18 @@ Future<_Harness> _fixture({
       const LoginRequest(email: 'parent@example.test', password: 'fixture'),
     );
   }
+  if (!signedIn) await auth.logout();
   final repository = _Repository()
     ..state = state
     ..until = until
-    ..offline = offline;
+    ..offline = offline
+    ..complimentary = complimentary;
   final fixture = _Harness(auth, repository);
   await fixture.checkout.refresh();
   return fixture;
 }
 
 void _expectNoChildShell() {
-  expect(find.text('Subscription required'), findsNothing);
   for (final type in [
     HomeScreen,
     StoriesScreen,
@@ -281,14 +284,57 @@ Future<void> _pump(WidgetTester tester) async {
   }
 }
 
+void _expectLockedPlans() {
+  expect(find.byType(SubscriptionScreen), findsOneWidget);
+  expect(find.text('Monthly'), findsOneWidget);
+  expect(find.text('Yearly'), findsOneWidget);
+  expect(find.byKey(const Key('subscription-back')), findsNothing);
+  expect(find.byType(BackButton), findsNothing);
+  expect(find.byTooltip('Back'), findsNothing);
+  expect(find.byTooltip('Close'), findsNothing);
+  _expectNoChildShell();
+}
+
+Finder _menuOption(String label) => find.descendant(
+  of: find.byWidgetPredicate((widget) => widget is PopupMenuItem),
+  matching: find.text(label),
+);
+
+Future<void> _openAccountOptions(WidgetTester tester) async {
+  // A short error toast can finish before this intentional account action.
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const Key('subscription-account-actions')));
+  await tester.pumpAndSettle();
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUp(() {
     FlutterSecureStorage.setMockInitialValues({});
     paidContentAccessState.selectScope(null);
     featureViewStateCache.clearIdentity();
+    for (final channel in [
+      'flutter_timezone',
+      'dexterous.com/flutter/local_notifications',
+    ]) {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+            MethodChannel(channel),
+            (_) async =>
+                throw PlatformException(code: 'unavailable_in_fixture'),
+          );
+    }
   });
-  tearDown(() => paidContentAccessState.selectScope(null));
+  tearDown(() {
+    paidContentAccessState.selectScope(null);
+    for (final channel in [
+      'flutter_timezone',
+      'dexterous.com/flutter/local_notifications',
+    ]) {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(MethodChannel(channel), null);
+    }
+  });
 
   for (final route in [
     AppRoutes.home,
@@ -308,80 +354,49 @@ void main() {
     AppRoutes.levelMilestone,
     '/an-unknown-child-route',
   ]) {
-    testWidgets('authoritative unpaid direct route $route has no child shell', (
+    testWidgets('unpaid direct route $route stays on real locked plans', (
       tester,
     ) async {
       final fixture = await _fixture();
       addTearDown(fixture.dispose);
       await tester.pumpWidget(fixture.app(route));
       await _pump(tester);
-      expect(
-        find.byKey(const Key('subscription-required-carousel')),
-        findsOneWidget,
-      );
-      _expectNoChildShell();
+      _expectLockedPlans();
+      await tester.binding.handlePopRoute();
+      await _pump(tester);
+      _expectLockedPlans();
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
     });
   }
 
-  for (final systemBack in [false, true]) {
-    testWidgets(
-      'unpaid plans ${systemBack ? 'system' : 'app bar'} back ends on standalone access page',
-      (tester) async {
-        final fixture = await _fixture();
-        addTearDown(fixture.dispose);
-        await tester.pumpWidget(fixture.app(AppRoutes.home));
-        await _pump(tester);
-        unawaited(
-          fixture.navigator.currentState!.pushNamed(AppRoutes.subscription),
-        );
-        await _pump(tester);
-        expect(find.byKey(const Key('subscription-back')), findsOneWidget);
-        if (systemBack) {
-          await tester.binding.handlePopRoute();
-        } else {
-          await tester.tap(find.byKey(const Key('subscription-back')));
-        }
-        await _pump(tester);
-        expect(
-          find.byKey(const Key('subscription-required-carousel')),
-          findsOneWidget,
-        );
-        expect(
-          find.byKey(const Key('subscription-required-view-plans')),
-          findsOneWidget,
-        );
-        expect(fixture.topRoute, isNot(AppRoutes.parentalControls));
-        expect(fixture.topRoute, isNot(AppRoutes.home));
-        _expectNoChildShell();
-        expect(tester.takeException(), isNull);
-        await tester.pumpWidget(const SizedBox.shrink());
-      },
-    );
-  }
-
-  testWidgets('unpaid swipe back cannot expose an underlying child route', (
-    tester,
-  ) async {
-    final fixture = await _fixture();
-    addTearDown(fixture.dispose);
-    await tester.pumpWidget(fixture.app(AppRoutes.games));
-    await _pump(tester);
-    unawaited(
-      fixture.navigator.currentState!.pushNamed(AppRoutes.subscription),
-    );
-    await _pump(tester);
-    await tester.dragFrom(const Offset(1, 280), const Offset(650, 0));
-    await _pump(tester);
-    _expectNoChildShell();
-    expect(tester.takeException(), isNull);
-    await tester.pumpWidget(const SizedBox.shrink());
-  });
+  testWidgets(
+    'unpaid plans expose no back and consume system, navigator and swipe escape',
+    (tester) async {
+      final fixture = await _fixture();
+      addTearDown(fixture.dispose);
+      await tester.pumpWidget(fixture.app(AppRoutes.games));
+      await _pump(tester);
+      unawaited(
+        fixture.navigator.currentState!.pushNamed(AppRoutes.subscription),
+      );
+      await _pump(tester);
+      _expectLockedPlans();
+      final route = fixture.topRoute;
+      expect(await fixture.navigator.currentState!.maybePop(), isTrue);
+      await tester.binding.handlePopRoute();
+      await tester.dragFrom(const Offset(1, 280), const Offset(650, 0));
+      await _pump(tester);
+      expect(fixture.topRoute, route);
+      _expectLockedPlans();
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
 
   for (final offline in [false, true]) {
     testWidgets(
-      '${offline ? 'offline' : 'unknown'} status is never an unpaid claim',
+      '${offline ? 'offline' : 'unknown'} stays on neutral real plans with retry and account options',
       (tester) async {
         final fixture = await _fixture(
           state: SandboxAccessState.unknown,
@@ -390,64 +405,76 @@ void main() {
         addTearDown(fixture.dispose);
         await tester.pumpWidget(fixture.app(AppRoutes.home));
         await _pump(tester);
+        _expectLockedPlans();
+        expect(find.textContaining('No active subscription.'), findsNothing);
+        expect(fixture.checkout.canOpen, isFalse);
         expect(
-          find.byKey(const Key('subscription-required-carousel')),
-          findsNothing,
+          tester
+              .widget<FilledButton>(
+                find.byKey(const Key('subscription-parent-continue')),
+              )
+              .onPressed,
+          isNull,
         );
-        expect(find.byKey(const Key('hosted-access-unknown')), findsOneWidget);
-        expect(
-          find.text('We could not verify your subscription.'),
-          findsOneWidget,
-        );
+        final retry = find.text('Check access');
+        expect(retry, findsOneWidget);
+        final reads = fixture.repository.reads;
+        await tester.ensureVisible(retry);
+        await tester.tap(retry);
+        await _pump(tester);
+        expect(fixture.repository.reads, greaterThan(reads));
+        await _openAccountOptions(tester);
         for (final control in [
           'Sign out',
-          'Privacy',
+          'Privacy Policy',
           'Password help',
           'Delete account',
         ]) {
-          expect(find.text(control), findsOneWidget);
+          expect(_menuOption(control), findsOneWidget);
         }
-        _expectNoChildShell();
+        fixture.navigator.currentState!.pop();
+        await _pump(tester);
+        _expectLockedPlans();
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+    );
+  }
+
+  for (final complimentary in [false, true]) {
+    testWidgets(
+      '${complimentary ? 'complimentary' : 'paid'} canonical access still browses normally',
+      (tester) async {
+        final fixture = await _fixture(
+          state: SandboxAccessState.paid,
+          until: DateTime.now().toUtc().add(const Duration(hours: 1)),
+          complimentary: complimentary,
+        );
+        addTearDown(fixture.dispose);
+        await tester.pumpWidget(
+          fixture.app(AppRoutes.home, paidSentinel: true),
+        );
+        await _pump(tester);
+        expect(fixture.checkout.canBrowse, isTrue);
+        expect(find.text('Paid child content'), findsOneWidget);
+        expect(find.byKey(const Key('bottom-nav-main-dock')), findsOneWidget);
+        expect(find.byType(SubscriptionScreen), findsNothing);
         expect(fixture.checkout.canOpen, isFalse);
         await tester.pumpWidget(const SizedBox.shrink());
       },
     );
   }
 
-  testWidgets('unexpired canonical paid access bypasses gate and shows dock', (
-    tester,
-  ) async {
+  test('expired paid proof cannot browse', () async {
     final fixture = await _fixture(
       state: SandboxAccessState.paid,
-      until: DateTime.now().toUtc().add(const Duration(hours: 1)),
+      until: DateTime.now().toUtc().subtract(const Duration(seconds: 1)),
     );
     addTearDown(fixture.dispose);
-    await tester.pumpWidget(fixture.app(AppRoutes.home, paidSentinel: true));
-    await _pump(tester);
-    expect(fixture.checkout.canBrowse, isTrue);
-    expect(find.text('Paid child content'), findsOneWidget);
-    expect(find.byKey(const Key('bottom-nav-main-dock')), findsOneWidget);
-    expect(
-      find.byKey(const Key('subscription-required-carousel')),
-      findsNothing,
-    );
-    await tester.pumpWidget(const SizedBox.shrink());
+    expect(fixture.checkout.canBrowse, isFalse);
   });
 
-  test(
-    'expired canonical paid snapshot cannot bypass access boundary',
-    () async {
-      final fixture = await _fixture(
-        state: SandboxAccessState.paid,
-        until: DateTime.now().toUtc().subtract(const Duration(seconds: 1)),
-      );
-      addTearDown(fixture.dispose);
-      expect(fixture.checkout.canBrowse, isFalse);
-    },
-  );
-
   testWidgets(
-    'identity change hides old paid pixels while secure owner read is delayed',
+    'identity switch hides old paid pixels while secure owner read is delayed',
     (tester) async {
       final sessions = _DelayedSessionStore();
       await sessions.writeSession(_session);
@@ -476,7 +503,7 @@ void main() {
         await tester.pump();
         expect(fixture.checkout.canBrowse, isFalse);
         expect(find.text('Paid child content'), findsNothing);
-        expect(find.byKey(const Key('bottom-nav-main-dock')), findsNothing);
+        _expectLockedPlans();
       } finally {
         repository.state = SandboxAccessState.unpaid;
         release.complete();
@@ -487,214 +514,158 @@ void main() {
   );
 
   testWidgets(
-    'standalone unpaid gate keeps controls reachable at 320px and 2.2x text',
+    'locked plans and account options stay reachable at 320px and 2.2x text',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(320, 568));
       addTearDown(() => tester.binding.setSurfaceSize(null));
       final fixture = await _fixture();
       addTearDown(fixture.dispose);
       await tester.pumpWidget(
-        fixture.app(AppRoutes.subscriptionRequired, textScale: 2.2),
+        fixture.app(AppRoutes.subscription, textScale: 2.2),
       );
       await _pump(tester);
-      expect(
-        find.byKey(const Key('subscription-required-carousel')),
-        findsOneWidget,
-      );
-      for (final key in [
-        'subscription-required-view-plans',
-        'subscription-required-sign-out',
-        'subscription-required-delete-account',
+      _expectLockedPlans();
+      await _openAccountOptions(tester);
+      for (final control in [
+        'Sign out',
+        'Privacy Policy',
+        'Password help',
+        'Delete account',
       ]) {
-        final control = find.byKey(Key(key));
-        await tester.ensureVisible(control);
-        await tester.pump();
-        expect(control.hitTestable(), findsOneWidget);
+        final option = _menuOption(control);
+        await tester.ensureVisible(option);
+        expect(option.hitTestable(), findsOneWidget);
       }
       expect(tester.takeException(), isNull);
-      _expectNoChildShell();
       await tester.pumpWidget(const SizedBox.shrink());
     },
   );
 
-  testWidgets('restored selected-child plans require the real adult gate', (
-    tester,
-  ) async {
-    final fixture = await _fixture(restored: true);
-    addTearDown(fixture.dispose);
-    expect(fixture.checkout.requiresParentGate, isTrue);
-    await tester.pumpWidget(fixture.app(AppRoutes.subscription));
-    await _pump(tester);
-    expect(find.byKey(const Key('adult-gate-screen')), findsOneWidget);
-    expect(find.byKey(const Key('adult-gate-password')), findsOneWidget);
-    expect(find.byKey(const Key('subscription-back')), findsNothing);
-    _expectNoChildShell();
-    await tester.tap(find.byTooltip('Back'));
-    await _pump(tester);
-    expect(fixture.topRoute, AppRoutes.subscriptionRequired);
-    expect(
-      find.byKey(const Key('subscription-required-carousel')),
-      findsOneWidget,
-    );
-    _expectNoChildShell();
-    await tester.tap(find.byKey(const Key('subscription-required-view-plans')));
-    await _pump(tester);
-    expect(find.byKey(const Key('adult-gate-screen')), findsOneWidget);
-    await tester.binding.handlePopRoute();
-    await _pump(tester);
-    expect(fixture.topRoute, AppRoutes.subscriptionRequired);
-    expect(
-      find.byKey(const Key('subscription-required-carousel')),
-      findsOneWidget,
-    );
-    _expectNoChildShell();
-    expect(tester.takeException(), isNull);
-    await tester.pumpWidget(const SizedBox.shrink());
-  });
-
-  if (const bool.fromEnvironment('CAPTURE_NATIVE_GATE')) {
-    testWidgets('render the actual three bundled subscription gate slides', (
-      tester,
-    ) async {
-      tester.view.physicalSize = const Size(1170, 2532);
-      tester.view.devicePixelRatio = 3;
-      addTearDown(tester.view.reset);
-      await tester.runAsync(() async {
-        final avenir = File('/System/Library/Fonts/Avenir Next.ttc');
-        final data = ByteData.sublistView(await avenir.readAsBytes());
-        await (FontLoader('Avenir Next')..addFont(Future.value(data))).load();
-        await (FontLoader('Roboto')..addFont(Future.value(data))).load();
-        await (FontLoader('MaterialIcons')..addFont(
-              Future.value(
-                await rootBundle.load('fonts/MaterialIcons-Regular.otf'),
-              ),
-            ))
-            .load();
-      });
-      final fixture = await _fixture();
+  testWidgets(
+    'restored child adult gate has no back and keeps recovery available',
+    (tester) async {
+      final fixture = await _fixture(restored: true);
       addTearDown(fixture.dispose);
-      final boundaryKey = GlobalKey();
-      await tester.pumpWidget(
-        RepaintBoundary(
-          key: boundaryKey,
-          child: fixture.app(AppRoutes.subscriptionRequired),
-        ),
-      );
+      expect(fixture.checkout.requiresParentGate, isTrue);
+      await tester.pumpWidget(fixture.app(AppRoutes.subscription));
       await _pump(tester);
-      await tester.runAsync(() async {
-        final context = tester.element(
-          find.byKey(const Key('subscription-required-carousel')),
-        );
-        for (final name in ['stories', 'games', 'together']) {
-          await precacheImage(
-            AssetImage('assets/images/subscription/access-$name-v1.png'),
-            context,
-          );
-        }
-      });
-      final carousel = tester.widget<PageView>(
-        find.byKey(const Key('subscription-required-carousel')),
-      );
-      for (var slide = 0; slide < 3; slide++) {
-        carousel.controller!.jumpToPage(slide);
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 200));
-        expect(carousel.controller!.page, slide.toDouble());
-        expect(
-          find.text(
-            const [
-              'Wonderful stories await',
-              'Play, discover, and grow',
-              'Every adventure, one subscription',
-            ][slide],
-          ),
-          findsOneWidget,
-        );
-        expect(find.text('Subscription required'), findsNothing);
-        expect(
-          find
-              .byKey(const Key('subscription-required-view-plans'))
-              .hitTestable(),
-          findsOneWidget,
-        );
-        _expectNoChildShell();
-        expect(tester.takeException(), isNull);
-        final boundary =
-            boundaryKey.currentContext!.findRenderObject()!
-                as RenderRepaintBoundary;
-        await tester.runAsync(() async {
-          final bitmap = await boundary.toImage(pixelRatio: 3);
-          final bytes = await bitmap.toByteData(format: ui.ImageByteFormat.png);
-          final output = Directory(
-            '../../output/subscription-gate-20261112',
-          ).absolute;
-          await output.create(recursive: true);
-          final file = File('${output.path}/gate-slide-${slide + 1}.png');
-          await file.writeAsBytes(bytes!.buffer.asUint8List());
-          bitmap.dispose();
-          stdout.writeln('Saved ${file.path}');
-        });
-      }
-      // Public monthly disclosure fixture from hosted_policies.disclosure.
-      // This is a layout render: its callback must never authorize a purchase.
-      var authorizationCalls = 0;
-      final consent = showHostedParentAuthorization(
-        tester.element(
-          find.byKey(const Key('subscription-required-view-plans')),
-        ),
-        title: 'Subscription terms',
-        disclosure:
-            r'Square will charge $9.99 USD now and automatically every 30 days until you cancel. '
-            'Each successful payment provides 30 days of access to all stories and games, starting when payment completes. '
-            'Square saves your card and manages recurring payments on its secure payment page. '
-            'There is no free period or proration. Renewal billing follows Square’s subscription dates; '
-            'it is not promised to occur at the same time of day as your first payment. '
-            'You can stop future renewals in parent account settings. Canceling keeps your verified already-paid access until its original end.',
-        authorize: () async {
-          authorizationCalls++;
+      expect(find.byKey(const Key('adult-gate-screen')), findsOneWidget);
+      expect(find.byKey(const Key('adult-gate-password')), findsOneWidget);
+      expect(find.byType(BackButton), findsNothing);
+      final route = fixture.topRoute;
+      await tester.binding.handlePopRoute();
+      await tester.dragFrom(const Offset(1, 280), const Offset(650, 0));
+      await _pump(tester);
+      expect(fixture.topRoute, route);
+      expect(find.byKey(const Key('adult-gate-screen')), findsOneWidget);
+      _expectNoChildShell();
+      await _openAccountOptions(tester);
+      await tester.tap(_menuOption('Password help'));
+      await _pump(tester);
+      expect(find.byType(PasswordResetScreen), findsOneWidget);
+      _expectNoChildShell();
+      await tester.binding.handlePopRoute();
+      await _pump(tester);
+      expect(find.byKey(const Key('adult-gate-screen')), findsOneWidget);
+      expect(find.byType(BackButton), findsNothing);
+      _expectNoChildShell();
+      final nativeCleanup = Completer<Object?>();
+      var cleanupStarted = false;
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        const MethodChannel('flutter_timezone'),
+        (_) {
+          cleanupStarted = true;
+          return nativeCleanup.future;
         },
       );
-      bool? consentResult;
-      unawaited(
-        consent.then((value) {
-          consentResult = value;
-        }),
+      await _openAccountOptions(tester);
+      await tester.tap(_menuOption('Sign out'));
+      await _pump(tester);
+      expect(await fixture.auth.restoreSession(), isNull);
+      expect(cleanupStarted, isTrue);
+      expect(find.byKey(const Key('adult-gate-screen')), findsNothing);
+      nativeCleanup.completeError(
+        PlatformException(code: 'unavailable_in_fixture'),
       );
-      await tester.pumpAndSettle();
-      final checkbox = find.byKey(const Key('hosted-subscription-consent'));
-      await tester.ensureVisible(checkbox);
-      await tester.tap(checkbox);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 350));
-      expect(tester.widget<CheckboxListTile>(checkbox).value, isTrue);
-      expect(find.byKey(const Key('hosted-parent-password')), findsNothing);
-      expect(
-        tester
-            .widget<FilledButton>(
-              find.byKey(const Key('hosted-authorize-continue')),
-            )
-            .onPressed,
-        isNotNull,
-      );
-      expect(authorizationCalls, 0);
-      final boundary =
-          boundaryKey.currentContext!.findRenderObject()!
-              as RenderRepaintBoundary;
-      await tester.runAsync(() async {
-        final bitmap = await boundary.toImage(pixelRatio: 3);
-        final bytes = await bitmap.toByteData(format: ui.ImageByteFormat.png);
-        final file = File(
-          '../../output/subscription-gate-20261112/consent-terms.png',
-        ).absolute;
-        await file.writeAsBytes(bytes!.buffer.asUint8List());
-        bitmap.dispose();
-        stdout.writeln('Saved ${file.path}');
-      });
-      fixture.navigator.currentState!.pop(false);
-      await tester.pumpAndSettle();
-      expect(consentResult, isFalse);
-      expect(authorizationCalls, 0);
+      await _pump(tester);
+      expect(fixture.topRoute, AppRoutes.login);
+      _expectNoChildShell();
+      expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
-    });
+    },
+  );
+
+  testWidgets(
+    'locked plans allow privacy and recovery then return to the same locked plans',
+    (tester) async {
+      final fixture = await _fixture();
+      addTearDown(fixture.dispose);
+      await tester.pumpWidget(fixture.app(AppRoutes.subscription));
+      await _pump(tester);
+      await _openAccountOptions(tester);
+      await tester.tap(_menuOption('Privacy Policy'));
+      await _pump(tester);
+      expect(find.byType(PrivacyPolicyScreen), findsOneWidget);
+      _expectNoChildShell();
+      await tester.binding.handlePopRoute();
+      await _pump(tester);
+      _expectLockedPlans();
+      await _openAccountOptions(tester);
+      await tester.tap(_menuOption('Password help'));
+      await _pump(tester);
+      expect(find.byType(PasswordResetScreen), findsOneWidget);
+      _expectNoChildShell();
+      await tester.binding.handlePopRoute();
+      await _pump(tester);
+      _expectLockedPlans();
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
+  for (final signedIn in [true, false]) {
+    testWidgets(
+      'explicit sign out reaches login with ${signedIn ? 'owned' : 'already cleared'} session',
+      (tester) async {
+        final fixture = await _fixture(signedIn: signedIn);
+        addTearDown(fixture.dispose);
+        await tester.pumpWidget(fixture.app(AppRoutes.subscription));
+        await _pump(tester);
+        _expectLockedPlans();
+        await _openAccountOptions(tester);
+        await tester.tap(_menuOption('Sign out'));
+        await _pump(tester);
+        expect(fixture.topRoute, AppRoutes.login);
+        expect(await fixture.auth.restoreSession(), isNull);
+        _expectNoChildShell();
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+    );
   }
+
+  testWidgets(
+    'delete-account confirmation is reachable without exposing child screens',
+    (tester) async {
+      final fixture = await _fixture();
+      addTearDown(fixture.dispose);
+      await tester.pumpWidget(fixture.app(AppRoutes.subscription));
+      await _pump(tester);
+      await _openAccountOptions(tester);
+      await tester.tap(_menuOption('Delete account'));
+      await _pump(tester);
+      expect(find.text('Permanently delete family account?'), findsOneWidget);
+      expect(find.byKey(const Key('settings-delete-password')), findsOneWidget);
+      await tester.tap(
+        find.byKey(const Key('settings-confirm-delete-account')),
+      );
+      await _pump(tester);
+      expect(find.text('Enter your current password.'), findsOneWidget);
+      expect(await fixture.auth.restoreSession(), isNotNull);
+      _expectNoChildShell();
+      await tester.tap(find.text('Keep account'));
+      await _pump(tester);
+      _expectLockedPlans();
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
 }

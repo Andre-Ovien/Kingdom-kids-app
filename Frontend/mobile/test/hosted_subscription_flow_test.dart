@@ -893,6 +893,9 @@ void main() {
       await tester.pump();
       expect(find.text('Private child story'), findsNothing);
       expect(find.text('Parent account settings'), findsNothing);
+      expect(find.byKey(const Key('subscription-back')), findsNothing);
+      await tester.tap(find.byKey(const Key('subscription-account-actions')));
+      await tester.pumpAndSettle();
       expect(find.text('Sign out'), findsOneWidget);
       expect(find.text('Delete account'), findsOneWidget);
       await tester.pumpWidget(const SizedBox.shrink());

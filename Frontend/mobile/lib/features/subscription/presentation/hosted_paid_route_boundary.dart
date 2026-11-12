@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/network/paid_content_access_state.dart';
-import 'subscription_access_screen.dart';
+import 'subscription_parent_screen.dart';
 import 'hosted_subscription_scope.dart';
 
 class HostedPaidRouteBoundary extends StatelessWidget {
@@ -22,7 +22,10 @@ class HostedPaidRouteBoundary extends StatelessWidget {
           if (childContext) controller.noteChildContext();
           return child;
         }
-        return const SubscriptionAccessScreen();
+        return SubscriptionParentScreen(
+          configuration: controller.configuration,
+          authRepository: HostedSubscriptionScope.authOf(context),
+        );
       },
     );
   }

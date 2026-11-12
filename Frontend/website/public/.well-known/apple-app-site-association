@@ -2,9 +2,15 @@
   "applinks": {
     "details": [
       {
-        "appIDs": ["VTV9889TNF.com.andreovien.kingdomkids"],
+        "appIDs": [
+          "GG228DP7G6.app.kingdom-kids.kingdomkids",
+          "VTV9889TNF.com.andreovien.kingdomkids"
+        ],
         "components": [
-          { "/": "/payments/return/", "comment": "Payment return correlation only; the app authenticates and verifies access separately." }
+          {
+            "/": "/payments/return/",
+            "comment": "Payment return correlation only; the app authenticates and verifies access separately."
+          }
         ]
       }
     ]

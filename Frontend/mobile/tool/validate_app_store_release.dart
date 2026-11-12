@@ -13,6 +13,12 @@ void validateAppStoreRelease(
   required String approvedCheckoutUrl,
 }) {
   String value(String key) => defines[key]?.toString() ?? '';
+  if (value('APP_STORE_BUNDLE_ID') != 'app.kingdom-kids.kingdomkids' ||
+      value('APP_STORE_TEAM_ID') != 'GG228DP7G6') {
+    throw const ReleaseConfigurationException(
+      'Use the registered client App ID and team for App Store build inputs.',
+    );
+  }
   if (value('HOSTED_RETURN_SCHEME_ONLY_PREVIEW') != 'false' &&
       value('HOSTED_RETURN_SCHEME_ONLY_PREVIEW').isNotEmpty) {
     throw const ReleaseConfigurationException(
@@ -88,7 +94,7 @@ void main(List<String> arguments) {
       approvedCheckoutUrl: arguments[2],
     );
     stdout.writeln(
-      'App Store build inputs validated. Territory, privacy, billing operations, and App Review qualification remain required.',
+      'App Store build inputs validated. Actual archive signing, territory, privacy, billing operations, and App Review qualification remain required.',
     );
   } on ReleaseConfigurationException catch (error) {
     stderr.writeln('App Store configuration error: ${error.message}');

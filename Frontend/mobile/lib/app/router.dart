@@ -36,7 +36,6 @@ import '../features/subscription/presentation/subscription_review_screen.dart';
 import '../features/subscription/presentation/subscription_parent_screen.dart';
 import '../features/subscription/presentation/subscription_screen.dart';
 import '../features/subscription/presentation/hosted_paid_route_boundary.dart';
-import '../features/subscription/presentation/subscription_access_screen.dart';
 import '../features/privacy/presentation/privacy_policy_screen.dart';
 import '../features/videos/domain/video_story.dart';
 import '../features/videos/presentation/video_watch_screen.dart';
@@ -189,7 +188,7 @@ class AppRouter {
         protectedBuilder: (_) => const ParentalControlsScreen(),
       ),
       AppRoutes.subscription => const SubscriptionParentScreen(),
-      AppRoutes.subscriptionRequired => const SubscriptionAccessScreen(),
+      AppRoutes.subscriptionRequired => const SubscriptionParentScreen(),
       AppRoutes.privacy => const PrivacyPolicyScreen(),
       AppRoutes.subscriptionReview =>
         !kReleaseMode &&

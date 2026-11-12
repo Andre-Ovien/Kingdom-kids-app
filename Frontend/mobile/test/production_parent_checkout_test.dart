@@ -1095,6 +1095,8 @@ void main() {
     'App Store preflight rejects Sandbox/review input and unapproved live origins',
     () {
       final defines = <String, dynamic>{
+        'APP_STORE_BUNDLE_ID': 'app.kingdom-kids.kingdomkids',
+        'APP_STORE_TEAM_ID': 'GG228DP7G6',
         'API_BASE_URL': _configuration.apiBaseUrl,
         'CONTENT_MEDIA_HOSTS': '',
         'PRODUCTION_PAYMENT_FLOW_ENABLED': true,
@@ -1109,6 +1111,10 @@ void main() {
       );
       expect(() => validate(defines), returnsNormally);
       for (final change in <Map<String, dynamic>>[
+        {'APP_STORE_BUNDLE_ID': 'com.andreovien.kingdomkids'},
+        {'APP_STORE_TEAM_ID': 'VTV9889TNF'},
+        {'APP_STORE_BUNDLE_ID': ''},
+        {'APP_STORE_TEAM_ID': ''},
         {'SQUARE_SANDBOX_CHECKOUT_ENABLED': true},
         {'HOSTED_RETURN_SCHEME_ONLY_PREVIEW': true},
         {'SUBSCRIPTION_REVIEW_ID': 'local-preview'},

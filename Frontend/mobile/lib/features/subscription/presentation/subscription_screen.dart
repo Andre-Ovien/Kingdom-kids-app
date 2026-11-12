@@ -36,11 +36,15 @@ class SubscriptionScreen extends StatefulWidget {
     this.previewDate,
     this.onClose,
     this.sandboxCheckout,
+    this.showClose = true,
+    this.accountActions,
   });
   final bool reviewMode;
   final DateTime? previewDate;
   final VoidCallback? onClose;
   final ParentCheckoutController? sandboxCheckout;
+  final bool showClose;
+  final Widget? accountActions;
   @override
   State<SubscriptionScreen> createState() => _SubscriptionScreenState();
 }
@@ -117,6 +121,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         );
 
   void _close() {
+    if (!widget.showClose) return;
     if (widget.onClose != null) {
       widget.onClose!();
       return;
@@ -166,27 +171,72 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                   : 'Checkout is unavailable. Exact dates and the billing timezone will be shown before payment.',
               style: _type(14, height: 1.5),
             ),
-            const SizedBox(height: 16),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                navigator.pushNamed(
+            if (widget.accountActions == null) ...[
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  navigator.pushNamed(
+                    _checkout is HostedSubscriptionController &&
+                            !(_checkout as HostedSubscriptionController)
+                                .canBrowse
+                        ? AppRoutes.subscriptionRequired
+                        : AppRoutes.parentalControls,
+                  );
+                },
+                child: Text(
                   _checkout is HostedSubscriptionController &&
                           !(_checkout as HostedSubscriptionController).canBrowse
-                      ? AppRoutes.subscriptionRequired
-                      : AppRoutes.parentalControls,
-                );
-              },
-              child: Text(
-                _checkout is HostedSubscriptionController &&
-                        !(_checkout as HostedSubscriptionController).canBrowse
-                    ? 'Account options'
-                    : 'Parent account settings',
+                      ? 'Account options'
+                      : 'Parent account settings',
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),
+    );
+  }
+
+  Widget _header(BuildContext context) {
+    final back = IconButton(
+      key: const Key('subscription-back'),
+      tooltip: 'Back',
+      onPressed: _close,
+      style: IconButton.styleFrom(
+        backgroundColor: Colors.white,
+        minimumSize: const Size(44, 44),
+      ),
+      icon: const Icon(Icons.chevron_left_rounded, size: 24, color: _ink),
+    );
+    final title = Text(
+      'Subscription',
+      style: _type(23, weight: FontWeight.w600, spacing: -.6),
+    );
+    if (MediaQuery.textScalerOf(context).scale(14) > 20) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (widget.showClose || widget.accountActions != null) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                if (widget.showClose) back else const SizedBox.shrink(),
+                if (widget.accountActions != null) widget.accountActions!,
+              ],
+            ),
+            const SizedBox(height: 8),
+          ],
+          title,
+        ],
+      );
+    }
+    return Row(
+      children: [
+        if (widget.showClose) ...[back, const SizedBox(width: 10)],
+        Expanded(child: title),
+        if (widget.accountActions != null) widget.accountActions!,
+      ],
     );
   }
 
@@ -275,64 +325,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (MediaQuery.textScalerOf(context).scale(14) > 20)
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            IconButton(
-                              key: const Key('subscription-back'),
-                              tooltip: 'Back',
-                              onPressed: _close,
-                              style: IconButton.styleFrom(
-                                backgroundColor: Colors.white,
-                                minimumSize: const Size(44, 44),
-                              ),
-                              icon: const Icon(
-                                Icons.chevron_left_rounded,
-                                color: _ink,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Subscription',
-                              style: _type(
-                                23,
-                                weight: FontWeight.w600,
-                                spacing: -.6,
-                              ),
-                            ),
-                          ],
-                        )
-                      else
-                        Row(
-                          children: [
-                            IconButton(
-                              key: const Key('subscription-back'),
-                              tooltip: 'Back',
-                              onPressed: _close,
-                              style: IconButton.styleFrom(
-                                backgroundColor: Colors.white,
-                                minimumSize: const Size(44, 44),
-                              ),
-                              icon: const Icon(
-                                Icons.chevron_left_rounded,
-                                size: 24,
-                                color: _ink,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                'Subscription',
-                                style: _type(
-                                  23,
-                                  weight: FontWeight.w600,
-                                  spacing: -.6,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                      _header(context),
                       const SizedBox(height: 17),
                       _DurationSwitch(
                         yearly: yearly,

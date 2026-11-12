@@ -46,7 +46,7 @@ test('browser fallback only opens on user action, retains generic status and per
 });
 test('exact-path AASA and static headers expose no broad app links, auth requirement or redirect', () => {
   const association = JSON.parse(readFileSync(new URL('../public/.well-known/apple-app-site-association', import.meta.url)));
-  assert.deepEqual(association.applinks.details, [{ appIDs: ['VTV9889TNF.com.andreovien.kingdomkids'],
+  assert.deepEqual(association.applinks.details, [{ appIDs: ['GG228DP7G6.app.kingdom-kids.kingdomkids', 'VTV9889TNF.com.andreovien.kingdomkids'],
     components: [{ '/': '/payments/return/', comment: 'Payment return correlation only; the app authenticates and verifies access separately.' }] }]);
   const config = JSON.parse(readFileSync(new URL('../vercel.json', import.meta.url)));
   const headers = Object.fromEntries(config.headers.find((entry) => entry.source === '/.well-known/apple-app-site-association').headers.map((entry) => [entry.key, entry.value]));
