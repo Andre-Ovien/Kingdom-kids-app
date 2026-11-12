@@ -15,6 +15,24 @@ const _policy = ContentMediaPolicy(
 const _source =
     'https://cdn.test/cover.png?signature=private&expires_at=9999999999';
 const _scope = ('backend', 'parent', 'child', 'lion', 1);
+const _cloudinaryPolicy = ContentMediaPolicy(
+  apiBaseUrl: 'https://api.test/api',
+  configuredHosts: 'api.cloudinary.com',
+);
+String _immutableSource(
+  String signature, {
+  String hash = 'a',
+  int? expiry,
+  Map<String, String> extra = const {},
+}) => Uri.https('api.cloudinary.com', '/v1_1/cloud/image/download', {
+  'type': 'authenticated',
+  'public_id': 'kingdom-kids/media-v1/sha256-${List.filled(64, hash).join()}',
+  'format': 'webp',
+  'expires_at': '${expiry ?? 9999999999}',
+  'signature': signature,
+  'timestamp': signature == 'old' ? '1' : '2',
+  ...extra,
+}).toString();
 
 void main() {
   setUp(featureReadCache.invalidate);
@@ -112,6 +130,154 @@ void main() {
     pending.response.complete(initial);
     await tester.pumpAndSettle();
   });
+
+  testWidgets(
+    'immutable signed URL renewal preserves existing pixels while still fetching the new URL',
+    (tester) async {
+      final oldSource = _immutableSource('old');
+      final newSource = _immutableSource('new');
+      final old = await _seed(source: oldSource, policy: _cloudinaryPolicy);
+      await tester.pumpWidget(
+        _app(
+          _ReadyFetcher(old),
+          initial: old,
+          source: oldSource,
+          policy: _cloudinaryPolicy,
+        ),
+      );
+      await tester.runAsync(
+        () => precacheImage(
+          tester.widget<Image>(find.byType(Image)).image,
+          tester.element(find.byType(Image)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final pending = _PendingFetcher();
+      await tester.pumpWidget(
+        _app(
+          pending,
+          initial: old,
+          source: newSource,
+          policy: _cloudinaryPolicy,
+        ),
+      );
+      expect(pending.requested, [newSource]);
+      expect(find.text('loading'), findsNothing);
+      expect(tester.widget<RawImage>(find.byType(RawImage)).image, isNotNull);
+      expect(old.sourceUri.toString(), oldSource);
+      // Repeated rebuilds cannot rewrite the retained data's source provenance.
+      await tester.pumpWidget(
+        _app(
+          pending,
+          initial: old,
+          source: newSource,
+          policy: _cloudinaryPolicy,
+        ),
+      );
+      expect(find.text('loading'), findsNothing);
+      pending.response.completeError(
+        const ContentMediaFetchException('unexpected_status'),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(Image), findsNothing);
+      expect(find.text('error'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'different immutable asset, arbitrary query, scope or generation cannot retain pixels',
+    (tester) async {
+      final oldSource = _immutableSource('old');
+      final old = await _seed(source: oldSource, policy: _cloudinaryPolicy);
+      for (final changed in [
+        (_immutableSource('new', hash: 'b'), _scope),
+        (_immutableSource('new', extra: {'unapproved': 'value'}), _scope),
+        (
+          _immutableSource('new'),
+          ('backend', 'other-parent', 'child', 'lion', 1),
+        ),
+      ]) {
+        await tester.pumpWidget(
+          _app(
+            _ReadyFetcher(old),
+            initial: old,
+            source: oldSource,
+            policy: _cloudinaryPolicy,
+          ),
+        );
+        await tester.pumpAndSettle();
+        final pending = _PendingFetcher();
+        await tester.pumpWidget(
+          _app(
+            pending,
+            initial: old,
+            source: changed.$1,
+            scope: changed.$2,
+            policy: _cloudinaryPolicy,
+          ),
+        );
+        expect(find.byType(Image), findsNothing);
+        await tester.pumpWidget(const SizedBox.shrink());
+        pending.response.complete(old);
+      }
+      await tester.pumpWidget(
+        _app(
+          _ReadyFetcher(old),
+          initial: old,
+          source: oldSource,
+          policy: _cloudinaryPolicy,
+        ),
+      );
+      await tester.pumpAndSettle();
+      featureReadCache.invalidate();
+      final pending = _PendingFetcher();
+      await tester.pumpWidget(
+        _app(
+          pending,
+          initial: old,
+          source: _immutableSource('new'),
+          policy: _cloudinaryPolicy,
+        ),
+      );
+      expect(find.byType(Image), findsNothing);
+      await tester.pumpWidget(const SizedBox.shrink());
+      pending.response.complete(old);
+    },
+  );
+
+  testWidgets(
+    'a later signed expiry cannot extend the old pixels original absolute expiry',
+    (tester) async {
+      final seconds = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      final oldSource = _immutableSource('old', expiry: seconds + 12);
+      final old = await _seed(source: oldSource, policy: _cloudinaryPolicy);
+      await tester.pumpWidget(
+        _app(
+          _ReadyFetcher(old),
+          initial: old,
+          source: oldSource,
+          policy: _cloudinaryPolicy,
+        ),
+      );
+      await tester.pumpAndSettle();
+      final pending = _PendingFetcher();
+      await tester.pumpWidget(
+        _app(
+          pending,
+          initial: old,
+          source: _immutableSource('new'),
+          policy: _cloudinaryPolicy,
+        ),
+      );
+      expect(find.byType(Image), findsOneWidget);
+      await tester.pump(const Duration(seconds: 3));
+      expect(find.byType(Image), findsNothing);
+      expect(find.text('loading'), findsOneWidget);
+      expect(old.sourceUri.toString(), oldSource);
+      await tester.pumpWidget(const SizedBox.shrink());
+      pending.response.complete(old);
+    },
+  );
 }
 
 Widget _app(
@@ -119,6 +285,7 @@ Widget _app(
   required FetchedContentMedia initial,
   String source = _source,
   Object? scope = _scope,
+  ContentMediaPolicy policy = _policy,
 }) => MaterialApp(
   home: Center(
     child: SizedBox(
@@ -127,7 +294,7 @@ Widget _app(
       child: ContentMediaImage(
         key: const Key('private-cover'),
         source: source,
-        mediaPolicy: _policy,
+        mediaPolicy: policy,
         mediaFetcher: fetcher,
         initialMedia: initial,
         mediaScope: scope,
@@ -140,13 +307,16 @@ Widget _app(
   ),
 );
 
-Future<FetchedContentMedia> _seed() async {
+Future<FetchedContentMedia> _seed({
+  String source = _source,
+  ContentMediaPolicy policy = _policy,
+}) async {
   final cache = CachedContentMediaFetcher(
-    policy: _policy,
+    policy: policy,
     fetcher: _ImageFetcher(),
   );
-  await cache.fetchScoped(_source, scope: _scope);
-  return cache.peekScoped(_source, scope: _scope)!;
+  await cache.fetchScoped(source, scope: _scope);
+  return cache.peekScoped(source, scope: _scope)!;
 }
 
 class _ImageFetcher implements ContentMediaFetcher {
@@ -164,8 +334,12 @@ class _ImageFetcher implements ContentMediaFetcher {
 
 class _PendingFetcher implements ContentMediaFetcher {
   final response = Completer<FetchedContentMedia>();
+  final requested = <Object?>[];
   @override
-  Future<FetchedContentMedia> fetch(Object? source) => response.future;
+  Future<FetchedContentMedia> fetch(Object? source) {
+    requested.add(source);
+    return response.future;
+  }
 }
 
 class _ReadyFetcher implements ContentMediaFetcher {

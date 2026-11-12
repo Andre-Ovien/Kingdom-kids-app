@@ -131,7 +131,7 @@ class AuthenticatedSandboxContentAccessRepository
   @override
   Future<SandboxContentAccess> fetch() async {
     if (!configuration.isEnabled) {
-      throw const AppException('Sandbox checkout is unavailable.');
+      throw const AppException('Checkout is unavailable.');
     }
     final origin = await _auth.restoreSession();
     if (origin == null || origin.parent.id.isEmpty) {
@@ -157,7 +157,7 @@ class AuthenticatedSandboxContentAccessRepository
       })().timeout(requestTimeout);
       if (response.statusCode != 200) {
         throw AppException(
-          'We could not check sandbox access. Try again.',
+          'We could not check your access. Try again.',
           statusCode: response.statusCode,
         );
       }

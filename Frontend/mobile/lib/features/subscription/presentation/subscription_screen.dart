@@ -78,20 +78,20 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
   String get _sandboxNotice {
     final checkout = _checkout!;
-    if (checkout.checking) return 'Sandbox test · Checking access…';
-    if (checkout.error != null) return 'Sandbox test · ${checkout.error}';
+    if (checkout.checking) return 'Checking access…';
+    if (checkout.error != null) return checkout.error!;
     if (checkout.access?.state == SandboxAccessState.paid) {
-      return 'Sandbox test · Access active. Paid access confirmed. No additional payment is needed.';
+      return 'Access active. No additional payment is needed.';
     }
     final state = switch (checkout.access?.state) {
       SandboxAccessState.paid => 'Paid access confirmed.',
-      SandboxAccessState.unpaid => 'No active paid access.',
+      SandboxAccessState.unpaid => 'No active subscription.',
       _ => 'Access status unknown.',
     };
     final capability = checkout.access?.checkoutAvailable == true
-        ? 'Test payments only.'
+        ? 'Continue in your browser.'
         : 'Checkout unavailable.';
-    return 'Sandbox test · $state $capability';
+    return '$state $capability';
   }
 
   Widget _footer(Widget child) => _checkout == null
@@ -146,8 +146,8 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
             const SizedBox(height: 14),
             Text(
               _checkout != null
-                  ? 'Test mode · No real charges. Continue to secure card payment in your browser. Sign in with the same parent account if asked.'
-                  : 'Checkout is not available yet. Exact dates and the billing timezone must come from the confirmed server quote before a purchase. No payment can be made on this screen.',
+                  ? 'Continue to secure card payment in your browser. Sign in with the same parent account if asked.'
+                  : 'Checkout is unavailable. Exact dates and the billing timezone will be shown before payment.',
               style: _type(14, height: 1.5),
             ),
             const SizedBox(height: 16),
@@ -311,7 +311,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                             ? _sandboxNotice
                             : widget.reviewMode
                             ? 'Preview only · Example dates · No payment can be made.'
-                            : 'Checkout is not configured yet. No payment can be made.',
+                            : 'Checkout is currently unavailable.',
                         key: Key(
                           _checkout != null
                               ? 'subscription-sandbox-notice'
@@ -366,11 +366,11 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                                 child: Text(
                                   _checkout != null
                                       ? _checkout!.busy
-                                            ? 'Checking sandbox…'
+                                            ? 'Checking…'
                                             : _checkout!.access?.state ==
                                                   SandboxAccessState.paid
-                                            ? 'Access active · Sandbox'
-                                            : 'Proceed · Sandbox'
+                                            ? 'Access active'
+                                            : 'Proceed'
                                       : 'Checkout unavailable',
                                   textAlign: TextAlign.center,
                                   style: _type(

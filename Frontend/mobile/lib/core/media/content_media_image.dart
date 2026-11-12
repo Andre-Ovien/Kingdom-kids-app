@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 
 import '../config/app_config.dart';
@@ -52,6 +54,7 @@ class _ContentMediaImageState extends State<ContentMediaImage> {
   ContentMediaPolicy? _configuredPolicy;
   int _retainedMediaGeneration = -1;
   bool _failed = false;
+  Timer? _retainedExpiryTimer;
 
   @override
   void initState() {
@@ -79,15 +82,27 @@ class _ContentMediaImageState extends State<ContentMediaImage> {
     _ownedFetcher = null;
 
     final sanitized = widget.mediaPolicy.sanitize(widget.source);
-    final sameIdentity =
+    final sameScope =
         sanitized != null &&
-        sanitized == _configuredSource &&
         _configuredScope == widget.mediaScope &&
         _configuredPolicy != null &&
         _samePolicy(_configuredPolicy!, widget.mediaPolicy) &&
         _retainedMediaGeneration == featureReadCache.mediaGeneration;
+    final sameIdentity =
+        sameScope &&
+        (sanitized == _configuredSource ||
+            (widget.mediaScope != null &&
+                _sameImmutablePrivateImage(
+                  _retainedMedia?.sourceUri,
+                  Uri.tryParse(sanitized),
+                )));
     if (!sameIdentity) _failed = false;
-    final previous = sameIdentity ? _usableMedia(_retainedMedia) : null;
+    final previous = sameIdentity
+        ? _usableMedia(
+            _retainedMedia,
+            source: _retainedMedia?.sourceUri?.toString(),
+          )
+        : null;
     _retainedMedia = _failed
         ? null
         : _usableMedia(widget.initialMedia) ?? previous;
@@ -95,6 +110,7 @@ class _ContentMediaImageState extends State<ContentMediaImage> {
     _configuredScope = widget.mediaScope;
     _configuredPolicy = widget.mediaPolicy;
     _retainedMediaGeneration = featureReadCache.mediaGeneration;
+    _armRetainedExpiry();
     if (sanitized == null) {
       _media = null;
       _retainedMedia = null;
@@ -119,13 +135,16 @@ class _ContentMediaImageState extends State<ContentMediaImage> {
     );
   }
 
-  FetchedContentMedia? _usableMedia(FetchedContentMedia? media) {
+  FetchedContentMedia? _usableMedia(
+    FetchedContentMedia? media, {
+    String? source,
+  }) {
     if (media == null || widget.mediaPolicy.sanitize(media.finalUri) == null) {
       return null;
     }
-    final source = widget.mediaPolicy.sanitize(widget.source);
-    if (source == null || media.sourceUri != Uri.parse(source)) return null;
-    if (Uri.parse(source).hasQuery ||
+    final trusted = widget.mediaPolicy.sanitize(source ?? widget.source);
+    if (trusted == null || media.sourceUri != Uri.parse(trusted)) return null;
+    if (Uri.parse(trusted).hasQuery ||
         media.finalUri.hasQuery ||
         media.cacheScope != null) {
       if (widget.mediaScope == null ||
@@ -134,9 +153,27 @@ class _ContentMediaImageState extends State<ContentMediaImage> {
         return null;
       }
     }
-    final expiry = featureMediaExpiry([source, media.finalUri.toString()]);
+    final expiry = featureMediaExpiry([trusted, media.finalUri.toString()]);
     if (expiry != null && !DateTime.now().isBefore(expiry)) return null;
     return media;
+  }
+
+  void _armRetainedExpiry() {
+    _retainedExpiryTimer?.cancel();
+    final retained = _retainedMedia;
+    if (retained == null) return;
+    final expiry = featureMediaExpiry([
+      retained.sourceUri?.toString(),
+      retained.finalUri.toString(),
+    ]);
+    if (expiry == null) return;
+    final delay = expiry.difference(DateTime.now());
+    if (delay <= Duration.zero) return;
+    _retainedExpiryTimer = Timer(delay, () {
+      if (mounted && identical(retained, _retainedMedia)) {
+        setState(() => _retainedMedia = null);
+      }
+    });
   }
 
   Future<FetchedContentMedia> _fetchWithRefresh(
@@ -177,6 +214,7 @@ class _ContentMediaImageState extends State<ContentMediaImage> {
   @override
   void dispose() {
     _generation++;
+    _retainedExpiryTimer?.cancel();
     _ownedFetcher?.close();
     super.dispose();
   }
@@ -202,7 +240,14 @@ class _ContentMediaImageState extends State<ContentMediaImage> {
         if (fetched == null) {
           return widget.loadingBuilder(context);
         }
+        if (snapshot.connectionState != ConnectionState.done &&
+            (_retainedMedia == null ||
+                _usableMedia(fetched, source: fetched.sourceUri?.toString()) ==
+                    null)) {
+          return widget.loadingBuilder(context);
+        }
         if (snapshot.connectionState == ConnectionState.done) {
+          _retainedExpiryTimer?.cancel();
           _retainedMedia = fetched;
           _retainedMediaGeneration = featureReadCache.mediaGeneration;
           _failed = false;
@@ -224,6 +269,51 @@ class _ContentMediaImageState extends State<ContentMediaImage> {
       },
     );
   }
+}
+
+/// Only the content-addressed assets emitted by our authenticated metadata API
+/// may keep existing pixels while a newly signed URL downloads. The old bytes
+/// keep their original source/expiry; they never become a hit for the new URL.
+bool _sameImmutablePrivateImage(Uri? oldSource, Uri? newSource) {
+  if (oldSource == null ||
+      newSource == null ||
+      oldSource.scheme != 'https' ||
+      newSource.scheme != 'https' ||
+      oldSource.host != 'api.cloudinary.com' ||
+      oldSource.host != newSource.host ||
+      oldSource.port != newSource.port ||
+      oldSource.path != newSource.path ||
+      !oldSource.path.endsWith('/image/download')) {
+    return false;
+  }
+  final oldQuery = oldSource.queryParametersAll;
+  final newQuery = newSource.queryParametersAll;
+  if (oldQuery.values.any((values) => values.length != 1) ||
+      newQuery.values.any((values) => values.length != 1)) {
+    return false;
+  }
+  final id = oldSource.queryParameters['public_id'] ?? '';
+  if (!RegExp(r'^kingdom-kids/media-v1/sha256-[a-f0-9]{64}$').hasMatch(id) ||
+      newSource.queryParameters['public_id'] != id ||
+      oldSource.queryParameters['type'] != 'authenticated' ||
+      newSource.queryParameters['type'] != 'authenticated' ||
+      (oldSource.queryParameters['signature'] ?? '').isEmpty ||
+      (newSource.queryParameters['signature'] ?? '').isEmpty) {
+    return false;
+  }
+  const renewed = {'signature', 'expires_at', 'timestamp'};
+  final stableOld = Map.of(oldQuery)
+    ..removeWhere((key, _) => renewed.contains(key));
+  final stableNew = Map.of(newQuery)
+    ..removeWhere((key, _) => renewed.contains(key));
+  if (stableOld.length != stableNew.length ||
+      stableOld.entries.any(
+        (entry) => stableNew[entry.key]?.single != entry.value.single,
+      )) {
+    return false;
+  }
+  final expiry = featureMediaExpiry([newSource.toString()]);
+  return expiry != null && DateTime.now().isBefore(expiry);
 }
 
 DateTime? _cloudinaryExpiry(String source) {

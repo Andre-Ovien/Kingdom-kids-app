@@ -391,7 +391,7 @@ void main() {
       await tester.tap(find.byKey(const Key('subscription-parent-continue')));
       await tester.pumpAndSettle();
       expect(launches.last.queryParameters, {'plan': 'yearly'});
-      expect(find.text('Proceed · Sandbox'), findsOneWidget);
+      expect(find.text('Proceed'), findsOneWidget);
     },
   );
 
@@ -533,7 +533,7 @@ void main() {
       expect(repository.reads, 2);
       expect(find.byKey(const Key('adult-gate-screen')), findsOneWidget);
       await _unlock(tester);
-      expect(find.textContaining('Paid access confirmed.'), findsOneWidget);
+      expect(find.textContaining('Access active.'), findsOneWidget);
       await tester.pumpWidget(const SizedBox.shrink());
     },
   );
