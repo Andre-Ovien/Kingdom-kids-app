@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
-import '../../../app/router.dart';
 import '../../../core/network/paid_content_access_state.dart';
-import '../data/sandbox_checkout.dart';
+import 'subscription_access_screen.dart';
 import 'hosted_subscription_scope.dart';
 
 class HostedPaidRouteBoundary extends StatelessWidget {
-  const HostedPaidRouteBoundary({required this.child, super.key});
+  const HostedPaidRouteBoundary({
+    required this.child,
+    this.childContext = true,
+    super.key,
+  });
+  final bool childContext;
   final Widget child;
   @override
   Widget build(BuildContext context) {
@@ -14,49 +18,11 @@ class HostedPaidRouteBoundary extends StatelessWidget {
     return AnimatedBuilder(
       animation: Listenable.merge([controller, paidContentAccessState]),
       builder: (context, _) {
-        final access = controller.access;
-        if (!paidContentAccessState.isDenied &&
-            access?.state == SandboxAccessState.paid &&
-            access!.enforcementEnabled &&
-            access.routingEnabled) {
+        if (controller.canBrowse) {
+          if (childContext) controller.noteChildContext();
           return child;
         }
-        return Scaffold(
-          key: const Key('hosted-access-required'),
-          appBar: AppBar(title: const Text('Subscription')),
-          body: SafeArea(
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (controller.checking) const CircularProgressIndicator(),
-                    const SizedBox(height: 16),
-                    Text(
-                      controller.checking
-                          ? 'Checking your subscription…'
-                          : 'Choose a subscription to start exploring.',
-                      textAlign: TextAlign.center,
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.of(
-                        context,
-                      ).pushNamed(AppRoutes.subscription),
-                      child: const Text('Subscription plans'),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.of(
-                        context,
-                      ).pushNamed(AppRoutes.parentalControls),
-                      child: const Text('Parent account settings'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
+        return const SubscriptionAccessScreen();
       },
     );
   }

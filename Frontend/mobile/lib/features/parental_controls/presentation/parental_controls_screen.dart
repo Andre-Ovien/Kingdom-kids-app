@@ -18,6 +18,13 @@ import '../data/parent_settings_store.dart';
 import '../data/parental_controls_repository.dart';
 import '../domain/parent_settings.dart';
 
+Future<String?> showParentAccountDeletionDialog(BuildContext context) =>
+    showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const _DeleteAccountDialog(),
+    );
+
 class ParentalControlsScreen extends StatefulWidget {
   const ParentalControlsScreen({
     super.key,

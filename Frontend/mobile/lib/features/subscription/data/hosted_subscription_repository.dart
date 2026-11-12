@@ -11,11 +11,7 @@ import 'sandbox_checkout.dart';
 
 abstract interface class HostedSubscriptionRepository {
   Future<HostedQuote> quote(SubscriptionBillingPeriod period);
-  Future<HostedAuthorization> authorize(
-    HostedQuote quote,
-    String operationId,
-    String password,
-  );
+  Future<HostedAuthorization> authorize(HostedQuote quote, String operationId);
   Future<HostedAttempt> prepare(HostedAuthorization authorization);
   Future<HostedAttempt> reconcile(
     String attemptId,
@@ -142,7 +138,6 @@ class HttpHostedSubscriptionRepository implements HostedSubscriptionRepository {
   Future<HostedAuthorization> authorize(
     HostedQuote quote,
     String operationId,
-    String password,
   ) async {
     final result = await _request(
       'POST',
@@ -152,7 +147,6 @@ class HttpHostedSubscriptionRepository implements HostedSubscriptionRepository {
       body: {
         'operation_id': hostedUuid(operationId),
         'billing_period': quote.period.name,
-        'password': password,
         'accepted': true,
         'disclosure_version': quote.disclosureVersion,
         'disclosure_sha256': quote.disclosureHash,

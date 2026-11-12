@@ -444,9 +444,9 @@ def _authorize_dispatch(term):
                 require_checkout_enabled(environment='production')
             elif getattr(settings, 'SQUARE_PRODUCTION_RENEWALS_ENABLED', False) is not True:
                 raise CheckoutRejected('Production renewal dispatch is disabled.')
-        from .permissions import verified_paid_coverage_until
+        from .permissions import verified_content_access_until
         proof_environments = ('sandbox','production') if term.environment == 'sandbox' else ('production',)
-        if any(verified_paid_coverage_until(parent,environment=proof_env,at=now) is not None
+        if any(verified_content_access_until(parent,environment=proof_env,at=now) is not None
                 for proof_env in proof_environments):
             raise CheckoutRejected('Another verified paid period is still active; no overlapping charge is authorized.')
         if not current.buyer_present and now >= coverage_end(current.request_not_before,current.coverage_rule,agreement.billing_timezone):

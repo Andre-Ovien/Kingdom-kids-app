@@ -106,7 +106,7 @@ class HostedFixture:
 
 def authorize(parent,period='monthly',operation=None):
  q=disclosure(period,'production')
- return core.authorize(parent=parent,operation_id=str(operation or uuid4()),billing_period=period,password=PASSWORD,
+ return core.authorize(parent=parent,operation_id=str(operation or uuid4()),billing_period=period,
   accepted=True,disclosure_version=q['disclosure_version'],disclosure_sha256=q['disclosure_sha256'])
 
 
@@ -160,14 +160,14 @@ class HostedConfigurationTests(SimpleTestCase):
 @override_settings(**HOSTED)
 class HostedCheckoutTests(TestCase):
  def setUp(self):cache.clear();self.parent=make_parent('hosted');self.other=make_parent('hosted-other');self.fixture=HostedFixture()
- def test_all_verified_parents_quote_and_native_password_once(self):
+ def test_all_verified_parents_quote_and_session_consent_authorization(self):
   for parent in [self.parent,self.other]:
    result=core.quote(parent=parent,period='monthly',client=self.fixture)
    self.assertEqual(result['amount_minor'],999);self.assertEqual(result['parent_id'],str(parent.pk))
    self.assertEqual(parent_content_access(parent)['checkout']['reason_code'],'production_hosted')
   with self.assertRaises(CheckoutRejected):
-   q=disclosure('monthly','production');core.authorize(parent=self.parent,operation_id=str(uuid4()),billing_period='monthly',password='bad',
-    accepted=True,disclosure_version=q['disclosure_version'],disclosure_sha256=q['disclosure_sha256'])
+   q=disclosure('monthly','production');core.authorize(parent=self.parent,operation_id=str(uuid4()),billing_period='monthly',
+    accepted=False,disclosure_version=q['disclosure_version'],disclosure_sha256=q['disclosure_sha256'])
   self.assertEqual(SquareHostedAttempt.objects.count(),0)
  def test_same_operation_plan_and_unresolved_checkout_block_new_attempt(self):
   auth=authorize(self.parent);again=authorize(self.parent,operation=auth['operation_id']);self.assertEqual(auth['attempt_id'],again['attempt_id'])
@@ -434,3 +434,28 @@ class HostedTransportBoundaryTests(SimpleTestCase):
   with override_settings(SQUARE_PRODUCTION_TRANSPORT_FACTORY=lambda:transport):
    with self.assertRaises(SquareConfigurationError):hosted_client(environment='production')
   transport.send.assert_not_called()
+
+
+@override_settings(**HOSTED)
+class HostedSessionConsentTests(TestCase):
+ def setUp(self):self.parent=make_parent('session-consent')
+ def test_authenticated_parent_can_authorize_frozen_consent_without_password(self):
+  q=disclosure('monthly','production');body={'operation_id':str(uuid4()),'billing_period':'monthly',
+   'accepted':True,'disclosure_version':q['disclosure_version'],'disclosure_sha256':q['disclosure_sha256']}
+  api=APIClient();self.assertEqual(api.post(BASE+'authorize/',body,format='json').status_code,401)
+  api.force_authenticate(self.parent)
+  response=api.post(BASE+'authorize/',body,format='json');self.assertEqual(response.status_code,200)
+  self.assertEqual(response.data['parent_id'],str(self.parent.pk));self.assertIn('authorization_token',response.data)
+  self.assertEqual(SquareHostedAttempt.objects.count(),1)
+  # Credential fields are not accepted by this explicit consent-only contract.
+  response=api.post(BASE+'authorize/',{**body,'password':'unnecessary-secret'},format='json')
+  self.assertEqual(response.status_code,400);self.assertNotIn('unnecessary-secret',str(response.data))
+ def test_consent_hash_verified_identity_expiry_and_owned_prepare_remain_required(self):
+  q=disclosure('monthly','production')
+  for changes in [{'accepted':False},{'disclosure_sha256':'a'*64},{'disclosure_version':'old'}]:
+   with self.assertRaises(CheckoutRejected):core.authorize(parent=self.parent,operation_id=str(uuid4()),billing_period='monthly',
+    **{'accepted':True,'disclosure_sha256':q['disclosure_sha256'],'disclosure_version':q['disclosure_version'],**changes})
+  self.assertEqual(SquareHostedAttempt.objects.count(),0)
+  self.parent.email_verified_at=None;self.parent.save()
+  with self.assertRaises(SquareDisabled):authorize(self.parent)
+  self.assertEqual(SquareHostedAttempt.objects.count(),0)

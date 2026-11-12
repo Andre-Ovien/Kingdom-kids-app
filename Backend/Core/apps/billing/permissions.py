@@ -66,7 +66,7 @@ def paid_content_access_until(parent, *, at=None):
     """
     if not settings.PAID_CONTENT_ENFORCEMENT_ENABLED:
         return None
-    return verified_paid_coverage_until(parent, environment=settings.PAID_CONTENT_ENTITLEMENT_ENVIRONMENT, at=at)
+    return verified_content_access_until(parent, environment=settings.PAID_CONTENT_ENTITLEMENT_ENVIRONMENT, at=at)
 
 
 def verified_paid_coverage_until(parent, *, environment, at=None):
@@ -107,3 +107,14 @@ class HasPaidContentAccess(BasePermission):
         if not has_paid_content_access(request.user):
             raise PaidContentRequired()
         return True
+
+
+def verified_content_access_until(parent, *, environment, at=None):
+    """Canonical finite access includes separately audited complimentary grants."""
+    if getattr(parent, 'pk', None) is None:
+        return None
+    from .complimentary import complimentary_coverage_until
+    paid = verified_paid_coverage_until(parent, environment=environment, at=at)
+    complimentary = complimentary_coverage_until(parent, environment=environment, at=at)
+    ends = [value for value in (paid, complimentary) if value is not None]
+    return max(ends) if ends else None

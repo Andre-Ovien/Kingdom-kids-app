@@ -153,9 +153,13 @@ class _VerificationPageState extends State<VerificationPage>
 
   void _codeChanged() {
     final code = widget.controller.text;
-    if (code.length != widget.codeLength ||
-        code == _lastAttemptedCode ||
-        _queued) {
+    if (code.length != widget.codeLength) {
+      // A rejected code is cleared by its screen, and a person may correct an
+      // incomplete entry back to the same digits. Both are new entries.
+      _lastAttemptedCode = null;
+      return;
+    }
+    if (code == _lastAttemptedCode || _queued) {
       return;
     }
     final generation = _generation;
@@ -174,6 +178,7 @@ class _VerificationPageState extends State<VerificationPage>
   Future<void> _attemptSubmit({bool automatic = false}) async {
     if (!_canAttempt) return;
     final code = widget.controller.text;
+    final challenge = widget.challengeKey;
     if (automatic &&
         (code.length != widget.codeLength ||
             code == _lastAttemptedCode ||
@@ -186,7 +191,16 @@ class _VerificationPageState extends State<VerificationPage>
     try {
       await widget.onSubmit();
     } finally {
-      if (mounted) setState(() => _inFlight = false);
+      if (mounted) {
+        // Native autofill can clear and restore a value while the first
+        // request is pending. Its unchanged completed value is still one
+        // attempt; a later incomplete edit can explicitly re-arm it.
+        if (widget.challengeKey == challenge &&
+            widget.controller.text == code) {
+          _lastAttemptedCode = code;
+        }
+        setState(() => _inFlight = false);
+      }
     }
   }
 

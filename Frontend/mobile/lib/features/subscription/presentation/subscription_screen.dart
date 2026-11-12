@@ -81,6 +81,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
   String get _sandboxNotice {
     final checkout = _checkout!;
+    if (checkout.access?.complimentaryAccess == true) {
+      return 'Complimentary access active.';
+    }
     if (checkout is HostedSubscriptionController &&
         checkout.persistentStatus != null) {
       return checkout.persistentStatus!;
@@ -156,7 +159,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
             ),
             const SizedBox(height: 14),
             Text(
-              _checkout != null
+              _checkout is HostedSubscriptionController
+                  ? 'Continue to Square to enter your card details and complete payment.'
+                  : _checkout != null
                   ? 'Continue to secure card payment in your browser. Sign in with the same parent account if asked.'
                   : 'Checkout is unavailable. Exact dates and the billing timezone will be shown before payment.',
               style: _type(14, height: 1.5),
@@ -165,9 +170,19 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
-                navigator.pushNamed(AppRoutes.parentalControls);
+                navigator.pushNamed(
+                  _checkout is HostedSubscriptionController &&
+                          !(_checkout as HostedSubscriptionController).canBrowse
+                      ? AppRoutes.subscriptionRequired
+                      : AppRoutes.parentalControls,
+                );
               },
-              child: const Text('Parent account settings'),
+              child: Text(
+                _checkout is HostedSubscriptionController &&
+                        !(_checkout as HostedSubscriptionController).canBrowse
+                    ? 'Account options'
+                    : 'Parent account settings',
+              ),
             ),
           ],
         ),
@@ -177,6 +192,59 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_checkout?.access?.complimentaryAccess == true) {
+      return Scaffold(
+        key: const Key('complimentary-access-screen'),
+        backgroundColor: _canvas,
+        appBar: AppBar(
+          title: const Text('Complimentary access'),
+          leading: IconButton(
+            onPressed: _close,
+            icon: const Icon(Icons.arrow_back_rounded),
+          ),
+        ),
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(28),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.auto_stories_rounded,
+                      size: 64,
+                      color: _blue,
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Complimentary access active',
+                      style: _type(27, weight: FontWeight.w700),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Your family can explore stories and games. No payment is required for this access.',
+                      style: _type(16, height: 1.5),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    FilledButton(
+                      onPressed: _close,
+                      style: FilledButton.styleFrom(
+                        shape: const StadiumBorder(),
+                        textStyle: _type(16),
+                      ),
+                      child: const Text('Continue'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     final yearly = _period == SubscriptionBillingPeriod.yearly;
     final renewal = _period.exampleRenewal(_today);
     final nextLabel = widget.reviewMode

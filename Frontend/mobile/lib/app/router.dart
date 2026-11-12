@@ -36,6 +36,8 @@ import '../features/subscription/presentation/subscription_review_screen.dart';
 import '../features/subscription/presentation/subscription_parent_screen.dart';
 import '../features/subscription/presentation/subscription_screen.dart';
 import '../features/subscription/presentation/hosted_paid_route_boundary.dart';
+import '../features/subscription/presentation/subscription_access_screen.dart';
+import '../features/privacy/presentation/privacy_policy_screen.dart';
 import '../features/videos/domain/video_story.dart';
 import '../features/videos/presentation/video_watch_screen.dart';
 import '../features/videos/presentation/videos_screen.dart';
@@ -66,6 +68,8 @@ class AppRoutes {
   static const profile = '/profile';
   static const parentalControls = '/parental-controls';
   static const subscription = '/parent/subscription';
+  static const subscriptionRequired = '/parent/subscription-required';
+  static const privacy = '/privacy';
   static const subscriptionReview = '/dev/subscription-review';
 
   static const tabRoutes = [home, stories, videos, games, profile];
@@ -185,6 +189,8 @@ class AppRouter {
         protectedBuilder: (_) => const ParentalControlsScreen(),
       ),
       AppRoutes.subscription => const SubscriptionParentScreen(),
+      AppRoutes.subscriptionRequired => const SubscriptionAccessScreen(),
+      AppRoutes.privacy => const PrivacyPolicyScreen(),
       AppRoutes.subscriptionReview =>
         !kReleaseMode &&
                 subscriptionReviewBuildId.isNotEmpty &&
@@ -210,7 +216,7 @@ class AppRouter {
         '${AppRoutes.storyReadAlong}/${story.slug}',
       _ => null,
     };
-    final screen = AppRoutes.isTabRoute(settings.name)
+    final featureScreen = AppRoutes.isTabRoute(settings.name)
         ? ScopedFeaturePage(
             route: settings.name!,
             preparation: tabTransition?.preparation,
@@ -222,13 +228,30 @@ class AppRouter {
             identityBound: true,
             child: destination,
           )
-        : const {
-            AppRoutes.profilePicker,
-            AppRoutes.kidProfileSetup,
-            AppRoutes.bible,
-          }.contains(settings.name)
-        ? HostedPaidRouteBoundary(child: destination)
         : destination;
+
+    const publicRoutes = {
+      AppRoutes.splash,
+      AppRoutes.onboarding,
+      AppRoutes.auth,
+      AppRoutes.login,
+      AppRoutes.register,
+      AppRoutes.emailVerification,
+      AppRoutes.passwordReset,
+      AppRoutes.subscription,
+      AppRoutes.subscriptionRequired,
+      AppRoutes.privacy,
+    };
+    final screen = publicRoutes.contains(settings.name)
+        ? featureScreen
+        : HostedPaidRouteBoundary(
+            childContext: !const {
+              AppRoutes.profilePicker,
+              AppRoutes.kidProfileSetup,
+              AppRoutes.parentalControls,
+            }.contains(settings.name),
+            child: featureScreen,
+          );
 
     if (tabTransition != null && AppRoutes.isTabRoute(settings.name)) {
       return TabGlideRoute(

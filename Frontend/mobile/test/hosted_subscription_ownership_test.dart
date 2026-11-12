@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:mobile/app/router.dart';
+import 'package:mobile/core/errors/app_exception.dart';
 import 'package:mobile/core/network/paid_content_access_state.dart';
 import 'package:mobile/features/auth/data/auth_api.dart';
 import 'package:mobile/features/auth/data/auth_repository.dart';
@@ -18,6 +19,7 @@ import 'package:mobile/features/subscription/data/hosted_subscription_repository
 import 'package:mobile/features/subscription/data/sandbox_checkout.dart';
 import 'package:mobile/features/subscription/domain/subscription_plan.dart';
 import 'package:mobile/features/subscription/presentation/hosted_subscription_scope.dart';
+import 'package:mobile/features/subscription/presentation/hosted_parent_authorization.dart';
 
 const _operation = '11111111-1111-4111-8111-111111111111';
 const _attemptA = '22222222-2222-4222-8222-222222222222';
@@ -173,6 +175,10 @@ class _SuccessController extends HostedSubscriptionController {
   @override
   HostedFlowState get state => HostedFlowState.paid;
   @override
+  bool get hasCurrentOwner => true;
+  @override
+  bool get canBrowse => true;
+  @override
   Future<bool> refresh() async => true;
   void completeForA() {
     sequence++;
@@ -183,6 +189,70 @@ class _SuccessController extends HostedSubscriptionController {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   tearDown(() => paidContentAccessState.selectScope(null));
+
+  testWidgets(
+    'invalidated covered consent removes only its own modal without authorizing',
+    (tester) async {
+      final navigator = GlobalKey<NavigatorState>();
+      final valid = ValueNotifier(true);
+      addTearDown(valid.dispose);
+      var authorizations = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          navigatorKey: navigator,
+          home: const Scaffold(body: Text('Original route')),
+        ),
+      );
+      final result = showHostedParentAuthorization(
+        navigator.currentContext!,
+        title: 'Subscription terms',
+        disclosure: 'Square renews this plan automatically until canceled.',
+        authorize: () async {
+          authorizations++;
+        },
+        validityChanges: valid,
+        isCurrent: () => valid.value,
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('hosted-parent-authorization')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('hosted-subscription-consent')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('hosted-parent-password')), findsNothing);
+      unawaited(
+        navigator.currentState!.push(
+          MaterialPageRoute<void>(
+            builder: (_) =>
+                const Scaffold(body: Text('Covering route stays open')),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      valid.value = false;
+      await tester.pumpAndSettle();
+      bool? completed;
+      unawaited(result.then((value) => completed = value));
+      await tester.pump();
+      expect(find.text('Covering route stays open'), findsOneWidget);
+      expect(
+        find.byKey(
+          const Key('hosted-parent-authorization'),
+          skipOffstage: false,
+        ),
+        findsNothing,
+      );
+      expect(completed, isFalse);
+      expect(authorizations, 0);
+      navigator.currentState!.pop();
+      await tester.pumpAndSettle();
+      expect(find.text('Original route'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
 
   for (final paid in [true, false]) {
     test(
@@ -219,7 +289,7 @@ void main() {
   }
 
   test(
-    'a parent switch during pending storage cannot send A password under B JWT',
+    'a parent switch during pending storage cannot send A consent under B JWT',
     () async {
       final auth = _Auth(), posted = <http.Request>[];
       final repository = HttpHostedSubscriptionRepository(
@@ -256,7 +326,7 @@ void main() {
       );
       addTearDown(controller.dispose);
       controller.authorizeParent = (quote, authorize) async {
-        await authorize('fixture-A-password');
+        await authorize();
         return true;
       };
       await controller.refresh();
@@ -275,6 +345,166 @@ void main() {
       expect(store.values['B'], isNull);
     },
   );
+
+  for (final interruption in ['refresh', 'background']) {
+    test(
+      'same-parent $interruption invalidates held consent without posting and preserves its operation',
+      () async {
+        final auth = _Auth(), store = _Store();
+        store.values['A'] = const HostedPendingCheckout(
+          parentId: 'A',
+          operationId: _operation,
+          period: SubscriptionBillingPeriod.monthly,
+        );
+        final posts = <http.Request>[];
+        var launches = 0, generatedOperations = 0;
+        final repository = HttpHostedSubscriptionRepository(
+          configuration: _configuration,
+          authRepository: auth,
+          client: MockClient((request) async {
+            if (request.method == 'POST') {
+              posts.add(request);
+              if (request.url.path.endsWith('/authorize/')) {
+                expect(jsonDecode(request.body), {
+                  'operation_id': _operation,
+                  'billing_period': 'monthly',
+                  'accepted': true,
+                  'disclosure_version': 'hosted-monthly-v1',
+                  'disclosure_sha256': List.filled(64, 'a').join(),
+                });
+                return http.Response(
+                  jsonEncode({
+                    'schema_version': 1,
+                    'parent_id': 'A',
+                    'environment': 'production',
+                    'attempt_id': _attemptA,
+                    'operation_id': _operation,
+                    'billing_period': 'monthly',
+                    'amount_minor': 999,
+                    'currency': 'USD',
+                    'authorization_token':
+                        'kkhost.${List.filled(43, 'a').join()}',
+                    'authorization_expires_at': DateTime.now()
+                        .toUtc()
+                        .add(const Duration(minutes: 9))
+                        .toIso8601String(),
+                  }),
+                  200,
+                );
+              }
+              expect(request.url.path.endsWith('/prepare/'), isTrue);
+              return http.Response(
+                jsonEncode({
+                  'schema_version': 1,
+                  'parent_id': 'A',
+                  'environment': 'production',
+                  'attempt_id': _attemptA,
+                  'operation_id': _operation,
+                  'billing_period': 'monthly',
+                  'amount_minor': 999,
+                  'currency': 'USD',
+                  'return_state': _returnA,
+                  'state': 'ready',
+                  'checkout_url': 'https://square.link/u/Owned123',
+                  'payment_confirmed': false,
+                  'access_state': 'unknown',
+                  'access_until': null,
+                  'renewals_enabled': false,
+                }),
+                200,
+              );
+            }
+            return http.Response(
+              jsonEncode(
+                request.url.path.endsWith('/quote/')
+                    ? _quote()
+                    : _access('A', paid: false),
+              ),
+              200,
+            );
+          }),
+        );
+        addTearDown(repository.dispose);
+        final controller = HostedSubscriptionController(
+          configuration: _configuration,
+          repository: repository,
+          pendingStore: store,
+          authRepository: auth,
+          operationId: () {
+            generatedOperations++;
+            return _operationB;
+          },
+          storefrontCountryProvider: () async => 'USA',
+          launcher: (_) async {
+            launches++;
+            return true;
+          },
+        );
+        addTearDown(controller.dispose);
+        await controller.refresh();
+        final entered = Completer<void>(), accepted = Completer<bool>();
+        late Future<void> Function() heldConsent;
+        controller.authorizeParent = (quote, authorize) async {
+          heldConsent = authorize;
+          entered.complete();
+          return accepted.future;
+        };
+        final opening = controller.openCheckout(
+          billingPeriod: SubscriptionBillingPeriod.monthly,
+        );
+        await entered.future.timeout(const Duration(seconds: 2));
+        final ticket = controller.authorizationRevision;
+        expect(controller.isAuthorizationCurrent(ticket), isTrue);
+        if (interruption == 'refresh') {
+          await controller.refresh();
+        } else {
+          controller.background();
+        }
+        expect(controller.isAuthorizationCurrent(ticket), isFalse);
+        await expectLater(
+          heldConsent(),
+          throwsA(
+            isA<AppException>().having(
+              (error) => error.code,
+              'code',
+              'checkout_interrupted',
+            ),
+          ),
+        );
+        accepted.complete(false);
+        await opening;
+        expect(posts, isEmpty);
+        expect(launches, 0);
+        expect(controller.error, isNot(contains('parent changed')));
+        expect(store.values['A']?.operationId, _operation);
+        if (interruption == 'background') await controller.resume();
+        expect(controller.canOpen, isTrue);
+        controller.authorizeParent = (quote, authorize) async {
+          await authorize();
+          return true;
+        };
+        await controller.openCheckout(
+          billingPeriod: SubscriptionBillingPeriod.monthly,
+        );
+        expect(
+          posts
+              .map((request) => request.url.path)
+              .where((path) => path.endsWith('/authorize/')),
+          hasLength(1),
+        );
+        expect(
+          posts
+              .map((request) => request.url.path)
+              .where((path) => path.endsWith('/prepare/')),
+          hasLength(1),
+        );
+        expect(generatedOperations, 0);
+        expect(launches, 1);
+        expect(store.values['A']?.operationId, _operation);
+        expect(controller.pending?.operationId, _operation);
+      },
+    );
+  }
 
   test(
     'A completion held at storage cleanup cannot clear B pending or signal B success',
@@ -408,6 +638,12 @@ void main() {
       expect(find.text('Original plans route'), findsOneWidget);
       expect(find.text('Unexpected B route'), findsNothing);
       expect(find.text('Unexpected login route'), findsNothing);
+      // Prove the fixture actually admits A's success; the B assertion above
+      // must not pass just because every success presentation is disabled.
+      auth.switchParent('A');
+      ownedController.completeForA();
+      await tester.pumpAndSettle();
+      expect(find.text('Subscription active'), findsOneWidget);
       await tester.pumpWidget(const SizedBox());
     },
   );

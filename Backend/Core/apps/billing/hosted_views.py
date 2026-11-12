@@ -47,7 +47,7 @@ class HostedAuthorizeView(HostedBase):
     @sensitive_variables()
     def post(self,request):
         try:
-            data=self.fields(request,('operation_id','billing_period','password','accepted','disclosure_version','disclosure_sha256'))
+            data=self.fields(request,('operation_id','billing_period','accepted','disclosure_version','disclosure_sha256'))
             return Response(core.authorize(parent=request.user,**data))
         except (SquareDisabled,SquareConfigurationError,CheckoutRejected,ValueError,TypeError) as error:return self.error(error)
 

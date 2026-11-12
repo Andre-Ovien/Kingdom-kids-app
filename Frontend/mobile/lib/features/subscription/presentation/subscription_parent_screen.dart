@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../auth/presentation/adult_gate.dart';
 import '../data/sandbox_checkout.dart';
+import '../data/hosted_subscription_controller.dart';
+import 'subscription_access_screen.dart';
 import 'subscription_screen.dart';
 import 'hosted_subscription_scope.dart';
 import 'hosted_subscription_parent_view.dart';
@@ -34,6 +36,24 @@ class _SubscriptionParentScreenState extends State<SubscriptionParentScreen>
     with WidgetsBindingObserver {
   AuthenticatedSandboxContentAccessRepository? _repository;
   SandboxCheckoutController? _checkout;
+  bool _preparingHostedStack = false;
+  void _prepareHostedStack(HostedSubscriptionController controller) {
+    if (_preparingHostedStack ||
+        controller.canBrowse ||
+        ModalRoute.of(context)?.settings.arguments ==
+            HostedPlansBackStack.prepared) {
+      return;
+    }
+    _preparingHostedStack = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _preparingHostedStack = false;
+      if (!controller.canBrowse &&
+          (ModalRoute.of(context)?.isCurrent ?? true)) {
+        openHostedSubscriptionPlans(context);
+      }
+    });
+  }
 
   @override
   void initState() {
@@ -81,7 +101,24 @@ class _SubscriptionParentScreenState extends State<SubscriptionParentScreen>
           ? const Scaffold(
               body: Center(child: Text('Checkout is unavailable.')),
             )
-          : HostedSubscriptionParentView(controller: controller);
+          : AnimatedBuilder(
+              animation: controller,
+              builder: (context, _) {
+                _prepareHostedStack(controller);
+                return controller.requiresParentGate
+                    ? AdultGate(
+                        repository:
+                            widget.authRepository ??
+                            HostedSubscriptionScope.authOf(context),
+                        title: 'Subscription plans',
+                        reason: 'A parent needs to open this area.',
+                        protectedBuilder: (_) => HostedSubscriptionParentView(
+                          controller: controller,
+                        ),
+                      )
+                    : HostedSubscriptionParentView(controller: controller);
+              },
+            );
     }
     return AdultGate(
       repository: widget.authRepository,

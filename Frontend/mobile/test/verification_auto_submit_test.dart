@@ -6,6 +6,94 @@ import 'package:mobile/app/app_route_observer.dart';
 import 'package:mobile/features/auth/presentation/verification_page.dart';
 
 void main() {
+  testWidgets(
+    'server-cleared code can be re-entered identically without a button',
+    (tester) async {
+      final controller = TextEditingController(), focus = FocusNode();
+      var calls = 0;
+      await tester.pumpWidget(
+        _app(controller, focus, () async {
+          calls++;
+          controller.clear();
+        }),
+      );
+      await tester.enterText(find.byType(TextField), '123456');
+      await tester.pumpAndSettle();
+      expect(calls, 1);
+      expect(controller.text, isEmpty);
+      await tester.enterText(find.byType(TextField), '123456');
+      await tester.pumpAndSettle();
+      expect(calls, 2);
+      await tester.pump(const Duration(seconds: 2));
+      expect(calls, 2);
+      await tester.pumpWidget(const SizedBox.shrink());
+      controller.dispose();
+      focus.dispose();
+    },
+  );
+
+  testWidgets(
+    'incomplete correction re-arms an unchanged completed code once',
+    (tester) async {
+      final controller = TextEditingController(), focus = FocusNode();
+      var calls = 0;
+      await tester.pumpWidget(
+        _app(controller, focus, () async {
+          calls++;
+        }),
+      );
+      await tester.enterText(find.byType(TextField), '123456');
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), '12345');
+      await tester.pump();
+      expect(calls, 1);
+      await tester.enterText(find.byType(TextField), '123456');
+      await tester.pumpAndSettle();
+      expect(calls, 2);
+      controller.selection = const TextSelection.collapsed(offset: 0);
+      await tester.pumpAndSettle();
+      expect(calls, 2);
+      await tester.pumpWidget(const SizedBox.shrink());
+      controller.dispose();
+      focus.dispose();
+    },
+  );
+
+  testWidgets(
+    'duplicate clear-and-fill while pending never duplicates the request',
+    (tester) async {
+      final controller = TextEditingController(), focus = FocusNode();
+      final barrier = Completer<void>();
+      var calls = 0;
+      await tester.pumpWidget(
+        _app(controller, focus, () {
+          calls++;
+          return barrier.future;
+        }),
+      );
+      await tester.enterText(find.byType(TextField), '123456');
+      await tester.pump();
+      expect(calls, 1);
+      controller.clear();
+      controller.text = '123456';
+      await tester.pump();
+      expect(calls, 1);
+      barrier.complete();
+      await tester.pumpAndSettle();
+      controller.selection = const TextSelection.collapsed(offset: 0);
+      await tester.pumpAndSettle();
+      expect(calls, 1);
+      controller.clear();
+      await tester.pump();
+      await tester.enterText(find.byType(TextField), '123456');
+      await tester.pumpAndSettle();
+      expect(calls, 2);
+      await tester.pumpWidget(const SizedBox.shrink());
+      controller.dispose();
+      focus.dispose();
+    },
+  );
+
   testWidgets('rapid code replacement checks the latest value once', (
     tester,
   ) async {

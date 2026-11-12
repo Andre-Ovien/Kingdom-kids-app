@@ -595,6 +595,9 @@ def start():
             for name in ('KK_TEST_FAMILY_IMPORT_ZLIB_B64', 'KK_TEST_FAMILY_IMPORT_SHA256', 'KK_TEST_FAMILY_IMPORT_EMAIL'):
                 os.environ.pop(name, None)
     lookup_sandbox_test_parent(os.environ)
+    if any(name.startswith('KK_COMPLIMENTARY_ACCESS_') for name in os.environ):
+        from apps.billing.complimentary_startup import apply_startup_operation
+        apply_startup_operation(os.environ)
     connections.close_all()
     # One synchronous worker fits the Free instance and keeps DB usage bounded.
     # Access logs omit request URLs, which can contain query parameters.

@@ -7,13 +7,13 @@ Only an active verified parent authenticated with the normal app JWT can use `/a
 | Method and suffix | Input | Result |
 | --- | --- | --- |
 | GET `quote/` | Exactly one `billing_period=monthly` or `yearly` | Canonical provider-checked fixed price/cadence, frozen disclosure/hash and parent/environment identity |
-| POST `authorize/` | `operation_id` client UUID, `billing_period`, fresh `password`, `accepted: true`, exact `disclosure_version` and `disclosure_sha256` | Owned attempt and short-lived opaque `authorization_token` in JSON body only |
+| POST `authorize/` | `operation_id` client UUID, `billing_period`, `accepted: true`, exact `disclosure_version` and `disclosure_sha256` | Owned attempt and short-lived opaque `authorization_token` in JSON body only |
 | POST `prepare/` | Same `operation_id`, `billing_period`, `authorization_token` | Exactly the same frozen idempotent API-created link; no automatic rekey or replacement |
 | GET `attempts/<UUID>/status/` | No financial input | Local owned canonical-proof status, no provider mutation |
 | POST `attempts/<UUID>/reconcile/` | `{}` | Bounded canonical reads, no payment/card/link creation |
 | POST `attempts/<UUID>/cancel/` | Fresh `password` | Revoke owned unused link and stop future owned Square renewal; preserve verified paid end |
 
-All replies are private/no-store. Wrong owner/environment is 404. Uncertainty is 409/503 and retains the same attempt; it is never an instruction to create another operation. A definitive wrong password is `invalid_parent_password`. Native authorization is the only fresh password step before Square's own Pay action. No app JWT or parent password is placed in a URL.
+All replies are private/no-store. Wrong owner/environment is 404. Uncertainty is 409/503 and retains the same attempt; it is never an instruction to create another operation. A definitive wrong password is `invalid_parent_password`. Native purchase authorization uses the current verified parent session and explicit frozen consent; it does not request the password again. Cancellation still requires a fresh parent password. No app JWT or parent password is placed in a URL.
 
 Quote identity includes `schema_version: 1`, string `parent_id`, explicit `environment`, `billing_period`, integer `amount_minor` (999 or 9990), `currency: USD`, policy/disclosure hashes, `automatic_renewal: true`, `billing_controller: square_hosted_subscriptions`, and `cadence: THIRTY_DAYS|ANNUAL`.
 

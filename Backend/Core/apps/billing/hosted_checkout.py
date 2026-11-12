@@ -24,7 +24,7 @@ from .hosted_policies import hosted_plan,disclosure
 from .hosted_provider import (hosted_configuration,hosted_client,variation_id,approved_provider_url,RETURN_URL,hosted_enabled)
 from .models import ParentContentEntitlement,SquareCheckoutIntent
 from .plans import ALL_CONTENT_FEATURE
-from .permissions import verified_paid_coverage_until
+from .permissions import verified_content_access_until
 from .reconciliation import CanonicalReader,_timestamp,_payment_snapshot,_payment_identity,_not_older_payments
 
 class HostedParentAuthorizationRejected(CheckoutRejected):pass
@@ -93,14 +93,14 @@ def quote(*,parent,period,client=None):
 
 
 @sensitive_variables()
-def authorize(*,parent,operation_id,billing_period,password,accepted,disclosure_version,disclosure_sha256):
+def authorize(*,parent,operation_id,billing_period,accepted,disclosure_version,disclosure_sha256):
     env=active_billing_environment();config=hosted_configuration(environment=env);operation=_uuid(operation_id)
     expected=disclosure(billing_period,env);plan=hosted_plan(billing_period)
     if accepted is not True or disclosure_version!=expected['disclosure_version'] or disclosure_sha256!=expected['disclosure_sha256']:
         raise CheckoutRejected('Accept the current recurring billing terms before checkout.')
     token=AUTH_PREFIX+secrets.token_urlsafe(32)
     with transaction.atomic():
-        current=get_user_model().objects.select_for_update().get(pk=parent.pk);_check_hosted_parent(current,password)
+        current=get_user_model().objects.select_for_update().get(pk=parent.pk)
         if not _eligible(current):raise SquareDisabled('A verified active parent is required.')
         attempt=SquareHostedAttempt.objects.select_for_update().filter(parent=current,environment=env,operation_id=operation).first()
         if attempt and attempt.billing_period!=billing_period:raise CheckoutConflict('Keep the original checkout plan and operation.')
@@ -109,13 +109,13 @@ def authorize(*,parent,operation_id,billing_period,password,accepted,disclosure_
                 raise CheckoutConflict('An existing checkout must be checked or canceled before another purchase.')
             if SquareCheckoutIntent.objects.filter(parent=current,environment=env,is_open=True).exists():
                 raise CheckoutConflict('An earlier payment must be checked before starting hosted checkout.')
-            if verified_paid_coverage_until(current,environment=env) is not None:
+            if verified_content_access_until(current,environment=env) is not None:
                 raise CheckoutConflict('Existing paid access is still active; no second purchase is authorized.')
             attempt=SquareHostedAttempt.objects.create(parent=current,environment=env,operation_id=operation,
                 billing_period=billing_period,policy_id=plan.policy_id,policy_sha256=plan.policy_sha256,
                 disclosure_sha256=disclosure_sha256,merchant_id=config.provider.merchant_id,location_id=config.location_id,
                 variation_id=variation_id(billing_period,env),amount_minor=plan.amount)
-        if verified_paid_coverage_until(current,environment=env) is not None:
+        if verified_content_access_until(current,environment=env) is not None:
             raise CheckoutConflict('Existing paid access is still active; no second purchase is authorized.')
         if not attempt.is_open or attempt.cancel_requested_at or attempt.subscription_id:
             raise CheckoutConflict('This checkout is already stopped; use its status rather than reopening it.')
@@ -180,7 +180,7 @@ def _claim(attempt_id,*,parent=None,creating=False,authorization_token=None):
         _contract(attempt,config);now=timezone.now()
         if attempt.processing_lease and attempt.lease_until and attempt.lease_until>now:raise CheckoutBusy('This checkout is already being checked.')
         if creating:
-            if attempt.subscription_id or (owner and verified_paid_coverage_until(owner,environment=env) is not None):
+            if attempt.subscription_id or (owner and verified_content_access_until(owner,environment=env) is not None):
                 raise CheckoutConflict('This parent already has paid access or an owned recurring subscription; use management.')
             if (not _eligible(owner) or attempt.cancel_requested_at or not attempt.is_open
                     or not isinstance(authorization_token,str) or not authorization_token.startswith(AUTH_PREFIX)
@@ -228,7 +228,7 @@ def prepare(*,parent,operation_id,billing_period,authorization_token,client=None
                 owner=get_user_model().objects.select_for_update().get(pk=parent.pk)
                 current=SquareHostedAttempt.objects.select_for_update().get(pk=attempt.pk,environment=env)
                 hosted_configuration(environment=env)
-                if (verified_paid_coverage_until(owner,environment=env) is not None or not _eligible(owner) or current.cancel_requested_at or current.processing_lease!=attempt.processing_lease
+                if (verified_content_access_until(owner,environment=env) is not None or not _eligible(owner) or current.cancel_requested_at or current.processing_lease!=attempt.processing_lease
                         or current.authorization_expires_at<=timezone.now()
                         or not constant_time_compare(current.parent_auth_sha256,_parent_digest(owner))):
                     raise CheckoutRejected('This hosted checkout is no longer authorized.')
@@ -464,7 +464,7 @@ def reconcile(*,parent,attempt_id,client=None,subscription_hint=None,invoice_hin
                 current=SquareHostedAttempt.objects.select_for_update().get(pk=attempt.pk,environment=attempt.environment)
                 if (not _eligible(owner) or current.cancel_requested_at or not current.is_open
                         or not constant_time_compare(current.parent_auth_sha256,_parent_digest(owner))
-                        or verified_paid_coverage_until(owner,environment=attempt.environment) is not None):
+                        or verified_content_access_until(owner,environment=attempt.environment) is not None):
                     raise CheckoutBusy('This checkout must remain pending until ownership and payment are checked.')
                 _checkpoint(attempt,state='ready',processing_lease=None,lease_until=None)
             return status(attempt)
@@ -609,7 +609,7 @@ class HostedReader(CanonicalReader):
 def capability(parent):
     env=active_billing_environment()
     result={'state':'unavailable','reason_code':'not_configured','provider':'square_hosted',
-        'fresh_parent_auth_required':True,'handoff_available':False,'management_handoff_available':False,
+        'fresh_parent_auth_required':False,'handoff_available':False,'management_handoff_available':False,
         'management_state':'unavailable','management_reason_code':'no_owned_purchase',
         'management_recovery':None,'controlled_parent_eligible':False}
     if not _eligible(parent):return result

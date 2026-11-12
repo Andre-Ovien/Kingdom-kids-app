@@ -31,14 +31,19 @@ class AuthRepository {
   // Repositories share the device's session storage. An explicit sign-in is a
   // new session even for the same parent; routine token rotation is not.
   static int _signInGeneration = 0;
+  static int? _freshParentGeneration;
+  static bool get hasFreshParentSession =>
+      _freshParentGeneration == _signInGeneration;
+  static int get sessionIdentityRevision => _signInGeneration;
 
   Future<PendingEmailVerification> register(RegisterParentRequest request) {
     return _api.register(request);
   }
 
   Future<AuthSession> verifyEmail(VerifyEmailRequest request) async {
+    final generation = _signInGeneration;
     final session = await _api.verifyEmail(request);
-    await _writeSession(session);
+    await _writeSession(session, expectedGeneration: generation);
     return session;
   }
 
@@ -71,6 +76,7 @@ class AuthRepository {
         return;
       }
       await _sessionStore.clear();
+      _signInGeneration += 1;
       _invalidateFeatureIdentity();
     });
   }
@@ -584,6 +590,7 @@ class AuthRepository {
         if (current == null ||
             (session != null && current.parent.id == session.parent.id)) {
           await _sessionStore.clear();
+          _signInGeneration += 1;
           _invalidateFeatureIdentity();
         }
       });
@@ -647,6 +654,7 @@ class AuthRepository {
         return current;
       }
       await _sessionStore.clear();
+      _signInGeneration += 1;
       _invalidateFeatureIdentity();
       return null;
     });
@@ -672,6 +680,7 @@ class AuthRepository {
           return current;
         }
         await _sessionStore.clear();
+        _signInGeneration += 1;
         _invalidateFeatureIdentity();
         return null;
       });
@@ -726,10 +735,15 @@ class AuthRepository {
     return refresh;
   }
 
-  Future<void> _writeSession(AuthSession session) {
+  Future<void> _writeSession(AuthSession session, {int? expectedGeneration}) {
     return _withSessionMutationLock(() async {
+      if (expectedGeneration != null &&
+          expectedGeneration != _signInGeneration) {
+        throw _accountChangedException;
+      }
       await _sessionStore.writeSession(session);
       _signInGeneration += 1;
+      _freshParentGeneration = _signInGeneration;
       _invalidateFeatureIdentity();
     });
   }
@@ -766,6 +780,7 @@ class AuthRepository {
         _requireExpectedParent(current, expectedParentId);
       }
       await _sessionStore.clear();
+      _signInGeneration += 1;
       _invalidateFeatureIdentity();
     });
   }

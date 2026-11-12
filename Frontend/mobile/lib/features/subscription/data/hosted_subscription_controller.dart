@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import '../../../core/errors/app_exception.dart';
+import '../../../core/network/paid_content_access_state.dart';
 import '../../auth/data/auth_repository.dart';
 import '../domain/hosted_checkout_return.dart';
 import '../domain/hosted_subscription.dart';
@@ -12,10 +13,7 @@ import 'hosted_subscription_repository.dart';
 import 'sandbox_checkout.dart';
 
 typedef HostedParentAuthorization =
-    Future<bool> Function(
-      HostedQuote quote,
-      Future<void> Function(String password) authorize,
-    );
+    Future<bool> Function(HostedQuote quote, Future<void> Function() authorize);
 typedef HostedCancellationAuthorization =
     Future<bool> Function(Future<void> Function(String password) cancel);
 
@@ -81,6 +79,8 @@ class HostedSubscriptionController extends ParentCheckoutController {
   HostedAttempt? _attempt;
   SandboxContentAccess? _access;
   Object? _owner;
+  int? _ownerGeneration;
+  Object? _childContextOwner;
   bool _busy = false,
       _checking = false,
       _disposed = false,
@@ -91,7 +91,7 @@ class HostedSubscriptionController extends ParentCheckoutController {
   Future<void>? _verification;
   HostedFlowState _state = HostedFlowState.idle;
   @override
-  SandboxContentAccess? get access => _access;
+  SandboxContentAccess? get access => hasCurrentOwner ? _access : null;
   @override
   bool get busy => _busy || _checking;
   @override
@@ -161,6 +161,24 @@ class HostedSubscriptionController extends ParentCheckoutController {
     }
   }
 
+  Future<AppException> _authorizationInterruption(Object? owner) async {
+    try {
+      final current = await _auth.captureParentAccessOwner();
+      if (owner == null || current?.scope != owner) {
+        return const AppException(
+          'The signed-in parent changed.',
+          code: 'account_changed',
+        );
+      }
+    } catch (_) {
+      // Unavailable protected storage is not evidence of another parent.
+    }
+    return const AppException(
+      'Checkout was interrupted. Please continue again.',
+      code: 'checkout_interrupted',
+    );
+  }
+
   Future<bool> _ticket(int revision, Object? owner) async {
     final same = await _sameOwner(owner);
     return same && !_disposed && _foreground && revision == _revision;
@@ -191,7 +209,13 @@ class HostedSubscriptionController extends ParentCheckoutController {
       _error = null;
     }
     _owner = scope;
+    _ownerGeneration = AuthRepository.sessionIdentityRevision;
     if (!_loaded) {
+      if (!AuthRepository.hasFreshParentSession) {
+        final child = await _auth.currentKid();
+        if (!await _ticket(revision, scope)) return false;
+        if (child?.parentId == captured.parentId) _childContextOwner = scope;
+      }
       final saved = await _store.read(captured.parentId);
       if (!await _ticket(revision, scope)) return false;
       _pending = saved?.parentId == captured.parentId ? saved : null;
@@ -235,6 +259,12 @@ class HostedSubscriptionController extends ParentCheckoutController {
       return false;
     }
     final revision = ++_revision;
+    if (_state == HostedFlowState.preparing) {
+      _state = _pending == null
+          ? HostedFlowState.idle
+          : HostedFlowState.pending;
+      _busy = false;
+    }
     _checking = true;
     _notify();
     try {
@@ -247,7 +277,12 @@ class HostedSubscriptionController extends ParentCheckoutController {
       _adoptRecovery(result.access.parentId, result.recovery);
       if (_pending != null) await _store.write(_pending!);
       if (!await _ticket(revision, owner)) return false;
-      if (_pending?.attemptId != null) await _checkOnce(owner, revision);
+      if (result.access.complimentaryAccess) {
+        _state = HostedFlowState.idle;
+        _error = null;
+      } else if (_pending?.attemptId != null) {
+        await _checkOnce(owner, revision);
+      }
       return true;
     } catch (_) {
       if (_disposed || revision != _revision) return false;
@@ -323,9 +358,9 @@ class HostedSubscriptionController extends ParentCheckoutController {
         _state = HostedFlowState.idle;
         return;
       }
-      final accepted = await presenter(quote, (password) async {
+      final accepted = await presenter(quote, () async {
         if (!await _ticket(revision, owner)) {
-          throw const AppException('The signed-in parent changed.');
+          throw await _authorizationInterruption(owner);
         }
         // Persist before the first uncertain request; never keep the password.
         final previous = _pending;
@@ -338,10 +373,10 @@ class HostedSubscriptionController extends ParentCheckoutController {
         );
         await _store.write(_pending!);
         if (!await _ticket(revision, owner)) {
-          throw const AppException('The signed-in parent changed.');
+          throw await _authorizationInterruption(owner);
         }
         try {
-          grant = await _repository.authorize(quote, operation, password);
+          grant = await _repository.authorize(quote, operation);
         } on AppException catch (error) {
           if (!await _ticket(revision, owner)) rethrow;
           if (error.statusCode == 400 || error.statusCode == 403) {
@@ -357,7 +392,7 @@ class HostedSubscriptionController extends ParentCheckoutController {
           rethrow;
         }
         if (!await _ticket(revision, owner)) {
-          throw const AppException('The signed-in parent changed.');
+          throw await _authorizationInterruption(owner);
         }
         if (previous?.attemptId != null &&
             previous!.attemptId != grant!.attemptId) {
@@ -372,7 +407,7 @@ class HostedSubscriptionController extends ParentCheckoutController {
         );
         await _store.write(_pending!);
         if (!await _ticket(revision, owner)) {
-          throw const AppException('The signed-in parent changed.');
+          throw await _authorizationInterruption(owner);
         }
       });
       if (!await _ticket(revision, owner)) return;
@@ -495,6 +530,7 @@ class HostedSubscriptionController extends ParentCheckoutController {
   }
 
   Future<bool> handleReturn(HostedCheckoutReturn link) async {
+    if (access?.complimentaryAccess == true) return false;
     final current = await _auth.captureParentAccessOwner();
     if (current?.scope == _owner &&
         _pending?.attemptId != null &&
@@ -543,7 +579,11 @@ class HostedSubscriptionController extends ParentCheckoutController {
   Future<void> _verifyPending() async {
     if (_disposed || !_foreground) return;
     await refresh();
-    if (_pending?.attemptId == null || _state == HostedFlowState.paid) return;
+    if (_access?.complimentaryAccess == true ||
+        _pending?.attemptId == null ||
+        _state == HostedFlowState.paid) {
+      return;
+    }
     final owner = _owner;
     final revision = ++_revision;
     _checking = true;
@@ -623,9 +663,41 @@ class HostedSubscriptionController extends ParentCheckoutController {
     _checking = false;
     _busy = false;
     _verification = null;
+    if (_state == HostedFlowState.preparing) {
+      _state = _pending == null
+          ? HostedFlowState.idle
+          : HostedFlowState.pending;
+    }
+    _notify();
   }
 
   Object? get ownerScope => _owner;
+  int get authorizationRevision => _revision;
+  bool isAuthorizationCurrent(int revision) =>
+      !_disposed && _foreground && revision == _revision && hasCurrentOwner;
+  bool get requiresParentGate =>
+      hasCurrentOwner && _childContextOwner == _owner;
+  void noteChildContext() {
+    if (canBrowse) _childContextOwner = _owner;
+  }
+
+  bool get hasCurrentOwner =>
+      _owner != null &&
+      _ownerGeneration == AuthRepository.sessionIdentityRevision;
+  bool get canBrowse =>
+      hasCurrentOwner &&
+      !_disposed &&
+      !paidContentAccessState.isDenied &&
+      _access?.state == SandboxAccessState.paid &&
+      _access?.enforcementEnabled == true &&
+      _access?.routingEnabled == true &&
+      _access?.accessUntil?.isAfter(DateTime.now().toUtc()) == true;
+  bool get hasConfirmedUnpaid =>
+      hasCurrentOwner &&
+      (paidContentAccessState.isDenied ||
+          (_access?.state == SandboxAccessState.unpaid &&
+              _access?.enforcementEnabled == true &&
+              _access?.routingEnabled == true));
 
   Future<void> resume() async {
     _foreground = true;

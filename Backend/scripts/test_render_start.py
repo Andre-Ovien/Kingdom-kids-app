@@ -396,7 +396,7 @@ class RenderStartupTests(unittest.TestCase):
                 self.fail('Must not migrate without ownership')
         connection.__exit__.assert_called_once()
 
-    def run_start(self,fail_migration=False,private_media=False,fail_bootstrap=None,private_family=False,sandbox_checkout=False,parent_lookup=False,production_checkout=False,controlled_checkout=False,hosted_checkout=False):
+    def run_start(self,fail_migration=False,private_media=False,fail_bootstrap=None,private_family=False,sandbox_checkout=False,parent_lookup=False,production_checkout=False,controlled_checkout=False,hosted_checkout=False,complimentary_access=False):
         events=[]
         _, lookup_model, _ = self.lookup_fixture()
         lookup_query = lookup_model.objects.filter.return_value
@@ -422,6 +422,12 @@ class RenderStartupTests(unittest.TestCase):
         modules={'django':SimpleNamespace(setup=lambda:events.append('setup')),
             'django.core.management':SimpleNamespace(call_command=command),
             'django.db':SimpleNamespace(connections=Connections(default=database))}
+        def complimentary(values):
+            events.append('complimentary_operation')
+            for name in list(values):
+                if name.startswith('KK_COMPLIMENTARY_ACCESS_'): values.pop(name)
+        if complimentary_access:
+            modules['apps.billing.complimentary_startup']=SimpleNamespace(apply_startup_operation=complimentary)
         old_path=list(sys.path)
         try:
             values=self.private_environment() if private_media else environment()
@@ -433,6 +439,8 @@ class RenderStartupTests(unittest.TestCase):
                 values.update(controlled_production_environment())
             if hosted_checkout:
                 values.update(hosted_production_environment())
+            if complimentary_access:
+                values['KK_COMPLIMENTARY_ACCESS_OPERATION']='grant'
             if parent_lookup:
                 values['KK_SANDBOX_TEST_PARENT_LOOKUP_EMAIL']='private-parent@example.test'
             if private_family:
@@ -443,14 +451,16 @@ class RenderStartupTests(unittest.TestCase):
                     patch.object(startup,'migration_lock',lock),\
                     patch.object(startup,'lookup_sandbox_test_parent',side_effect=lookup),\
                     patch.object(startup,'control_socket_path',return_value='/tmp/fixture-private/control.sock'),\
-                    patch.object(startup.os,'execvp',side_effect=lambda *args:self.record_exec(events,args,private_family,parent_lookup)):
+                    patch.object(startup.os,'execvp',side_effect=lambda *args:self.record_exec(events,args,private_family,parent_lookup,complimentary_access)):
                 if fail_migration or fail_bootstrap:
                     with self.assertRaises(RuntimeError):startup.start()
                 else:startup.start()
         finally:sys.path[:]=old_path
         return events
 
-    def record_exec(self, events, args, private_family, parent_lookup=False):
+    def record_exec(self, events, args, private_family, parent_lookup=False, complimentary_access=False):
+        if complimentary_access:
+            self.assertFalse(any(name.startswith('KK_COMPLIMENTARY_ACCESS_') for name in os.environ))
         if private_family:
             for key in ('KK_TEST_FAMILY_IMPORT_ZLIB_B64', 'KK_TEST_FAMILY_IMPORT_SHA256', 'KK_TEST_FAMILY_IMPORT_EMAIL'):
                 self.assertNotIn(key, os.environ)
@@ -480,6 +490,15 @@ class RenderStartupTests(unittest.TestCase):
         self.assertEqual(events[:7], ['setup', 'check', 'lock', 'migrate',
             'install_published_matching_release', 'unlock', 'close_connections'])
         self.assertEqual(events[7][0], 'gunicorn')
+
+    def test_complimentary_operation_follows_migrate_and_deploy_checks_and_is_stripped_before_server(self):
+        events=self.run_start(hosted_checkout=True,complimentary_access=True)
+        self.assertEqual(events[:9], ['setup','check','lock','migrate','install_published_matching_release',
+            'install_private_media_release','unlock','complimentary_operation','close_connections'])
+        self.assertEqual(events[9][0],'gunicorn')
+        failed=self.run_start(hosted_checkout=True,complimentary_access=True,fail_migration=True)
+        self.assertEqual(failed,['setup','check','lock','migrate'])
+        self.assertNotIn('complimentary_operation',failed)
 
     def test_optional_parent_lookup_follows_checks_and_bootstrap_then_strips_email_before_gunicorn(self):
         events=self.run_start(sandbox_checkout=True,parent_lookup=True)

@@ -32,6 +32,9 @@ class HostedSubscriptionScope extends StatefulWidget {
   final AuthRepository? authRepository;
   final Stream<String>? returnLinks;
   final Future<String?>? initialReturn;
+  static AuthRepository? authOf(BuildContext context) => context
+      .dependOnInheritedWidgetOfExactType<_HostedScopeData>()
+      ?.authRepository;
   static HostedSubscriptionController? maybeOf(BuildContext context) => context
       .dependOnInheritedWidgetOfExactType<_HostedScopeData>()
       ?.controller;
@@ -41,7 +44,12 @@ class HostedSubscriptionScope extends StatefulWidget {
 }
 
 class _HostedScopeData extends InheritedWidget {
-  const _HostedScopeData({required this.controller, required super.child});
+  const _HostedScopeData({
+    required this.controller,
+    required this.authRepository,
+    required super.child,
+  });
+  final AuthRepository authRepository;
   final HostedSubscriptionController? controller;
   @override
   bool updateShouldNotify(_HostedScopeData old) => controller != old.controller;
@@ -139,7 +147,14 @@ class _HostedSubscriptionScopeState extends State<HostedSubscriptionScope>
   void _changed() {
     final controller = _controller!;
     if (!mounted) return;
-    if (_returnOwner != null && _returnOwner != controller.ownerScope) {
+    if (controller.access?.complimentaryAccess == true) {
+      _returnVisible = false;
+      _successVisible = false;
+      _returnTimer?.cancel();
+    }
+    if (_returnOwner != null &&
+        (_returnOwner != controller.ownerScope ||
+            !controller.hasCurrentOwner)) {
       _returnTimer?.cancel();
       _returnVisible = false;
       _successVisible = false;
@@ -172,7 +187,8 @@ class _HostedSubscriptionScopeState extends State<HostedSubscriptionScope>
           !_suppressAutoReturn &&
           _controller?.ownerScope == owner &&
           _controller?.successSequence == sequence &&
-          _controller?.state == HostedFlowState.paid;
+          _controller?.state == HostedFlowState.paid &&
+          _controller?.canBrowse == true;
     } catch (_) {
       return false;
     }
@@ -242,6 +258,7 @@ class _HostedSubscriptionScopeState extends State<HostedSubscriptionScope>
   @override
   Widget build(BuildContext context) => _HostedScopeData(
     controller: _controller,
+    authRepository: _auth,
     child: Stack(
       children: [
         widget.child,
@@ -292,9 +309,16 @@ class _HostedSubscriptionScopeState extends State<HostedSubscriptionScope>
                           ),
                         ],
                         TextButton(
-                          onPressed: () =>
-                              _leaveReturn(AppRoutes.parentalControls),
-                          child: const Text('Parent account settings'),
+                          onPressed: () => _leaveReturn(
+                            _controller!.canBrowse
+                                ? AppRoutes.parentalControls
+                                : AppRoutes.subscriptionRequired,
+                          ),
+                          child: Text(
+                            _controller!.canBrowse
+                                ? 'Parent account settings'
+                                : 'Account options',
+                          ),
                         ),
                         TextButton(
                           onPressed: () {

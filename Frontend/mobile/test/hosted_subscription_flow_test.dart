@@ -26,6 +26,7 @@ import 'package:mobile/features/subscription/presentation/checkout_error_notice.
 import 'package:mobile/features/subscription/presentation/hosted_paid_route_boundary.dart';
 import 'package:mobile/features/subscription/presentation/hosted_parent_authorization.dart';
 import 'package:mobile/features/subscription/presentation/hosted_subscription_scope.dart';
+import 'package:mobile/features/subscription/presentation/subscription_screen.dart';
 
 const _op = '11111111-1111-4111-8111-111111111111';
 const _attempt = '22222222-2222-4222-8222-222222222222';
@@ -99,17 +100,19 @@ Map<String, dynamic> _attemptJson(
       : null,
   'renewals_enabled': paid,
 };
-SandboxContentAccess _access({bool paid = false}) => SandboxContentAccess(
-  parentId: '42',
-  state: paid ? SandboxAccessState.paid : SandboxAccessState.unpaid,
-  checkoutAvailable: !paid,
-  enforcementEnabled: true,
-  routingEnabled: true,
-  managementAvailable: paid,
-  accessUntil: paid
-      ? DateTime.now().toUtc().add(const Duration(days: 29))
-      : null,
-);
+SandboxContentAccess _access({bool paid = false, bool complimentary = false}) =>
+    SandboxContentAccess(
+      parentId: '42',
+      state: paid ? SandboxAccessState.paid : SandboxAccessState.unpaid,
+      checkoutAvailable: !paid,
+      enforcementEnabled: true,
+      routingEnabled: true,
+      managementAvailable: paid && !complimentary,
+      complimentaryAccess: complimentary,
+      accessUntil: paid
+          ? DateTime.now().toUtc().add(const Duration(days: 29))
+          : null,
+    );
 
 class _AuthApi extends Fake implements AuthApi {}
 
@@ -141,7 +144,10 @@ class _Store implements HostedCheckoutPendingStore {
 
 class _Repository implements HostedSubscriptionRepository {
   int authorizations = 0, preparations = 0, reconciliations = 0, reads = 0;
-  bool paid = false, prepareTimeout = false, accessFails = false;
+  bool paid = false,
+      complimentary = false,
+      prepareTimeout = false,
+      accessFails = false;
   SubscriptionBillingPeriod selected = SubscriptionBillingPeriod.monthly;
   final operations = <String>[];
   Completer<HostedAttempt>? heldPrepare;
@@ -150,7 +156,10 @@ class _Repository implements HostedSubscriptionRepository {
   access() async {
     reads++;
     if (accessFails) throw const AppException('Offline', code: 'network_error');
-    return (access: _access(paid: paid), recovery: null);
+    return (
+      access: _access(paid: paid, complimentary: complimentary),
+      recovery: null,
+    );
   }
 
   @override
@@ -160,12 +169,10 @@ class _Repository implements HostedSubscriptionRepository {
   Future<HostedAuthorization> authorize(
     HostedQuote quote,
     String operationId,
-    String password,
   ) async {
     authorizations++;
     operations.add(operationId);
     selected = quote.period;
-    expect(password, 'fixture-password');
     return HostedAuthorization.fromJson(
       _authorization(selected),
       '42',
@@ -243,7 +250,7 @@ HostedSubscriptionController _controller(
     },
   );
   controller.authorizeParent = (quote, authorize) async {
-    await authorize('fixture-password');
+    await authorize();
     return true;
   };
   return controller;
@@ -257,6 +264,92 @@ Future<void> _drain() async {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  test(
+    'canonical complimentary access is finite owned access, never a purchase capability',
+    () {
+      final now = DateTime.now().toUtc();
+      final json = <String, dynamic>{
+        'schema_version': 1,
+        'parent_id': '42',
+        'environment': 'production',
+        'evaluated_at': now.toIso8601String(),
+        'access_state': 'paid',
+        'access_until': now.add(const Duration(days: 30)).toIso8601String(),
+        'access_basis': 'complimentary',
+        'reason_code': 'complimentary_access',
+        'payment_confirmed': false,
+        'content_enforcement_enabled': true,
+        'parent_plan_routing_enabled': true,
+        'checkout': {
+          'state': 'available',
+          'provider': 'square_hosted',
+          'reason_code': 'production_hosted',
+          'management_state': 'available',
+          'management_reason_code': 'owned_purchase',
+        },
+      };
+      final access = SandboxContentAccess.fromJson(
+        json,
+        expectedParentId: '42',
+        expectedEnvironment: 'production',
+        allowHostedProduction: true,
+      );
+      expect(access.complimentaryAccess, isTrue);
+      expect(access.checkoutAvailable, isFalse);
+      expect(access.managementAvailable, isFalse);
+      expect(
+        () => SandboxContentAccess.fromJson(
+          {...json, 'access_until': null},
+          expectedParentId: '42',
+          expectedEnvironment: 'production',
+          allowHostedProduction: true,
+        ),
+        throwsFormatException,
+      );
+    },
+  );
+  testWidgets(
+    'complimentary grant bypasses payment reconcile without fake success or deleting a frozen attempt',
+    (tester) async {
+      final fixture = await _auth();
+      final repo = _Repository()
+        ..paid = true
+        ..complimentary = true;
+      final store = _Store();
+      await store.write(
+        const HostedPendingCheckout(
+          parentId: '42',
+          operationId: _op,
+          period: SubscriptionBillingPeriod.monthly,
+          attemptId: _attempt,
+          returnState: _return,
+        ),
+      );
+      final controller = _controller(repo, store, fixture.auth);
+      addTearDown(controller.dispose);
+      await controller.refresh();
+      await controller.verifyPending();
+      expect(controller.canBrowse, isTrue);
+      expect(controller.canOpen, isFalse);
+      expect(controller.canManage, isFalse);
+      expect(repo.reconciliations, 0);
+      expect(controller.successSequence, 0);
+      expect((await store.read('42'))!.operationId, _op);
+      await tester.pumpWidget(
+        MaterialApp(home: SubscriptionScreen(sandboxCheckout: controller)),
+      );
+      expect(
+        find.byKey(const Key('complimentary-access-screen')),
+        findsOneWidget,
+      );
+      expect(find.text('Complimentary access active'), findsOneWidget);
+      expect(find.text('Subscription active'), findsNothing);
+      expect(find.text('Manage subscription'), findsNothing);
+      expect(find.text('Monthly plan'), findsNothing);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
   test(
     'hosted configuration and capability stay separate from old SDK/controlled profiles',
     () {
@@ -373,7 +466,7 @@ void main() {
   });
 
   test(
-    'one password precedes provider Pay; canonical paid return completes once without another authorization',
+    'verified parent consent precedes provider Pay; canonical paid return completes once',
     () async {
       final fixture = await _auth();
       final repo = _Repository(), store = _Store(), launches = <Uri>[];
@@ -636,7 +729,7 @@ void main() {
   );
 
   testWidgets(
-    'parent authorization requires disclosure acceptance and a password before its one server check',
+    'parent consent requires terms acceptance, no password, and a pill CTA before its one server check',
     (tester) async {
       var calls = 0;
       final submitted = Completer<void>();
@@ -649,11 +742,10 @@ void main() {
                 title: 'For parents',
                 disclosure:
                     'Square charges now and automatically renews until canceled.',
-                submit: (password) async {
-                  expect(password, 'fixture-password');
+                authorize: () async {
                   calls++;
                   if (calls == 1) {
-                    throw const AppException('Check your parent password.');
+                    throw const AppException('Please try continuing again.');
                   }
                   await submitted.future;
                 },
@@ -673,9 +765,16 @@ void main() {
             .onPressed,
         isNull,
       );
-      await tester.enterText(
-        find.byKey(const Key('hosted-parent-password')),
-        'fixture-password',
+      expect(find.byKey(const Key('hosted-parent-password')), findsNothing);
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.byKey(const Key('hosted-authorize-continue')),
+            )
+            .style!
+            .shape!
+            .resolve({}),
+        isA<StadiumBorder>(),
       );
       await tester.tap(find.byKey(const Key('hosted-subscription-consent')));
       await tester.pump();
@@ -686,7 +785,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byType(AlertDialog),
-          matching: find.text('Check your parent password.'),
+          matching: find.text('Please try continuing again.'),
         ),
         findsNothing,
       );
@@ -793,7 +892,10 @@ void main() {
       );
       await tester.pump();
       expect(find.text('Private child story'), findsNothing);
-      expect(find.text('Parent account settings'), findsOneWidget);
+      expect(find.text('Parent account settings'), findsNothing);
+      expect(find.text('Sign out'), findsOneWidget);
+      expect(find.text('Delete account'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox.shrink());
     },
   );
 
@@ -826,7 +928,6 @@ void main() {
               unorderedEquals([
                 'operation_id',
                 'billing_period',
-                'password',
                 'accepted',
                 'disclosure_version',
                 'disclosure_sha256',
@@ -856,7 +957,7 @@ void main() {
       );
       addTearDown(repo.dispose);
       final quote = await repo.quote(SubscriptionBillingPeriod.monthly);
-      final grant = await repo.authorize(quote, _op, 'fixture-password');
+      final grant = await repo.authorize(quote, _op);
       final prepared = await repo.prepare(grant);
       expect(prepared.checkoutUri!.host, 'square.link');
       expect(methods, ['GET', 'POST', 'POST']);

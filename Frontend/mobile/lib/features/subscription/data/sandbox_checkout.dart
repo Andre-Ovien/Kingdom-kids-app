@@ -29,6 +29,7 @@ class SandboxContentAccess {
     this.managementHandoffAvailable = false,
     this.enforcementEnabled = false,
     this.routingEnabled = false,
+    this.complimentaryAccess = false,
   });
 
   final String parentId;
@@ -40,6 +41,7 @@ class SandboxContentAccess {
   final bool managementHandoffAvailable;
   final bool enforcementEnabled;
   final bool routingEnabled;
+  final bool complimentaryAccess;
 
   factory SandboxContentAccess.fromJson(
     Map<String, dynamic> json, {
@@ -98,12 +100,20 @@ class SandboxContentAccess {
                         enforcement &&
                         checkout['reason_code'] == 'production_qualified'
             : routing && checkout['reason_code'] == 'sandbox_only');
+    final complimentary =
+        expectedEnvironment == 'production' &&
+        state == SandboxAccessState.paid &&
+        json['access_basis'] == 'complimentary' &&
+        json['reason_code'] == 'complimentary_access' &&
+        json['payment_confirmed'] == false;
     return SandboxContentAccess(
+      complimentaryAccess: complimentary,
       parentId: expectedParentId,
       state: state,
-      checkoutAvailable: available,
+      checkoutAvailable: available && !complimentary,
       accessUntil: accessUntil,
       managementAvailable:
+          !complimentary &&
           checkout is Map &&
           checkout['management_state'] == 'available' &&
           checkout['management_reason_code'] == 'owned_purchase',

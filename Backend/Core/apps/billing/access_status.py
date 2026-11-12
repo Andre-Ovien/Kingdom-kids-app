@@ -21,7 +21,7 @@ def _base(parent, now):
             'environment': settings.PAID_CONTENT_ENTITLEMENT_ENVIRONMENT
                 if settings.PAID_CONTENT_ENTITLEMENT_ENVIRONMENT in {'sandbox', 'production'} else None,
             'evaluated_at': now.isoformat(), 'access_state': 'unknown',
-            'access_until': None, 'reason_code': 'not_qualified',
+            'access_until': None, 'reason_code': 'not_qualified', 'access_basis': None, 'payment_confirmed': False,
             'content_enforcement_enabled': settings.PAID_CONTENT_ENFORCEMENT_ENABLED is True,
             'parent_plan_routing_enabled': False,
             'checkout': {'state': 'unavailable', 'reason_code': 'not_configured',
@@ -89,9 +89,16 @@ def parent_content_access(parent, *, at=None):
             result['checkout'].update(management_state='unknown', management_reason_code='temporarily_unavailable')
         return result
     try:
-        end = verified_paid_coverage_until(parent, environment=environment, at=now)
+        from .complimentary import complimentary_coverage_until
+        complimentary_end = complimentary_coverage_until(parent, environment=environment, at=now)
+        paid_end = verified_paid_coverage_until(parent, environment=environment, at=now)
+        ends = [value for value in (complimentary_end, paid_end) if value is not None]
+        end = max(ends) if ends else None
         if end is not None:
-            result.update(access_state='paid', access_until=end.isoformat(), reason_code='active_proof')
+            result.update(access_state='paid', access_until=end.isoformat(),
+                reason_code='complimentary_access' if complimentary_end is not None else 'active_proof',
+                access_basis='complimentary' if complimentary_end is not None else 'payment',
+                payment_confirmed=complimentary_end is None and paid_end is not None)
         result['purchase_recovery'] = _owned_recovery(parent, environment=environment)
         if result['access_state'] == 'paid' and result['purchase_recovery']:
             result['purchase_recovery']['restart_allowed'] = False
@@ -109,6 +116,16 @@ def parent_content_access(parent, *, at=None):
             result['hosted_checkout_recovery'] = recovery(parent,environment)
             if result['access_state'] != 'paid' and result['hosted_checkout_recovery'] and result['hosted_checkout_recovery']['state'] in {'creating','pending','review_required'}:
                 result.update(access_state='unknown',reason_code='purchase_requires_recovery')
+        if complimentary_end is not None:
+            # This is access authorization, never a paid subscription or payment
+            # success. Financial history is retained, but no purchase/renewal UI
+            # is advertised for an explicitly complimentary account.
+            result['purchase_recovery'] = None
+            result['management_recovery'] = None
+            result['hosted_checkout_recovery'] = None
+            result['checkout'].update(state='unavailable', reason_code='complimentary_access',
+                management_state='unavailable', management_reason_code='complimentary_access',
+                handoff_available=False, management_handoff_available=False)
         result['parent_plan_routing_enabled'] = bool(
             (environment == 'sandbox' and result['checkout']['state'] == 'available')
             or (environment == 'production' and active_billing_environment() == 'production'

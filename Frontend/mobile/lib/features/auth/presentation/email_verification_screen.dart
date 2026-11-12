@@ -1,10 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../subscription/data/hosted_access_routing.dart';
 
+import '../../../app/app_route_observer.dart';
 import '../../../app/router.dart';
 import '../../../core/errors/app_exception.dart';
+import '../../../core/network/feature_view_state_cache.dart';
 import '../data/auth_repository.dart';
 import '../domain/auth_requests.dart';
 import '../domain/auth_session.dart';
@@ -26,7 +29,8 @@ class EmailVerificationScreen extends StatefulWidget {
       _EmailVerificationScreenState();
 }
 
-class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
+class _EmailVerificationScreenState extends State<EmailVerificationScreen>
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver, RouteAware {
   static const _codeLength = 6;
 
   final _codeController = TextEditingController();
@@ -39,12 +43,30 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   int _resendSeconds = 0;
   bool _isSubmitting = false;
   bool _isResending = false;
+  bool _codeVerified = false;
+  int? _verifiedIdentityRevision;
+  bool _foreground = true;
+  int _verificationGeneration = 0;
+  int _requestSequence = 0;
+  int _rejectionAttempt = 0;
+  late final AnimationController _successBeat;
+  ModalRoute<dynamic>? _observedRoute;
   String? _errorMessage;
   String? _statusMessage;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    featureViewStateCache.addListener(_identityChanged);
+    _foreground =
+        WidgetsBinding.instance.lifecycleState == null ||
+        WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
+    _successBeat = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+      animationBehavior: AnimationBehavior.preserve,
+    );
     _repository = widget.repository ?? AuthRepository();
     _pending = widget.pending;
     _challengeExpiresAt = DateTime.now().add(
@@ -58,7 +80,79 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (!identical(route, _observedRoute)) {
+      if (_observedRoute != null) appRouteObserver.unsubscribe(this);
+      _observedRoute = route;
+      if (route != null) appRouteObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant EmailVerificationScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.pending.challengeId != widget.pending.challengeId ||
+        oldWidget.pending.email != widget.pending.email) {
+      _requestSequence++;
+      _cancelFeedback();
+      _codeController.clear();
+      _pending = widget.pending;
+      _challengeExpiresAt = DateTime.now().add(
+        Duration(seconds: _pending.expiresInSeconds),
+      );
+      _isSubmitting = false;
+      _isResending = false;
+      _rejectionAttempt = 0;
+      _errorMessage = null;
+      _statusMessage = _pending.deliveryDelayed
+          ? 'Email delivery was delayed. Ask for a fresh code.'
+          : null;
+      _startResendCountdown(_pending.resendAfterSeconds);
+    }
+  }
+
+  @override
+  void didPushNext() => _cancelFeedback();
+
+  void _identityChanged() {
+    if (_codeVerified &&
+        _verifiedIdentityRevision != AuthRepository.sessionIdentityRevision) {
+      _cancelFeedback();
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _foreground = state == AppLifecycleState.resumed;
+    if (_foreground) {
+      _updateResendCountdown();
+    } else {
+      _cancelFeedback();
+    }
+  }
+
+  void _cancelFeedback() {
+    _verificationGeneration++;
+    _successBeat.stop(canceled: true);
+    if (!mounted) return;
+    final clearVerifiedCode = _codeVerified;
+    setState(() {
+      _codeVerified = false;
+      _verifiedIdentityRevision = null;
+      _rejectionAttempt = 0;
+    });
+    if (clearVerifiedCode) _codeController.clear();
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    featureViewStateCache.removeListener(_identityChanged);
+    if (_observedRoute != null) appRouteObserver.unsubscribe(this);
+    _verificationGeneration++;
+    _successBeat.dispose();
     _resendTimer?.cancel();
     _codeController
       ..removeListener(_refreshCode)
@@ -74,6 +168,14 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
         _statusMessage = null;
       });
     }
+  }
+
+  void _focusCodeOnNextFrame() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_active && !_isSubmitting && !_isResending && !_codeVerified) {
+        _codeFocusNode.requestFocus();
+      }
+    });
   }
 
   void _startResendCountdown(int seconds) {
@@ -111,18 +213,26 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   }
 
   Future<void> _submit() async {
-    if (_isSubmitting || _isResending) {
+    if (!_active || _isSubmitting || _isResending || _codeVerified) {
       return;
     }
 
     final code = _codeController.text;
     final challengeId = _pending.challengeId;
-    if (code.length != _codeLength) {
+    if (!RegExp(r'^[0-9]{6}$').hasMatch(code)) {
       setState(() => _errorMessage = 'Enter all six digits to continue.');
-      _codeFocusNode.requestFocus();
+      _focusCodeOnNextFrame();
+      return;
+    }
+    if (!_challengeExpiresAt.isAfter(DateTime.now())) {
+      setState(
+        () => _errorMessage = 'This code has expired. Ask for a fresh code.',
+      );
       return;
     }
 
+    final request = ++_requestSequence;
+    final generation = ++_verificationGeneration;
     FocusManager.instance.primaryFocus?.unfocus();
     setState(() {
       _isSubmitting = true;
@@ -134,31 +244,60 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
       final session = await _repository.verifyEmail(
         VerifyEmailRequest(challengeId: challengeId, code: code),
       );
-      if (_challengeIsCurrent(challengeId)) {
-        await _continueToProfiles(session);
+      final identityRevision = AuthRepository.sessionIdentityRevision;
+      if (!_challengeIsCurrent(challengeId, generation)) return;
+      setState(() {
+        _codeVerified = true;
+        _verifiedIdentityRevision = identityRevision;
+        _errorMessage = null;
+      });
+      await _successBeat.forward(from: 0).orCancel;
+      if (!_challengeIsCurrent(challengeId, generation) ||
+          identityRevision != AuthRepository.sessionIdentityRevision) {
+        return;
       }
+      await _continueToProfiles(
+        session,
+        challengeId,
+        generation,
+        identityRevision,
+      );
+    } on TickerCanceled {
+      // Navigation or backgrounding cancels the green success beat.
     } on AppException catch (error) {
-      if (_challengeIsCurrent(challengeId)) {
-        setState(() => _errorMessage = error.userMessage);
+      if (!_challengeIsCurrent(challengeId, generation)) return;
+      if (error.code == 'invalid_or_expired_code') {
+        _codeController.clear();
+        _rejectionAttempt++;
+        unawaited(HapticFeedback.mediumImpact());
       }
+      setState(() => _errorMessage = error.userMessage);
+      _focusCodeOnNextFrame();
     } catch (_) {
-      if (_challengeIsCurrent(challengeId)) {
+      if (_challengeIsCurrent(challengeId, generation)) {
         setState(
           () => _errorMessage = 'We could not check that code. Try again.',
         );
       }
     } finally {
-      if (mounted) {
+      if (mounted && request == _requestSequence) {
         setState(() => _isSubmitting = false);
       }
     }
   }
 
   Future<void> _resend() async {
-    if (_isResending || _isSubmitting || _resendSeconds > 0) {
+    if (!_active ||
+        _isResending ||
+        _isSubmitting ||
+        _codeVerified ||
+        _resendSeconds > 0) {
       return;
     }
 
+    final challengeId = _pending.challengeId;
+    final request = ++_requestSequence;
+    final generation = ++_verificationGeneration;
     setState(() {
       _isResending = true;
       _errorMessage = null;
@@ -166,15 +305,14 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     });
 
     try {
-      final pending = await _repository.resendEmailVerification(
-        _pending.challengeId,
-      );
-      if (!mounted) {
-        return;
-      }
+      final pending = await _repository.resendEmailVerification(challengeId);
+      if (!_challengeIsCurrent(challengeId, generation)) return;
+      _verificationGeneration++;
       _codeController.clear();
       setState(() {
         _pending = pending;
+        _rejectionAttempt = 0;
+        _codeVerified = false;
         _challengeExpiresAt = DateTime.now().add(
           Duration(seconds: pending.expiresInSeconds),
         );
@@ -182,10 +320,10 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
             ? 'Email is still delayed. Please try sending again.'
             : 'A fresh code is on its way.';
       });
-      _codeFocusNode.requestFocus();
+      _focusCodeOnNextFrame();
       _startResendCountdown(pending.resendAfterSeconds);
     } on AppException catch (error) {
-      if (mounted) {
+      if (_challengeIsCurrent(challengeId, generation)) {
         if (error.code == 'resend_too_soon') {
           final retryAfter = int.tryParse(
             error.details['retry_after']?.toString() ?? '',
@@ -197,27 +335,42 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
         setState(() => _errorMessage = error.userMessage);
       }
     } catch (_) {
-      if (mounted) {
+      if (_challengeIsCurrent(challengeId, generation)) {
         setState(
           () => _errorMessage = 'We could not send a new code just yet.',
         );
       }
     } finally {
-      if (mounted) {
+      if (mounted && request == _requestSequence) {
         setState(() => _isResending = false);
       }
     }
   }
 
-  bool _challengeIsCurrent(String challengeId) =>
-      mounted &&
+  bool get _active =>
+      mounted && _foreground && (ModalRoute.of(context)?.isCurrent ?? true);
+
+  bool _challengeIsCurrent(String challengeId, int generation) =>
+      _active &&
+      generation == _verificationGeneration &&
       _pending.challengeId == challengeId &&
       (ModalRoute.of(context)?.isCurrent ?? true);
 
-  Future<void> _continueToProfiles(AuthSession session) async {
+  Future<void> _continueToProfiles(
+    AuthSession session,
+    String challengeId,
+    int generation,
+    int identityRevision,
+  ) async {
+    bool current() =>
+        _challengeIsCurrent(challengeId, generation) &&
+        identityRevision == AuthRepository.sessionIdentityRevision;
+    if (!current()) return;
     final routing = HostedAccessRouting(authRepository: _repository);
     final plans = await routing.requiresPlans();
-    if (!await routing.isCurrentParent(session.parent.id) || !mounted) return;
+    if (!current()) return;
+    final sameParent = await routing.isCurrentParent(session.parent.id);
+    if (!mounted || !sameParent || !current()) return;
     Navigator.of(context).pushNamedAndRemoveUntil(
       plans
           ? AppRoutes.subscription
@@ -246,10 +399,16 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     resendEnabled: _resendSeconds == 0 && !_isResending && !_isSubmitting,
     isResending: _isResending,
     isSubmitting: _isSubmitting,
-    canSubmit: _codeController.text.length == _codeLength,
+    inputEnabled: !_isSubmitting && !_isResending && !_codeVerified,
+    canSubmit: !_codeVerified && _codeController.text.length == _codeLength,
+    verified: _codeVerified,
+    rejectionAttempt: _rejectionAttempt,
     onResend: _resend,
     onSubmit: _submit,
-    onBack: () => Navigator.of(context).maybePop(),
+    onBack: () {
+      _cancelFeedback();
+      Navigator.of(context).maybePop();
+    },
   );
 }
 

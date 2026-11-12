@@ -115,9 +115,9 @@ def reserve_checkout(*, parent, password, disclosure_version, accepted, mode='di
                     existing.save(update_fields=('consented_at', 'reauthenticated_at', 'updated_at'))
             return existing
         now = timezone.now()
-        from .permissions import verified_paid_coverage_until
+        from .permissions import verified_content_access_until
         proof_environments = ('sandbox', 'production') if environment == 'sandbox' else ('production',)
-        if any(verified_paid_coverage_until(locked_parent,environment=proof_env,at=now) is not None
+        if any(verified_content_access_until(locked_parent,environment=proof_env,at=now) is not None
                 for proof_env in proof_environments):
             raise CheckoutConflict('Existing verified paid coverage must end before another purchase.')
         return SquareCheckoutIntent.objects.create(parent=locked_parent, environment=environment,
