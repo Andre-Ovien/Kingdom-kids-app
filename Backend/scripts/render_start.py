@@ -6,13 +6,17 @@ No credentials are generated locally or printed. Render's independently generate
 import base64
 from contextlib import contextmanager
 import hashlib
+import json
 import os
 from pathlib import Path
 import re
 import sys
+import tempfile
 import time
 
 BACKEND = Path(__file__).resolve().parents[1]
+PRIVATE_MEDIA_MAP = BACKEND / 'content/releases/cloudinary_first_release_v1.json'
+PRIVATE_MEDIA_MAP_SHA256 = '70e57ac281c330383db3e3a8c899c80d1816a41f400dae6a9a269b46c6436876'
 MIGRATION_LOCK = 54255181082000
 DISABLED_FLAGS = (
     'SQUARE_SANDBOX_ENABLED', 'SQUARE_SANDBOX_CHECKOUT_ENABLED',
@@ -20,7 +24,6 @@ DISABLED_FLAGS = (
     'SQUARE_SANDBOX_TERM_BILLING_ENABLED', 'SQUARE_SANDBOX_TERM_RECONCILIATION_ENABLED',
     'SQUARE_SANDBOX_HTTP_TRANSPORT_ENABLED', 'PAID_CONTENT_ENFORCEMENT_ENABLED',
     'PARENT_CHECKOUT_SANDBOX_ENABLED', 'PARENT_CONTENT_ACCESS_STATUS_ENABLED',
-    'CLOUDINARY_PRIVATE_DELIVERY_ENABLED',
 )
 
 
@@ -28,12 +31,46 @@ class StartupRejected(RuntimeError):
     pass
 
 
+def qualify_private_media(environ):
+    """Check the exact shipped map/config locally; never contact the provider."""
+    enabled = environ.get('CLOUDINARY_PRIVATE_DELIVERY_ENABLED', 'false')
+    if enabled not in {'true', 'false'}:
+        raise StartupRejected('Private media activation must be explicit.')
+    if enabled == 'false':
+        return
+    try:
+        if environ.get('CLOUDINARY_PRIVATE_MEDIA_MAP_SHA256') != PRIVATE_MEDIA_MAP_SHA256:
+            raise ValueError
+        descriptor = os.open(PRIVATE_MEDIA_MAP, os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0))
+        with os.fdopen(descriptor, 'rb') as source:
+            payload = source.read(1_048_577)
+        if len(payload) > 1_048_576 or hashlib.sha256(payload).hexdigest() != PRIVATE_MEDIA_MAP_SHA256:
+            raise ValueError
+        release = json.loads(payload)
+        cloud = environ.get('CLOUDINARY_CLOUD_NAME', '')
+        key = environ.get('CLOUDINARY_API_KEY', '')
+        secret = environ.get('CLOUDINARY_API_SECRET', '')
+        ttl = int(environ.get('CLOUDINARY_PRIVATE_URL_TTL_SECONDS', '300'))
+        hosts = {host.strip().lower() for host in environ.get('DJANGO_CONTENT_MEDIA_HOSTS', '').split(',')}
+        if (release.get('schema_version') != 1 or release.get('scope') != 'first_release_only'
+                or release.get('remote_originals_verified') is not True
+                or not cloud or cloud != release.get('cloud_name')
+                or not re.fullmatch(r'[0-9]{6,64}', key)
+                or not 16 <= len(secret) <= 200 or any(ord(char) <= 32 or ord(char) == 127 for char in secret)
+                or not 30 <= ttl <= 900 or 'api.cloudinary.com' not in hosts):
+            raise ValueError
+        secret.encode('utf-8')
+    except (OSError, ValueError, TypeError, AttributeError, UnicodeError):
+        raise StartupRejected('Private media credentials, approved map pin or HTTPS host configuration are incomplete.') from None
+
+
 def prepare_environment(environ):
     """Validate only explicit staging inputs; no environment values enter errors."""
     if environ.get('DJANGO_DEBUG') != 'false' or environ.get('DJANGO_EMAIL_DELIVERY_ENABLED') != 'false':
         raise StartupRejected('Explicit production mode and disabled email are required.')
     if any(environ.get(flag, 'false') != 'false' for flag in DISABLED_FLAGS):
-        raise StartupRejected('Financial, checkout and private-media features must stay disabled.')
+        raise StartupRejected('Financial, paid enforcement and parent checkout features must stay disabled.')
+    qualify_private_media(environ)
     for target, seed_name in (
         ('DJANGO_SECRET_KEY', 'RENDER_DJANGO_SECRET_SEED'),
         ('DJANGO_JWT_SIGNING_KEY', 'RENDER_JWT_SIGNING_SEED'),
@@ -70,6 +107,13 @@ def prepare_environment(environ):
     if not port.isdecimal() or not 1024 <= int(port) <= 65535:
         raise StartupRejected('A valid non-privileged application port is required.')
     return port
+
+
+def control_socket_path():
+    # mkdtemp creates a private 0700 directory. Never let Gunicorn create its
+    # default $HOME/.gunicorn beneath the deliberately read-only /app tree.
+    directory = tempfile.mkdtemp(prefix='kingdom-kids-gunicorn-', dir='/tmp')
+    return str(Path(directory) / 'control.sock')
 
 
 @contextmanager
@@ -109,11 +153,15 @@ def start():
         raise StartupRejected('Deployment migrations require PostgreSQL.')
     with migration_lock(database.get_connection_params()):
         call_command('migrate', interactive=False)
+        call_command('install_published_matching_release', apply=True, publish=True)
+        if os.environ.get('CLOUDINARY_PRIVATE_DELIVERY_ENABLED', 'false') == 'true':
+            call_command('install_private_media_release')
     connections.close_all()
     # One synchronous worker fits the Free instance and keeps DB usage bounded.
     # Access logs omit request URLs, which can contain query parameters.
     os.execvp('gunicorn', ['gunicorn', '--chdir', 'Core', 'Core.wsgi:application',
         '--bind', f'0.0.0.0:{port}', '--workers', '1', '--timeout', '30',
+        '--control-socket', control_socket_path(), '--control-socket-mode', '384',
         '--graceful-timeout', '30', '--access-logfile', '-',
         '--access-logformat', '%(h)s %(s)s %(L)s', '--error-logfile', '-'])
 

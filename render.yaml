@@ -1,4 +1,4 @@
-# Free staging only. Automatic deploys follow main; no payment/media activation.
+# Free staging only. Approved private media is opt-in; payments stay disabled.
 services:
   - type: web
     name: kingdom-kids-checkout-staging
@@ -71,7 +71,20 @@ services:
       - key: PARENT_CONTENT_ACCESS_STATUS_ENABLED
         value: "false"
       - key: CLOUDINARY_PRIVATE_DELIVERY_ENABLED
-        value: "false"
+        value: "true"
+      - key: DJANGO_CONTENT_MEDIA_HOSTS
+        value: "api.cloudinary.com"
+      - key: CLOUDINARY_PRIVATE_URL_TTL_SECONDS
+        value: "300"
+      - key: CLOUDINARY_PRIVATE_MEDIA_MAP_SHA256
+        value: "70e57ac281c330383db3e3a8c899c80d1816a41f400dae6a9a269b46c6436876"
+      # Supply privately in Render. No credentials are committed to this file.
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
   - type: keyvalue
     name: kingdom-kids-cache
     plan: free

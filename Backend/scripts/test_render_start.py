@@ -2,9 +2,12 @@
 import base64
 from contextlib import contextmanager
 import importlib.util
+import json
 import os
 from pathlib import Path
 import sys
+import shutil
+from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
@@ -24,6 +27,64 @@ def environment():
 
 
 class RenderStartupTests(unittest.TestCase):
+    def private_environment(self):
+        values = environment()
+        release = json.loads(startup.PRIVATE_MEDIA_MAP.read_text())
+        values.update(CLOUDINARY_PRIVATE_DELIVERY_ENABLED='true',
+            CLOUDINARY_CLOUD_NAME=release['cloud_name'], CLOUDINARY_API_KEY='1234567890',
+            CLOUDINARY_API_SECRET='synthetic-private-secret-not-a-real-account',
+            CLOUDINARY_PRIVATE_MEDIA_MAP_SHA256=startup.PRIVATE_MEDIA_MAP_SHA256,
+            CLOUDINARY_PRIVATE_URL_TTL_SECONDS='300', DJANGO_CONTENT_MEDIA_HOSTS='api.cloudinary.com')
+        return values
+
+    def test_approved_private_media_is_permitted_without_relaxing_financial_guards(self):
+        values = self.private_environment()
+        self.assertEqual(startup.prepare_environment(values), '10000')
+        for flag in startup.DISABLED_FLAGS:
+            with self.subTest(flag=flag):
+                invalid = self.private_environment(); invalid[flag] = 'true'
+                with self.assertRaises(startup.StartupRejected):
+                    startup.prepare_environment(invalid)
+
+    def test_private_media_missing_wrong_or_unsafe_configuration_fails_without_values(self):
+        variants = [('CLOUDINARY_CLOUD_NAME', ''), ('CLOUDINARY_CLOUD_NAME', 'wrong-account'),
+            ('CLOUDINARY_API_KEY', ''), ('CLOUDINARY_API_KEY', 'not-digits'),
+            ('CLOUDINARY_API_SECRET', ''), ('CLOUDINARY_API_SECRET', 'synthetic private secret'),
+            ('CLOUDINARY_PRIVATE_MEDIA_MAP_SHA256', '0'*64),
+            ('DJANGO_CONTENT_MEDIA_HOSTS', ''), ('DJANGO_CONTENT_MEDIA_HOSTS', 'api.cloudinary.com.attacker.example'),
+            ('CLOUDINARY_PRIVATE_URL_TTL_SECONDS', '901'), ('CLOUDINARY_PRIVATE_URL_TTL_SECONDS', '29'),
+            ('CLOUDINARY_PRIVATE_DELIVERY_ENABLED', 'misspelled')]
+        for name, value in variants:
+            with self.subTest(name=name):
+                invalid = self.private_environment(); invalid[name] = value
+                with self.assertRaises(startup.StartupRejected) as caught:
+                    startup.prepare_environment(invalid)
+                self.assertNotIn('synthetic private secret', str(caught.exception))
+                self.assertNotIn('wrong-account', str(caught.exception))
+
+    def test_private_media_off_never_reads_map_or_credentials(self):
+        with patch.object(startup.os, 'open', side_effect=AssertionError('Unexpected file read')):
+            self.assertEqual(startup.prepare_environment(environment()), '10000')
+
+    def test_modified_missing_or_symlinked_map_is_rejected(self):
+        values = self.private_environment()
+        with TemporaryDirectory() as directory:
+            missing = Path(directory)/'missing.json'
+            corrupt = Path(directory)/'corrupt.json'; corrupt.write_text('{}')
+            linked = Path(directory)/'linked.json'; linked.symlink_to(startup.PRIVATE_MEDIA_MAP)
+            for path in (missing, corrupt, linked):
+                with self.subTest(path=path.name), patch.object(startup, 'PRIVATE_MEDIA_MAP', path):
+                    with self.assertRaises(startup.StartupRejected):
+                        startup.prepare_environment(dict(values))
+
+    def test_control_socket_is_in_owned_private_writable_tmp_directory(self):
+        path = Path(startup.control_socket_path())
+        self.addCleanup(shutil.rmtree, path.parent)
+        self.assertEqual(path.parent.parent, Path('/tmp'))
+        self.assertEqual(path.name, 'control.sock')
+        self.assertEqual(path.parent.stat().st_mode & 0o777, 0o700)
+        self.assertTrue(os.access(path.parent, os.W_OK))
+
     def test_independent_platform_seeds_expand_stably_without_leaking_into_server_environment(self):
         a,b=environment(),environment()
         self.assertEqual(startup.prepare_environment(a),'10000');startup.prepare_environment(b)
@@ -76,11 +137,14 @@ class RenderStartupTests(unittest.TestCase):
                 self.fail('Must not migrate without ownership')
         connection.__exit__.assert_called_once()
 
-    def run_start(self,fail_migration=False):
+    def run_start(self,fail_migration=False,private_media=False,fail_bootstrap=None):
         events=[]
         def command(name,**kwargs):
             events.append(name)
             if fail_migration and name=='migrate':raise RuntimeError('synthetic failure')
+            if name==fail_bootstrap:raise RuntimeError('synthetic bootstrap failure')
+            if name=='install_published_matching_release':
+                self.assertEqual(kwargs, {'apply':True, 'publish':True})
         @contextmanager
         def lock(*args,**kwargs):
             events.append('lock');yield;events.append('unlock')
@@ -92,9 +156,12 @@ class RenderStartupTests(unittest.TestCase):
             'django.db':SimpleNamespace(connections=Connections(default=database))}
         old_path=list(sys.path)
         try:
-            with patch.dict(os.environ,environment(),clear=True),patch.dict(sys.modules,modules),patch.object(startup.os,'chdir'),\
-                    patch.object(startup,'migration_lock',lock),patch.object(startup.os,'execvp',side_effect=lambda *args:events.append(args)):
-                if fail_migration:
+            values=self.private_environment() if private_media else environment()
+            with patch.dict(os.environ,values,clear=True),patch.dict(sys.modules,modules),patch.object(startup.os,'chdir'),\
+                    patch.object(startup,'migration_lock',lock),\
+                    patch.object(startup,'control_socket_path',return_value='/tmp/fixture-private/control.sock'),\
+                    patch.object(startup.os,'execvp',side_effect=lambda *args:events.append(args)):
+                if fail_migration or fail_bootstrap:
                     with self.assertRaises(RuntimeError):startup.start()
                 else:startup.start()
         finally:sys.path[:]=old_path
@@ -102,13 +169,26 @@ class RenderStartupTests(unittest.TestCase):
 
     def test_production_check_and_serialized_migrate_precede_port_bound_server_exec(self):
         events=self.run_start()
-        self.assertEqual(events[:6],['setup','check','lock','migrate','unlock','close_connections'])
-        executable,args=events[6]
+        self.assertEqual(events[:7],['setup','check','lock','migrate','install_published_matching_release','unlock','close_connections'])
+        executable,args=events[7]
         self.assertEqual(executable,'gunicorn');self.assertIn('0.0.0.0:10000',args)
         self.assertEqual(args[args.index('--workers')+1],'1')
+        self.assertEqual(args[args.index('--control-socket')+1], '/tmp/fixture-private/control.sock')
+        self.assertEqual(args[args.index('--control-socket-mode')+1], '384')
 
     def test_failed_migration_never_starts_server(self):
         self.assertEqual(self.run_start(True),['setup','check','lock','migrate'])
+
+    def test_private_media_bootstrap_follows_matching_inside_migration_lock(self):
+        events=self.run_start(private_media=True)
+        self.assertEqual(events[:8],['setup','check','lock','migrate','install_published_matching_release',
+            'install_private_media_release','unlock','close_connections'])
+
+    def test_failed_content_bootstrap_never_starts_server(self):
+        for name in ('install_published_matching_release','install_private_media_release'):
+            with self.subTest(name=name):
+                events=self.run_start(private_media=True,fail_bootstrap=name)
+                self.assertFalse(any(isinstance(event,tuple) for event in events))
 
 
 if __name__=='__main__':unittest.main()
