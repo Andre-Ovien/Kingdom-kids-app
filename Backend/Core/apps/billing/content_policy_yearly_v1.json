@@ -1,0 +1,19 @@
+{
+  "access_feature": "all_stories_and_games",
+  "amount_minor": 10789,
+  "app_store_launch_country": "US",
+  "billing_cadence": "ANNUAL",
+  "can_prorate": false,
+  "currency": "USD",
+  "discount_percent": 10,
+  "first_charge": "full_amount_immediately",
+  "first_renewal": "28th_of_purchase_month_in_following_calendar_year",
+  "free_period": false,
+  "monthly_comparison_minor": 999,
+  "policy_id": "all-content-yearly-usd-10789-v1",
+  "renewal_anchor_day": 28,
+  "square_merchant_country": "US",
+  "subsequent_renewal": "same_month_28th_each_following_year",
+  "undiscounted_twelve_months_minor": 11988,
+  "version": 1
+}

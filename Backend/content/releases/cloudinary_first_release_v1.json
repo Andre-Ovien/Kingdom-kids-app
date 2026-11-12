@@ -1,0 +1,567 @@
+{
+  "assets": {
+    "Backend/media/character_narration/auditions/kai_boy2.mp3": {
+      "bytes": 123885,
+      "format": "mp3",
+      "public_id": "kingdom-kids/media-v1/sha256-83b550434f99fd7fa1a13e6b8b2cc965e401f5112dbdabbdaaeac6c90a55b0fc",
+      "resource_type": "video",
+      "sha256": "83b550434f99fd7fa1a13e6b8b2cc965e401f5112dbdabbdaaeac6c90a55b0fc",
+      "type": "authenticated",
+      "uses": [
+        "sample:lion"
+      ]
+    },
+    "Backend/media/character_narration/auditions/nia.mp3": {
+      "bytes": 166221,
+      "format": "mp3",
+      "public_id": "kingdom-kids/media-v1/sha256-417d5552f29eccc583a31c64f80834b80b2a7cd417e33be06060f4b6359d6c3f",
+      "resource_type": "video",
+      "sha256": "417d5552f29eccc583a31c64f80834b80b2a7cd417e33be06060f4b6359d6c3f",
+      "type": "authenticated",
+      "uses": [
+        "sample:dove"
+      ]
+    },
+    "Backend/media/character_narration/auditions/zuri.mp3": {
+      "bytes": 128781,
+      "format": "mp3",
+      "public_id": "kingdom-kids/media-v1/sha256-ca27997e8b2c3f1536368eeca166add8d0b43e22a3ecd5f415b6785155634feb",
+      "resource_type": "video",
+      "sha256": "ca27997e8b2c3f1536368eeca166add8d0b43e22a3ecd5f415b6785155634feb",
+      "type": "authenticated",
+      "uses": [
+        "sample:rainbow"
+      ]
+    },
+    "Backend/media/character_narration/creation-week/kai.mp3": {
+      "bytes": 421677,
+      "format": "mp3",
+      "public_id": "kingdom-kids/media-v1/sha256-6fec673bca62d51f466ef3d0c2d2e7c14a5e684eaeca59d5bb209ca2e331ad8c",
+      "resource_type": "video",
+      "sha256": "6fec673bca62d51f466ef3d0c2d2e7c14a5e684eaeca59d5bb209ca2e331ad8c",
+      "type": "authenticated",
+      "uses": [
+        "narration:creation-week:lion:de79457b8179d6f246ecd859b188b66ada3aee9828876678efdb7095919b54b2"
+      ]
+    },
+    "Backend/media/character_narration/creation-week/nia-repair-902b38ce9db85e9a.mp3": {
+      "bytes": 515853,
+      "format": "mp3",
+      "public_id": "kingdom-kids/media-v1/sha256-902b38ce9db85e9a01de49aeb5b62da8700fba12df8b54706a83a97c725344f8",
+      "resource_type": "video",
+      "sha256": "902b38ce9db85e9a01de49aeb5b62da8700fba12df8b54706a83a97c725344f8",
+      "type": "authenticated",
+      "uses": [
+        "narration:creation-week:dove:de79457b8179d6f246ecd859b188b66ada3aee9828876678efdb7095919b54b2"
+      ]
+    },
+    "Backend/media/character_narration/creation-week/zuri.mp3": {
+      "bytes": 419661,
+      "format": "mp3",
+      "public_id": "kingdom-kids/media-v1/sha256-2efe230cddeb570cda13c0e1b3b93c986aa433bc0711e885e1a0dd358c4b8359",
+      "resource_type": "video",
+      "sha256": "2efe230cddeb570cda13c0e1b3b93c986aa433bc0711e885e1a0dd358c4b8359",
+      "type": "authenticated",
+      "uses": [
+        "narration:creation-week:rainbow:de79457b8179d6f246ecd859b188b66ada3aee9828876678efdb7095919b54b2"
+      ]
+    },
+    "Backend/media/character_narration/crossing-the-red-sea/kai.mp3": {
+      "bytes": 432333,
+      "format": "mp3",
+      "public_id": "kingdom-kids/media-v1/sha256-b8bf3a79811e39bc7bfa24b35cc04a3878b48f4c9dfdd8a119683cff565be5e7",
+      "resource_type": "video",
+      "sha256": "b8bf3a79811e39bc7bfa24b35cc04a3878b48f4c9dfdd8a119683cff565be5e7",
+      "type": "authenticated",
+      "uses": [
+        "narration:crossing-the-red-sea:lion:4307dbb6bd1a7013914ab50ecac8c93eb63f4cc61ed6208e717850d649c451c7"
+      ]
+    },
+    "Backend/media/character_narration/crossing-the-red-sea/nia.mp3": {
+      "bytes": 470637,
+      "format": "mp3",
+      "public_id": "kingdom-kids/media-v1/sha256-aa76bd3cfc280d0e94d628bee24f71a03ed44331137c3ea5746296045b5b7237",
+      "resource_type": "video",
+      "sha256": "aa76bd3cfc280d0e94d628bee24f71a03ed44331137c3ea5746296045b5b7237",
+      "type": "authenticated",
+      "uses": [
+        "narration:crossing-the-red-sea:dove:4307dbb6bd1a7013914ab50ecac8c93eb63f4cc61ed6208e717850d649c451c7"
+      ]
+    },
+    "Backend/media/character_narration/crossing-the-red-sea/zuri.mp3": {
+      "bytes": 408141,
+      "format": "mp3",
+      "public_id": "kingdom-kids/media-v1/sha256-8e3779ddd08e8b93ce751b3e59287aa5f01cdcdf95df3499d053eab90a150520",
+      "resource_type": "video",
+      "sha256": "8e3779ddd08e8b93ce751b3e59287aa5f01cdcdf95df3499d053eab90a150520",
+      "type": "authenticated",
+      "uses": [
+        "narration:crossing-the-red-sea:rainbow:4307dbb6bd1a7013914ab50ecac8c93eb63f4cc61ed6208e717850d649c451c7"
+      ]
+    },
+    "Backend/media/character_narration/daniel-in-the-lions-den/kai.mp3": {
+      "bytes": 389997,
+      "format": "mp3",
+      "public_id": "kingdom-kids/media-v1/sha256-738e180490f792ab260beb2cf00a743ebf3631fd719012a44376c069c37dc143",
+      "resource_type": "video",
+      "sha256": "738e180490f792ab260beb2cf00a743ebf3631fd719012a44376c069c37dc143",
+      "type": "authenticated",
+      "uses": [
+        "narration:daniel-in-the-lions-den:lion:c3475d6f6dd8a3043b16896b85b277128ca2738e49003013dcd0e2b23cdeaffa"
+      ]
+    },
+    "Backend/media/character_narration/daniel-in-the-lions-den/nia.mp3": {
+      "bytes": 487053,
+      "format": "mp3",
+      "public_id": "kingdom-kids/media-v1/sha256-98920d22f8806e56dd13bc1a172f52d737dc2655ecdc2cc6449fa2c4bd516c55",
+      "resource_type": "video",
+      "sha256": "98920d22f8806e56dd13bc1a172f52d737dc2655ecdc2cc6449fa2c4bd516c55",
+      "type": "authenticated",
+      "uses": [
+        "narration:daniel-in-the-lions-den:dove:c3475d6f6dd8a3043b16896b85b277128ca2738e49003013dcd0e2b23cdeaffa"
+      ]
+    },
+    "Backend/media/character_narration/daniel-in-the-lions-den/zuri.mp3": {
+      "bytes": 403533,
+      "format": "mp3",
+      "public_id": "kingdom-kids/media-v1/sha256-ff41c086242790293e84fcbf296c1fdf161ab46da4a0aa0458c72cba9301b66a",
+      "resource_type": "video",
+      "sha256": "ff41c086242790293e84fcbf296c1fdf161ab46da4a0aa0458c72cba9301b66a",
+      "type": "authenticated",
+      "uses": [
+        "narration:daniel-in-the-lions-den:rainbow:c3475d6f6dd8a3043b16896b85b277128ca2738e49003013dcd0e2b23cdeaffa"
+      ]
+    },
+    "Backend/media/character_narration/david-and-goliath/kai.mp3": {
+      "bytes": 491661,
+      "format": "mp3",
+      "public_id": "kingdom-kids/media-v1/sha256-edd65ce6e7ee3d777e955bcc13d6a72ba31ede3e6a1070b2a803b8ea773cf1cf",
+      "resource_type": "video",
+      "sha256": "edd65ce6e7ee3d777e955bcc13d6a72ba31ede3e6a1070b2a803b8ea773cf1cf",
+      "type": "authenticated",
+      "uses": [
+        "narration:david-and-goliath:lion:467213467bb7e4bd0085ab2a1458725bdf725bf88c25d0430c00f1cc47eedf61"
+      ]
+    },
+    "Backend/media/character_narration/david-and-goliath/nia.mp3": {
+      "bytes": 560781,
+      "format": "mp3",
+      "public_id": "kingdom-kids/media-v1/sha256-6ad3d1db7a5c53ee0845cced9d943b162fbf16d8f0b6f966e541c9ae0a5d21ae",
+      "resource_type": "video",
+      "sha256": "6ad3d1db7a5c53ee0845cced9d943b162fbf16d8f0b6f966e541c9ae0a5d21ae",
+      "type": "authenticated",
+      "uses": [
+        "narration:david-and-goliath:dove:467213467bb7e4bd0085ab2a1458725bdf725bf88c25d0430c00f1cc47eedf61"
+      ]
+    },
+    "Backend/media/character_narration/david-and-goliath/zuri-repair-3a7a56d2737c4892.mp3": {
+      "bytes": 491661,
+      "format": "mp3",
+      "public_id": "kingdom-kids/media-v1/sha256-3a7a56d2737c4892248e8d24a0e20ab7f61848e4c0a65b2d2591fcf63753a897",
+      "resource_type": "video",
+      "sha256": "3a7a56d2737c4892248e8d24a0e20ab7f61848e4c0a65b2d2591fcf63753a897",
+      "type": "authenticated",
+      "uses": [
+        "narration:david-and-goliath:rainbow:467213467bb7e4bd0085ab2a1458725bdf725bf88c25d0430c00f1cc47eedf61"
+      ]
+    },
+    "Backend/media/character_narration/esther-speaks-up/kai.mp3": {
+      "bytes": 374733,
+      "format": "mp3",
+      "public_id": "kingdom-kids/media-v1/sha256-b24a6c509e88b6ace96adb63506160dbb7c6c92186ed259b5e902157e19f21ee",
+      "resource_type": "video",
+      "sha256": "b24a6c509e88b6ace96adb63506160dbb7c6c92186ed259b5e902157e19f21ee",
+      "type": "authenticated",
+      "uses": [
+        "narration:esther-speaks-up:lion:e648de783d42c011aeca192a1a50549c0e83da9c6b05badeeb4c8dd4a25dfc98"
+      ]
+    },
+    "Backend/media/character_narration/esther-speaks-up/nia.mp3": {
+      "bytes": 465741,
+      "format": "mp3",
+      "public_id": "kingdom-kids/media-v1/sha256-65ac3c74f2b6f1dd68c5171e4e7ce34aed63efbbdb5561d40ae5ff1933320993",
+      "resource_type": "video",
+      "sha256": "65ac3c74f2b6f1dd68c5171e4e7ce34aed63efbbdb5561d40ae5ff1933320993",
+      "type": "authenticated",
+      "uses": [
+        "narration:esther-speaks-up:dove:e648de783d42c011aeca192a1a50549c0e83da9c6b05badeeb4c8dd4a25dfc98"
+      ]
+    },
+    "Backend/media/character_narration/esther-speaks-up/zuri.mp3": {
+      "bytes": 355437,
+      "format": "mp3",
+      "public_id": "kingdom-kids/media-v1/sha256-68ce06285e800c5879db866fef6c5b979ef49651ec0d2ad66c2181a65103a8af",
+      "resource_type": "video",
+      "sha256": "68ce06285e800c5879db866fef6c5b979ef49651ec0d2ad66c2181a65103a8af",
+      "type": "authenticated",
+      "uses": [
+        "narration:esther-speaks-up:rainbow:e648de783d42c011aeca192a1a50549c0e83da9c6b05badeeb4c8dd4a25dfc98"
+      ]
+    },
+    "Backend/media/character_narration/jonah-and-the-big-fish/kai.mp3": {
+      "bytes": 438957,
+      "format": "mp3",
+      "public_id": "kingdom-kids/media-v1/sha256-6abe3cc15b4a9d99e93737d16ebe9093a061396cab7ebb26a1b3c8b6d9886825",
+      "resource_type": "video",
+      "sha256": "6abe3cc15b4a9d99e93737d16ebe9093a061396cab7ebb26a1b3c8b6d9886825",
+      "type": "authenticated",
+      "uses": [
+        "narration:jonah-and-the-big-fish:lion:ea5bfdd11a5aa0bb0feed81f87271819b1bbc9ee8a8739cf51c763f6d6ee0bc8"
+      ]
+    },
+    "Backend/media/character_narration/jonah-and-the-big-fish/nia.mp3": {
+      "bytes": 487053,
+      "format": "mp3",
+      "public_id": "kingdom-kids/media-v1/sha256-b5ae696c730c3b94330142ec3912ad991b04c555b974367830de62dfa217ab67",
+      "resource_type": "video",
+      "sha256": "b5ae696c730c3b94330142ec3912ad991b04c555b974367830de62dfa217ab67",
+      "type": "authenticated",
+      "uses": [
+        "narration:jonah-and-the-big-fish:dove:ea5bfdd11a5aa0bb0feed81f87271819b1bbc9ee8a8739cf51c763f6d6ee0bc8"
+      ]
+    },
+    "Backend/media/character_narration/jonah-and-the-big-fish/zuri.mp3": {
+      "bytes": 417933,
+      "format": "mp3",
+      "public_id": "kingdom-kids/media-v1/sha256-b2fd5c34f895b03dc912e2603b11b4a3e6184dac98ab5e841c2531ae0e924072",
+      "resource_type": "video",
+      "sha256": "b2fd5c34f895b03dc912e2603b11b4a3e6184dac98ab5e841c2531ae0e924072",
+      "type": "authenticated",
+      "uses": [
+        "narration:jonah-and-the-big-fish:rainbow:ea5bfdd11a5aa0bb0feed81f87271819b1bbc9ee8a8739cf51c763f6d6ee0bc8"
+      ]
+    },
+    "Backend/media/character_narration/moses-follows-god/kai.mp3": {
+      "bytes": 444717,
+      "format": "mp3",
+      "public_id": "kingdom-kids/media-v1/sha256-971ef2a8e191e45c4309298ee63f93f160525c152885d15319abbda9beee1bb4",
+      "resource_type": "video",
+      "sha256": "971ef2a8e191e45c4309298ee63f93f160525c152885d15319abbda9beee1bb4",
+      "type": "authenticated",
+      "uses": [
+        "narration:moses-follows-god:lion:4d54593dc633d4162374b9e392f2aabb8edb04befbd70302c74d039f790ad146"
+      ]
+    },
+    "Backend/media/character_narration/moses-follows-god/nia.mp3": {
+      "bytes": 497421,
+      "format": "mp3",
+      "public_id": "kingdom-kids/media-v1/sha256-789b2f4689f29199b4890dd7f916eb9741654287895d069e9f9ca3841bfa08d1",
+      "resource_type": "video",
+      "sha256": "789b2f4689f29199b4890dd7f916eb9741654287895d069e9f9ca3841bfa08d1",
+      "type": "authenticated",
+      "uses": [
+        "narration:moses-follows-god:dove:4d54593dc633d4162374b9e392f2aabb8edb04befbd70302c74d039f790ad146"
+      ]
+    },
+    "Backend/media/character_narration/moses-follows-god/zuri.mp3": {
+      "bytes": 412173,
+      "format": "mp3",
+      "public_id": "kingdom-kids/media-v1/sha256-26a6a806f609a2bcc2fcead0c62250df9bdef986a034d9faa66467c92ec0bdef",
+      "resource_type": "video",
+      "sha256": "26a6a806f609a2bcc2fcead0c62250df9bdef986a034d9faa66467c92ec0bdef",
+      "type": "authenticated",
+      "uses": [
+        "narration:moses-follows-god:rainbow:4d54593dc633d4162374b9e392f2aabb8edb04befbd70302c74d039f790ad146"
+      ]
+    },
+    "Backend/media/character_narration/noah-builds-the-ark/kai.mp3": {
+      "bytes": 497421,
+      "format": "mp3",
+      "public_id": "kingdom-kids/media-v1/sha256-ee00e53835a6147b1e4269326042e3a858501187c8ad55751cabfbe9ef210515",
+      "resource_type": "video",
+      "sha256": "ee00e53835a6147b1e4269326042e3a858501187c8ad55751cabfbe9ef210515",
+      "type": "authenticated",
+      "uses": [
+        "narration:noah-builds-the-ark:lion:837e1361429e33410c779949f94f2fc1ed412aa87f02c4556a3c12104a8d38cf"
+      ]
+    },
+    "Backend/media/character_narration/noah-builds-the-ark/nia.mp3": {
+      "bytes": 557901,
+      "format": "mp3",
+      "public_id": "kingdom-kids/media-v1/sha256-4413073004fd00feefee90e4efa16eeb913f922be2525ade2d287ae3380b5616",
+      "resource_type": "video",
+      "sha256": "4413073004fd00feefee90e4efa16eeb913f922be2525ade2d287ae3380b5616",
+      "type": "authenticated",
+      "uses": [
+        "narration:noah-builds-the-ark:dove:837e1361429e33410c779949f94f2fc1ed412aa87f02c4556a3c12104a8d38cf"
+      ]
+    },
+    "Backend/media/character_narration/noah-builds-the-ark/zuri.mp3": {
+      "bytes": 459981,
+      "format": "mp3",
+      "public_id": "kingdom-kids/media-v1/sha256-618d8b45ec19e34bfa6d4e04e9a38b06b8415b6201b120ebd7ae12859f837ff7",
+      "resource_type": "video",
+      "sha256": "618d8b45ec19e34bfa6d4e04e9a38b06b8415b6201b120ebd7ae12859f837ff7",
+      "type": "authenticated",
+      "uses": [
+        "narration:noah-builds-the-ark:rainbow:837e1361429e33410c779949f94f2fc1ed412aa87f02c4556a3c12104a8d38cf"
+      ]
+    },
+    "Backend/media/character_narration_additional_v1/joseph-colorful-coat/kai.mp3": {
+      "bytes": 898029,
+      "format": "mp3",
+      "public_id": "kingdom-kids/media-v1/sha256-66fca61fc811b5fd00bce1139a122ab97678248a10797107a308eb3665ba866e",
+      "resource_type": "video",
+      "sha256": "66fca61fc811b5fd00bce1139a122ab97678248a10797107a308eb3665ba866e",
+      "type": "authenticated",
+      "uses": [
+        "narration:joseph-colorful-coat:lion:416986056168b65186f66645d151fdcbd04acd9bd5d1646da99aae15b90ae348"
+      ]
+    },
+    "Backend/media/character_narration_additional_v1/joseph-colorful-coat/nia.mp3": {
+      "bytes": 1042029,
+      "format": "mp3",
+      "public_id": "kingdom-kids/media-v1/sha256-98f131e4ade39ca7d8ec0bcbaf5d856576af3a0968a5dd867691ea86097f9f6e",
+      "resource_type": "video",
+      "sha256": "98f131e4ade39ca7d8ec0bcbaf5d856576af3a0968a5dd867691ea86097f9f6e",
+      "type": "authenticated",
+      "uses": [
+        "narration:joseph-colorful-coat:dove:416986056168b65186f66645d151fdcbd04acd9bd5d1646da99aae15b90ae348"
+      ]
+    },
+    "Backend/media/character_narration_additional_v1/joseph-colorful-coat/zuri.mp3": {
+      "bytes": 817677,
+      "format": "mp3",
+      "public_id": "kingdom-kids/media-v1/sha256-2e95b144d64797300daf97362d1ce4277646f813805f53a206dde6db05f8a4dd",
+      "resource_type": "video",
+      "sha256": "2e95b144d64797300daf97362d1ce4277646f813805f53a206dde6db05f8a4dd",
+      "type": "authenticated",
+      "uses": [
+        "narration:joseph-colorful-coat:rainbow:416986056168b65186f66645d151fdcbd04acd9bd5d1646da99aae15b90ae348"
+      ]
+    },
+    "Backend/media/character_narration_additional_v1/ruth-and-naomi/kai-repair-27987927cf7ece05.mp3": {
+      "bytes": 865485,
+      "format": "mp3",
+      "public_id": "kingdom-kids/media-v1/sha256-27987927cf7ece05bf2b3c5d82030eca7679f14a49c2580e838c9c5cdab6f41c",
+      "resource_type": "video",
+      "sha256": "27987927cf7ece05bf2b3c5d82030eca7679f14a49c2580e838c9c5cdab6f41c",
+      "type": "authenticated",
+      "uses": [
+        "narration:ruth-and-naomi:lion:5327f036e022edca6d38bf72f9eed3fb470f92c9feb1dcde5dccee6864f4d8bc"
+      ]
+    },
+    "Backend/media/character_narration_additional_v1/ruth-and-naomi/nia.mp3": {
+      "bytes": 975789,
+      "format": "mp3",
+      "public_id": "kingdom-kids/media-v1/sha256-3b2ffc0ee926da40aa4c5820cdc37a0f15b20f173182936faa174c002626ab8d",
+      "resource_type": "video",
+      "sha256": "3b2ffc0ee926da40aa4c5820cdc37a0f15b20f173182936faa174c002626ab8d",
+      "type": "authenticated",
+      "uses": [
+        "narration:ruth-and-naomi:dove:5327f036e022edca6d38bf72f9eed3fb470f92c9feb1dcde5dccee6864f4d8bc"
+      ]
+    },
+    "Backend/media/character_narration_additional_v1/ruth-and-naomi/zuri.mp3": {
+      "bytes": 825165,
+      "format": "mp3",
+      "public_id": "kingdom-kids/media-v1/sha256-296bba8b958d0348e2ed1931de1f66eb2ed819e8e7637b92d13f05e4cfaace58",
+      "resource_type": "video",
+      "sha256": "296bba8b958d0348e2ed1931de1f66eb2ed819e8e7637b92d13f05e4cfaace58",
+      "type": "authenticated",
+      "uses": [
+        "narration:ruth-and-naomi:rainbow:5327f036e022edca6d38bf72f9eed3fb470f92c9feb1dcde5dccee6864f4d8bc"
+      ]
+    },
+    "Backend/media/character_narration_additional_v1/walls-of-jericho/kai.mp3": {
+      "bytes": 853965,
+      "format": "mp3",
+      "public_id": "kingdom-kids/media-v1/sha256-8c7e6e39601bcb618403c546135c54dfa24ea4e60fa888301402ed0eb0a68761",
+      "resource_type": "video",
+      "sha256": "8c7e6e39601bcb618403c546135c54dfa24ea4e60fa888301402ed0eb0a68761",
+      "type": "authenticated",
+      "uses": [
+        "narration:walls-of-jericho:lion:763b15236dac1384f0fc921af5d88491e97fe10d87619f158c2880f75f6a76f6"
+      ]
+    },
+    "Backend/media/character_narration_additional_v1/walls-of-jericho/nia.mp3": {
+      "bytes": 997101,
+      "format": "mp3",
+      "public_id": "kingdom-kids/media-v1/sha256-025cea3e2267703895926f365332cbef76fc64432aa0f0ae1adc15d46169b2d1",
+      "resource_type": "video",
+      "sha256": "025cea3e2267703895926f365332cbef76fc64432aa0f0ae1adc15d46169b2d1",
+      "type": "authenticated",
+      "uses": [
+        "narration:walls-of-jericho:dove:763b15236dac1384f0fc921af5d88491e97fe10d87619f158c2880f75f6a76f6"
+      ]
+    },
+    "Backend/media/character_narration_additional_v1/walls-of-jericho/zuri.mp3": {
+      "bytes": 857709,
+      "format": "mp3",
+      "public_id": "kingdom-kids/media-v1/sha256-34f1c852bbf0a4c40481279adc4166c19866ef98ed48001e2891518fd19c7398",
+      "resource_type": "video",
+      "sha256": "34f1c852bbf0a4c40481279adc4166c19866ef98ed48001e2891518fd19c7398",
+      "type": "authenticated",
+      "uses": [
+        "narration:walls-of-jericho:rainbow:763b15236dac1384f0fc921af5d88491e97fe10d87619f158c2880f75f6a76f6"
+      ]
+    },
+    "Frontend/mobile/assets/images/games/puzzle_quest/puzzle-quest-cover-v1.webp": {
+      "bytes": 482128,
+      "format": "webp",
+      "public_id": "kingdom-kids/media-v1/sha256-04732119ae01ec4985f267f088b540077f692436288a376d0619014b0af3fd6e",
+      "resource_type": "image",
+      "sha256": "04732119ae01ec4985f267f088b540077f692436288a376d0619014b0af3fd6e",
+      "type": "authenticated",
+      "uses": [
+        "game-cover:puzzle-quest"
+      ]
+    },
+    "Frontend/mobile/assets/images/stories/creation-week-v2.webp": {
+      "bytes": 397966,
+      "format": "webp",
+      "public_id": "kingdom-kids/media-v1/sha256-f7390a25d43dc567762fd54d48e6adcb394f6c3645b3957bb6f0fd5accdebb18",
+      "resource_type": "image",
+      "sha256": "f7390a25d43dc567762fd54d48e6adcb394f6c3645b3957bb6f0fd5accdebb18",
+      "type": "authenticated",
+      "uses": [
+        "game-cover:creation-match-bloom",
+        "story-cover:creation-week"
+      ]
+    },
+    "Frontend/mobile/assets/images/stories/crossing-the-red-sea-v2.webp": {
+      "bytes": 428766,
+      "format": "webp",
+      "public_id": "kingdom-kids/media-v1/sha256-b3fe9bf1146e32149c83df68f911d8343a595fdfa29e2ca2cb8f71df8d4f9323",
+      "resource_type": "image",
+      "sha256": "b3fe9bf1146e32149c83df68f911d8343a595fdfa29e2ca2cb8f71df8d4f9323",
+      "type": "authenticated",
+      "uses": [
+        "story-cover:crossing-the-red-sea"
+      ]
+    },
+    "Frontend/mobile/assets/images/stories/daniel-in-the-lions-den-v2.webp": {
+      "bytes": 403126,
+      "format": "webp",
+      "public_id": "kingdom-kids/media-v1/sha256-e60bb15a6ce6731cc57a68eeb0f7b94c57c20eece6093a145baea9d238ac2c1f",
+      "resource_type": "image",
+      "sha256": "e60bb15a6ce6731cc57a68eeb0f7b94c57c20eece6093a145baea9d238ac2c1f",
+      "type": "authenticated",
+      "uses": [
+        "story-cover:daniel-in-the-lions-den"
+      ]
+    },
+    "Frontend/mobile/assets/images/stories/david-and-goliath-v2.webp": {
+      "bytes": 373842,
+      "format": "webp",
+      "public_id": "kingdom-kids/media-v1/sha256-ca526f3e29b7c3dbc73645dcf11b659e42b68935bcf8fb2bfa345d20ff684bd2",
+      "resource_type": "image",
+      "sha256": "ca526f3e29b7c3dbc73645dcf11b659e42b68935bcf8fb2bfa345d20ff684bd2",
+      "type": "authenticated",
+      "uses": [
+        "game-cover:david-quiz",
+        "game-cover:puzzle-david",
+        "story-cover:david-and-goliath"
+      ]
+    },
+    "Frontend/mobile/assets/images/stories/esther-speaks-up-v2.webp": {
+      "bytes": 374810,
+      "format": "webp",
+      "public_id": "kingdom-kids/media-v1/sha256-d41368cb7715e52feb304f3af053111fd1f17976cece2a3bf39d0316822edaf0",
+      "resource_type": "image",
+      "sha256": "d41368cb7715e52feb304f3af053111fd1f17976cece2a3bf39d0316822edaf0",
+      "type": "authenticated",
+      "uses": [
+        "game-cover:esther-quiz",
+        "game-cover:esthers-celebration-table",
+        "game-cover:puzzle-esther",
+        "story-cover:esther-speaks-up"
+      ]
+    },
+    "Frontend/mobile/assets/images/stories/jonah-and-the-big-fish-v2.webp": {
+      "bytes": 322648,
+      "format": "webp",
+      "public_id": "kingdom-kids/media-v1/sha256-f3afc0b2c890a396a6f7b231873bae9052ff063ff28140d81dc3ee87e8809167",
+      "resource_type": "image",
+      "sha256": "f3afc0b2c890a396a6f7b231873bae9052ff063ff28140d81dc3ee87e8809167",
+      "type": "authenticated",
+      "uses": [
+        "game-cover:jonah-quiz",
+        "story-cover:jonah-and-the-big-fish"
+      ]
+    },
+    "Frontend/mobile/assets/images/stories/joseph-colorful-coat-storybook-v1.webp": {
+      "bytes": 584250,
+      "format": "webp",
+      "public_id": "kingdom-kids/media-v1/sha256-e3c281dc8527ef1f8680d1863bee77da4bc61a2750573f816da055be55d629b9",
+      "resource_type": "image",
+      "sha256": "e3c281dc8527ef1f8680d1863bee77da4bc61a2750573f816da055be55d629b9",
+      "type": "authenticated",
+      "uses": [
+        "game-cover:josephs-coat-studio",
+        "story-cover:joseph-colorful-coat"
+      ]
+    },
+    "Frontend/mobile/assets/images/stories/lost-sheep-storybook-v1.webp": {
+      "bytes": 563632,
+      "format": "webp",
+      "public_id": "kingdom-kids/media-v1/sha256-8f4968a136ca791a74a77d9ec8c558102a978aeb92c993669bad912985ccf918",
+      "resource_type": "image",
+      "sha256": "8f4968a136ca791a74a77d9ec8c558102a978aeb92c993669bad912985ccf918",
+      "type": "authenticated",
+      "uses": [
+        "game-cover:find-my-sheep",
+        "game-cover:lost-sheep-quiz",
+        "game-cover:puzzle-lost-sheep"
+      ]
+    },
+    "Frontend/mobile/assets/images/stories/moses-follows-god-v2.webp": {
+      "bytes": 392526,
+      "format": "webp",
+      "public_id": "kingdom-kids/media-v1/sha256-f6ddf63c465d7c0bbf4e794e0c36e728409ebad45e171bb9c08e8e631e6f9b1b",
+      "resource_type": "image",
+      "sha256": "f6ddf63c465d7c0bbf4e794e0c36e728409ebad45e171bb9c08e8e631e6f9b1b",
+      "type": "authenticated",
+      "uses": [
+        "story-cover:moses-follows-god"
+      ]
+    },
+    "Frontend/mobile/assets/images/stories/noah-builds-the-ark-v2.webp": {
+      "bytes": 422456,
+      "format": "webp",
+      "public_id": "kingdom-kids/media-v1/sha256-a06d3c57793a1fd062bb74e5c48a1e26a0d0af1584cf97ea15ff1132a5cae8d5",
+      "resource_type": "image",
+      "sha256": "a06d3c57793a1fd062bb74e5c48a1e26a0d0af1584cf97ea15ff1132a5cae8d5",
+      "type": "authenticated",
+      "uses": [
+        "game-cover:noah-quiz",
+        "game-cover:puzzle-noah",
+        "story-cover:noah-builds-the-ark"
+      ]
+    },
+    "Frontend/mobile/assets/images/stories/ruth-and-naomi-storybook-v1.webp": {
+      "bytes": 552812,
+      "format": "webp",
+      "public_id": "kingdom-kids/media-v1/sha256-dc0d79cbd2617dd1711233c1f2887512b61c7042e660b39a14daa401bd43ea8d",
+      "resource_type": "image",
+      "sha256": "dc0d79cbd2617dd1711233c1f2887512b61c7042e660b39a14daa401bd43ea8d",
+      "type": "authenticated",
+      "uses": [
+        "game-cover:ruths-harvest",
+        "story-cover:ruth-and-naomi"
+      ]
+    },
+    "Frontend/mobile/assets/images/stories/walls-of-jericho-storybook-v1.webp": {
+      "bytes": 586892,
+      "format": "webp",
+      "public_id": "kingdom-kids/media-v1/sha256-f6744a2d60bbd3e075223da0f2720b625a825b3fb93791b8fdfaa6708880ed0f",
+      "resource_type": "image",
+      "sha256": "f6744a2d60bbd3e075223da0f2720b625a825b3fb93791b8fdfaa6708880ed0f",
+      "type": "authenticated",
+      "uses": [
+        "story-cover:walls-of-jericho"
+      ]
+    }
+  },
+  "cloud_name": "fki5bf5g",
+  "remote_originals_verified": true,
+  "schema_version": 1,
+  "scope": "first_release_only",
+  "source_sha256": {
+    "bindings": "17ac89772e894809fef1c3aff6fab740ea429b6e5ca81571130cf139dc48a49f",
+    "manifest": "ec0716caba4b99db152fdd9bf80aef15600c6e7157af10540f0f19c6a8aea7d4",
+    "proof": "f8fa1cbcc58438097bc44341aabe13fd97f3111fcb202549219072d23406a01a",
+    "selection": "e0e7859ee42ce052c0bfa76928e6af48fa16fde7d7fbd6c12d3d071809b55c74"
+  },
+  "verified_selected_objects": 101
+}

@@ -1,15 +1,27 @@
+from django.conf import settings
+from Core.email_capability import EmailDependentViewMixin
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from django.shortcuts import get_object_or_404
+from django.views.decorators.debug import sensitive_variables
 from rest_framework import status, viewsets
+from rest_framework.exceptions import ValidationError
+from rest_framework.parsers import JSONParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.throttling import ScopedRateThrottle
+from rest_framework.throttling import ScopedRateThrottle, UserRateThrottle
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.settings import api_settings
+from rest_framework_simplejwt.token_blacklist.models import OutstandingToken
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
+from .account_deletion import (
+    InvalidAccountDeletionChallenge,
+    confirm_account_deletion,
+    request_account_deletion,
+)
 from .email_verification import (
     EmailAlreadyVerified,
     InvalidVerificationChallenge,
@@ -18,25 +30,54 @@ from .email_verification import (
     VerificationDeliveryDelayed,
     confirm_email_verification,
     issue_email_verification_challenge,
+    private_registration_payload,
     resend_email_verification,
     verification_payload,
 )
-from .models import EmailVerificationChallenge, KidProfile, KidProfilePreferences
+from .models import (
+    EmailVerificationChallenge,
+    KidProfile,
+    KidProfilePreferences,
+    User,
+    WaitlistSubscriber,
+)
+from .password_reset import (
+    InvalidPasswordResetChallenge,
+    confirm_password_reset,
+    request_password_reset,
+    verify_password_reset_code,
+)
 from .serializers import (
+    AccountDeletionConfirmSerializer,
+    AccountDeletionRequestSerializer,
+    DeleteAccountSerializer,
+    DeleteUnverifiedAccountSerializer,
     EmailVerificationConfirmSerializer,
     EmailVerificationResendSerializer,
     KidProfileSerializer,
     KidProfilePreferencesSerializer,
     LoginSerializer,
+    LogoutSerializer,
     ParentSerializer,
+    PasswordResetConfirmSerializer,
+    PasswordResetRequestSerializer,
+    PasswordResetVerifySerializer,
     RefreshSerializer,
     RegistrationSerializer,
+    WaitlistSignupSerializer,
+)
+from .throttles import (
+    AccountDeletionEmailRateThrottle,
+    LoginEmailRateThrottle,
+    PasswordResetEmailRateThrottle,
+    RegistrationEmailRateThrottle,
+    UnverifiedAccountDeletionEmailRateThrottle,
 )
 
 
 def _token_response(user) -> dict[str, object]:
-    if not user.is_email_verified:
-        raise ValueError('Cannot issue session tokens before email verification.')
+    if not user.is_active or not user.is_email_verified:
+        raise ValueError('Cannot issue session tokens for this account.')
     refresh = RefreshToken.for_user(user)
     return {
         'user': ParentSerializer(user).data,
@@ -63,9 +104,18 @@ def _delivery_delayed_response(challenge_id) -> Response:
     )
 
 
-class RegisterView(APIView):
+class NoStoreResponseMixin:
+    """Keep credentials, challenge handles and family data out of HTTP caches."""
+
+    def finalize_response(self, request, response, *args, **kwargs):
+        response = super().finalize_response(request, response, *args, **kwargs)
+        response['Cache-Control'] = 'no-store'
+        return response
+
+
+class RegisterView(EmailDependentViewMixin, NoStoreResponseMixin, APIView):
     permission_classes = (AllowAny,)
-    throttle_classes = (ScopedRateThrottle,)
+    throttle_classes = (ScopedRateThrottle, RegistrationEmailRateThrottle)
     throttle_scope = 'auth'
 
     def post(self, request):
@@ -73,8 +123,17 @@ class RegisterView(APIView):
         serializer.is_valid(raise_exception=True)
         try:
             with transaction.atomic():
-                user = serializer.save()
-                challenge = issue_email_verification_challenge(user)
+                result = serializer.save()
+                if not result.issue_challenge or result.user is None:
+                    return Response(
+                        {
+                            'verification': private_registration_payload(
+                                result.email
+                            )
+                        },
+                        status=status.HTTP_202_ACCEPTED,
+                    )
+                challenge = issue_email_verification_challenge(result.user)
         except VerificationDeliveryDelayed as exc:
             return _delivery_delayed_response(exc.challenge_id)
         return Response(
@@ -83,7 +142,166 @@ class RegisterView(APIView):
         )
 
 
-class EmailVerificationConfirmView(APIView):
+class WaitlistSignupView(APIView):
+    """Accept a footer signup without disclosing existing subscribers."""
+
+    permission_classes = (AllowAny,)
+    throttle_classes = (ScopedRateThrottle,)
+    throttle_scope = 'waitlist'
+
+    def post(self, request):
+        serializer = WaitlistSignupSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(
+            {'detail': 'Thanks. Your waitlist request has been received.'},
+            status=status.HTTP_202_ACCEPTED,
+        )
+
+
+class PasswordResetRequestView(EmailDependentViewMixin, NoStoreResponseMixin, APIView):
+    """Issue a real or decoy recovery handle with one generic response."""
+
+    permission_classes = (AllowAny,)
+    throttle_classes = (ScopedRateThrottle, PasswordResetEmailRateThrottle)
+    throttle_scope = 'password_reset_request'
+
+    def post(self, request):
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        challenge_id = request_password_reset(serializer.validated_data['email'])
+        return Response(
+            {
+                'detail': (
+                    'If an eligible account exists for that email, a password '
+                    'reset code has been sent.'
+                ),
+                'challenge_id': str(challenge_id),
+                'expires_in': int(settings.PASSWORD_RESET_TTL.total_seconds()),
+            },
+            status=status.HTTP_202_ACCEPTED,
+        )
+
+
+class PasswordResetVerifyView(EmailDependentViewMixin, NoStoreResponseMixin, APIView):
+    permission_classes = (AllowAny,)
+    throttle_classes = (ScopedRateThrottle,)
+    # Verification and final confirmation share an IP budget as well as the
+    # challenge's locked attempt counter.
+    throttle_scope = 'password_reset_confirm'
+
+    def post(self, request):
+        serializer = PasswordResetVerifySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            verify_password_reset_code(
+                challenge_id=serializer.validated_data['challenge_id'],
+                code=serializer.validated_data['code'],
+            )
+        except InvalidPasswordResetChallenge:
+            return Response(
+                {
+                    'code': 'invalid_or_expired_password_reset',
+                    'detail': (
+                        'That password reset code is incorrect or has expired.'
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class PasswordResetConfirmView(EmailDependentViewMixin, NoStoreResponseMixin, APIView):
+    permission_classes = (AllowAny,)
+    throttle_classes = (ScopedRateThrottle,)
+    throttle_scope = 'password_reset_confirm'
+
+    def post(self, request):
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            confirm_password_reset(
+                challenge_id=serializer.validated_data['challenge_id'],
+                code=serializer.validated_data['code'],
+                new_password=serializer.validated_data['new_password'],
+            )
+        except InvalidPasswordResetChallenge:
+            return Response(
+                {
+                    'code': 'invalid_or_expired_password_reset',
+                    'detail': (
+                        'That password reset code is incorrect or has expired.'
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except DjangoValidationError as exc:
+            return Response(
+                {'new_password': list(exc.messages)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AccountDeletionRequestView(EmailDependentViewMixin, NoStoreResponseMixin, APIView):
+    """Issue a real or decoy deletion handle with one generic response."""
+
+    permission_classes = (AllowAny,)
+    parser_classes = (JSONParser,)
+    throttle_classes = (ScopedRateThrottle, AccountDeletionEmailRateThrottle)
+    throttle_scope = 'account_deletion_request'
+
+    def post(self, request):
+        serializer = AccountDeletionRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        challenge_id = request_account_deletion(
+            serializer.validated_data['email']
+        )
+        return Response(
+            {
+                'detail': (
+                    'If an eligible account exists for that email, an account '
+                    'deletion code has been sent.'
+                ),
+                'challenge_id': str(challenge_id),
+                'expires_in': int(
+                    settings.ACCOUNT_DELETION_TTL.total_seconds()
+                ),
+            },
+            status=status.HTTP_202_ACCEPTED,
+        )
+
+
+class AccountDeletionConfirmView(EmailDependentViewMixin, NoStoreResponseMixin, APIView):
+    permission_classes = (AllowAny,)
+    parser_classes = (JSONParser,)
+    throttle_classes = (ScopedRateThrottle,)
+    throttle_scope = 'account_deletion_confirm'
+
+    @sensitive_variables()
+    def post(self, request):
+        serializer = AccountDeletionConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            confirm_account_deletion(
+                challenge_id=serializer.validated_data['challenge_id'],
+                code=serializer.validated_data['code'],
+            )
+        except InvalidAccountDeletionChallenge:
+            return Response(
+                {
+                    'code': 'invalid_or_expired_account_deletion',
+                    'detail': (
+                        'That account deletion code is incorrect or has expired.'
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class EmailVerificationConfirmView(EmailDependentViewMixin, NoStoreResponseMixin, APIView):
     permission_classes = (AllowAny,)
     throttle_classes = (ScopedRateThrottle,)
     throttle_scope = 'verification_confirm'
@@ -104,7 +322,7 @@ class EmailVerificationConfirmView(APIView):
         return Response(_token_response(user), status=status.HTTP_200_OK)
 
 
-class EmailVerificationResendView(APIView):
+class EmailVerificationResendView(EmailDependentViewMixin, NoStoreResponseMixin, APIView):
     permission_classes = (AllowAny,)
     throttle_classes = (ScopedRateThrottle,)
     throttle_scope = 'verification_resend'
@@ -149,30 +367,27 @@ class EmailVerificationResendView(APIView):
         )
 
 
-class LoginView(TokenObtainPairView):
+class LoginView(NoStoreResponseMixin, TokenObtainPairView):
     permission_classes = (AllowAny,)
-    throttle_classes = (ScopedRateThrottle,)
+    throttle_classes = (ScopedRateThrottle, LoginEmailRateThrottle)
     throttle_scope = 'auth'
     serializer_class = LoginSerializer
 
 
-class RefreshView(TokenRefreshView):
+class RefreshView(NoStoreResponseMixin, TokenRefreshView):
     permission_classes = (AllowAny,)
     throttle_classes = (ScopedRateThrottle,)
     throttle_scope = 'token_refresh'
     serializer_class = RefreshSerializer
 
 
-class LogoutView(APIView):
+class LogoutView(NoStoreResponseMixin, APIView):
     permission_classes = (IsAuthenticated,)
 
     def post(self, request):
-        refresh_value = request.data.get('refresh')
-        if not refresh_value:
-            return Response(
-                {'refresh': ['This field is required.']},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        serializer = LogoutSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        refresh_value = serializer.validated_data['refresh']
 
         try:
             refresh = RefreshToken(refresh_value)
@@ -192,14 +407,87 @@ class LogoutView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class MeView(APIView):
+class MeView(NoStoreResponseMixin, APIView):
     permission_classes = (IsAuthenticated,)
+
+    def get_throttles(self):
+        if self.request.method == 'DELETE':
+            self.throttle_scope = 'account_delete'
+            return (ScopedRateThrottle(), UserRateThrottle())
+        return super().get_throttles()
 
     def get(self, request):
         return Response(ParentSerializer(request.user).data)
 
+    @sensitive_variables()
+    def delete(self, request):
+        serializer = DeleteAccountSerializer(
+            data=request.data,
+            context={'request': request},
+        )
+        serializer.is_valid(raise_exception=True)
+        with transaction.atomic():
+            user = request.user.__class__.objects.select_for_update().get(
+                pk=request.user.pk,
+            )
+            # Re-check against the locked row. The serializer's first check
+            # gives the normal validation response, while this closes the
+            # narrow window in which a concurrent password reset could change
+            # the credential before deletion acquires its database lock.
+            if not user.check_password(serializer.validated_data['password']):
+                raise ValidationError(
+                    {'password': ['The password is incorrect.']}
+                )
+            # A waitlist request is independent data but belongs to the same
+            # person and must be erased with an account deletion request.
+            WaitlistSubscriber.objects.filter(email__iexact=user.email).delete()
+            OutstandingToken.objects.filter(user=user).delete()
+            user.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
-class KidProfileViewSet(viewsets.ModelViewSet):
+
+class UnverifiedAccountDeletionView(NoStoreResponseMixin, APIView):
+    """Delete a password-proven pending account without revealing its state."""
+
+    permission_classes = (AllowAny,)
+    throttle_classes = (
+        ScopedRateThrottle,
+        UnverifiedAccountDeletionEmailRateThrottle,
+    )
+    throttle_scope = 'unverified_account_delete'
+
+    @sensitive_variables()
+    def delete(self, request):
+        serializer = DeleteUnverifiedAccountSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data['email']
+        password = serializer.validated_data['password']
+
+        with transaction.atomic():
+            user = (
+                User.objects.select_for_update()
+                .filter(
+                    email=email,
+                    is_active=True,
+                    email_verified_at__isnull=True,
+                )
+                .first()
+            )
+            if user is None:
+                # Match Django's nonexistent-user password work so the generic
+                # response does not become a cheap account-state timing probe.
+                dummy_user = User(email=email)
+                dummy_user.set_password(password)
+            elif user.check_password(password):
+                OutstandingToken.objects.filter(user=user).delete()
+                user.delete()
+
+        # Wrong, verified, disabled, missing, and successfully deleted accounts
+        # are deliberately indistinguishable to an unauthenticated caller.
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class KidProfileViewSet(NoStoreResponseMixin, viewsets.ModelViewSet):
     serializer_class = KidProfileSerializer
     permission_classes = (IsAuthenticated,)
     lookup_field = 'id'
@@ -207,18 +495,61 @@ class KidProfileViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return KidProfile.objects.filter(parent=self.request.user)
 
+    def get_throttles(self):
+        throttles = list(super().get_throttles())
+        if self.action in {'create', 'update', 'partial_update', 'destroy'}:
+            self.throttle_scope = 'profile_write'
+            throttles.append(ScopedRateThrottle())
+        return throttles
+
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         validated_data = serializer.validated_data
-        profile, created = KidProfile.objects.get_or_create(
-            parent=request.user,
-            creation_operation_id=validated_data['creation_operation_id'],
-            defaults={
-                'display_name': validated_data['display_name'],
-                'avatar_key': validated_data['avatar_key'],
-            },
-        )
+        with transaction.atomic():
+            parent = request.user.__class__.objects.select_for_update().get(
+                pk=request.user.pk,
+            )
+            profile = KidProfile.objects.filter(
+                parent=parent,
+                creation_operation_id=validated_data['creation_operation_id'],
+            ).first()
+            if profile is not None:
+                if (
+                    profile.display_name != validated_data['display_name']
+                    or profile.avatar_key != validated_data['avatar_key']
+                ):
+                    return Response(
+                        {
+                            'detail': (
+                                'operation_id was already used for a different '
+                                'kid profile.'
+                            )
+                        },
+                        status=status.HTTP_409_CONFLICT,
+                    )
+                created = False
+            else:
+                if KidProfile.objects.filter(parent=parent).count() >= (
+                    settings.MAX_KID_PROFILES
+                ):
+                    raise ValidationError(
+                        {
+                            'detail': (
+                                f'An account can have at most '
+                                f'{settings.MAX_KID_PROFILES} kid profiles.'
+                            )
+                        }
+                    )
+                profile = KidProfile.objects.create(
+                    parent=parent,
+                    creation_operation_id=validated_data[
+                        'creation_operation_id'
+                    ],
+                    display_name=validated_data['display_name'],
+                    avatar_key=validated_data['avatar_key'],
+                )
+                created = True
         response_serializer = self.get_serializer(profile)
         response_status = (
             status.HTTP_201_CREATED if created else status.HTTP_200_OK
@@ -226,7 +557,7 @@ class KidProfileViewSet(viewsets.ModelViewSet):
         return Response(response_serializer.data, status=response_status)
 
 
-class KidProfilePreferencesView(APIView):
+class KidProfilePreferencesView(NoStoreResponseMixin, APIView):
     """Read or partially update preferences for one owned child profile."""
 
     permission_classes = (IsAuthenticated,)

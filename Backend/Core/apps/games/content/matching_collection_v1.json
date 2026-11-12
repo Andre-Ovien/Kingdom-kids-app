@@ -1,0 +1,1409 @@
+{
+  "sheep_rounds": [
+    {
+      "mode": "sheep_reunion",
+      "scene": "sheep_meadow",
+      "round_number": 1,
+      "targets": [
+        {
+          "id": "family_1",
+          "match_key": "coral_dots",
+          "capacity": 2
+        },
+        {
+          "id": "family_2",
+          "match_key": "teal_stripes",
+          "capacity": 2
+        },
+        {
+          "id": "family_3",
+          "match_key": "gold_zigzag",
+          "capacity": 2
+        }
+      ],
+      "items": [
+        {
+          "id": "lamb_1",
+          "match_key": "teal_stripes"
+        },
+        {
+          "id": "lamb_2",
+          "match_key": "coral_dots"
+        },
+        {
+          "id": "lamb_3",
+          "match_key": "gold_zigzag"
+        },
+        {
+          "id": "lamb_4",
+          "match_key": "coral_dots"
+        },
+        {
+          "id": "lamb_5",
+          "match_key": "gold_zigzag"
+        },
+        {
+          "id": "lamb_6",
+          "match_key": "teal_stripes"
+        }
+      ]
+    },
+    {
+      "mode": "sheep_reunion",
+      "scene": "sheep_meadow",
+      "round_number": 2,
+      "targets": [
+        {
+          "id": "family_1",
+          "match_key": "coral_dots",
+          "capacity": 2
+        },
+        {
+          "id": "family_2",
+          "match_key": "coral_stripes",
+          "capacity": 2
+        },
+        {
+          "id": "family_3",
+          "match_key": "teal_zigzag",
+          "capacity": 2
+        }
+      ],
+      "items": [
+        {
+          "id": "lamb_1",
+          "match_key": "coral_stripes"
+        },
+        {
+          "id": "lamb_2",
+          "match_key": "coral_dots"
+        },
+        {
+          "id": "lamb_3",
+          "match_key": "teal_zigzag"
+        },
+        {
+          "id": "lamb_4",
+          "match_key": "coral_dots"
+        },
+        {
+          "id": "lamb_5",
+          "match_key": "teal_zigzag"
+        },
+        {
+          "id": "lamb_6",
+          "match_key": "coral_stripes"
+        }
+      ]
+    },
+    {
+      "mode": "sheep_reunion",
+      "scene": "sheep_meadow",
+      "round_number": 3,
+      "targets": [
+        {
+          "id": "family_1",
+          "match_key": "teal_dots",
+          "capacity": 2
+        },
+        {
+          "id": "family_2",
+          "match_key": "teal_stripes",
+          "capacity": 2
+        },
+        {
+          "id": "family_3",
+          "match_key": "teal_zigzag",
+          "capacity": 2
+        }
+      ],
+      "items": [
+        {
+          "id": "lamb_1",
+          "match_key": "teal_stripes"
+        },
+        {
+          "id": "lamb_2",
+          "match_key": "teal_dots"
+        },
+        {
+          "id": "lamb_3",
+          "match_key": "teal_zigzag"
+        },
+        {
+          "id": "lamb_4",
+          "match_key": "teal_dots"
+        },
+        {
+          "id": "lamb_5",
+          "match_key": "teal_zigzag"
+        },
+        {
+          "id": "lamb_6",
+          "match_key": "teal_stripes"
+        }
+      ]
+    }
+  ],
+  "creation_rounds": [
+    {
+      "mode": "creation_bloom",
+      "scene": "creation_garden",
+      "round_number": 1,
+      "targets": [
+        {
+          "id": "sky",
+          "match_key": "sky",
+          "capacity": 2
+        },
+        {
+          "id": "water",
+          "match_key": "water",
+          "capacity": 1
+        },
+        {
+          "id": "forest",
+          "match_key": "forest",
+          "capacity": 1
+        },
+        {
+          "id": "meadow",
+          "match_key": "meadow",
+          "capacity": 2
+        }
+      ],
+      "items": [
+        {
+          "id": "sun",
+          "match_key": "sky"
+        },
+        {
+          "id": "fish",
+          "match_key": "water"
+        },
+        {
+          "id": "tree",
+          "match_key": "forest"
+        },
+        {
+          "id": "bird",
+          "match_key": "sky"
+        },
+        {
+          "id": "flower",
+          "match_key": "meadow"
+        },
+        {
+          "id": "deer",
+          "match_key": "meadow"
+        }
+      ]
+    },
+    {
+      "mode": "creation_bloom",
+      "scene": "creation_garden",
+      "round_number": 2,
+      "targets": [
+        {
+          "id": "sky",
+          "match_key": "sky",
+          "capacity": 2
+        },
+        {
+          "id": "water",
+          "match_key": "water",
+          "capacity": 1
+        },
+        {
+          "id": "forest",
+          "match_key": "forest",
+          "capacity": 1
+        },
+        {
+          "id": "meadow",
+          "match_key": "meadow",
+          "capacity": 2
+        }
+      ],
+      "items": [
+        {
+          "id": "deer",
+          "match_key": "meadow"
+        },
+        {
+          "id": "bird",
+          "match_key": "sky"
+        },
+        {
+          "id": "flower",
+          "match_key": "meadow"
+        },
+        {
+          "id": "tree",
+          "match_key": "forest"
+        },
+        {
+          "id": "fish",
+          "match_key": "water"
+        },
+        {
+          "id": "sun",
+          "match_key": "sky"
+        }
+      ]
+    },
+    {
+      "mode": "creation_bloom",
+      "scene": "creation_garden",
+      "round_number": 3,
+      "targets": [
+        {
+          "id": "sky",
+          "match_key": "sky",
+          "capacity": 2
+        },
+        {
+          "id": "water",
+          "match_key": "water",
+          "capacity": 1
+        },
+        {
+          "id": "forest",
+          "match_key": "forest",
+          "capacity": 1
+        },
+        {
+          "id": "meadow",
+          "match_key": "meadow",
+          "capacity": 2
+        }
+      ],
+      "items": [
+        {
+          "id": "fish",
+          "match_key": "water"
+        },
+        {
+          "id": "flower",
+          "match_key": "meadow"
+        },
+        {
+          "id": "sun",
+          "match_key": "sky"
+        },
+        {
+          "id": "deer",
+          "match_key": "meadow"
+        },
+        {
+          "id": "bird",
+          "match_key": "sky"
+        },
+        {
+          "id": "tree",
+          "match_key": "forest"
+        }
+      ]
+    }
+  ],
+  "esther_rounds": [
+    {
+      "mode": "esther_table",
+      "scene": "esther_banquet",
+      "round_number": 1,
+      "targets": [
+        {
+          "id": "seat_1",
+          "match_key": "bread",
+          "capacity": 1
+        },
+        {
+          "id": "seat_2",
+          "match_key": "grapes",
+          "capacity": 1
+        },
+        {
+          "id": "seat_3",
+          "match_key": "figs",
+          "capacity": 1
+        },
+        {
+          "id": "seat_4",
+          "match_key": "water",
+          "capacity": 1
+        },
+        {
+          "id": "seat_5",
+          "match_key": "flowers",
+          "capacity": 1
+        },
+        {
+          "id": "seat_6",
+          "match_key": "dates",
+          "capacity": 1
+        }
+      ],
+      "items": [
+        {
+          "id": "dates",
+          "match_key": "dates"
+        },
+        {
+          "id": "flowers",
+          "match_key": "flowers"
+        },
+        {
+          "id": "water",
+          "match_key": "water"
+        },
+        {
+          "id": "figs",
+          "match_key": "figs"
+        },
+        {
+          "id": "grapes",
+          "match_key": "grapes"
+        },
+        {
+          "id": "bread",
+          "match_key": "bread"
+        }
+      ]
+    },
+    {
+      "mode": "esther_table",
+      "scene": "esther_banquet",
+      "round_number": 2,
+      "targets": [
+        {
+          "id": "seat_1",
+          "match_key": "flowers",
+          "capacity": 1
+        },
+        {
+          "id": "seat_2",
+          "match_key": "bread",
+          "capacity": 1
+        },
+        {
+          "id": "seat_3",
+          "match_key": "water",
+          "capacity": 1
+        },
+        {
+          "id": "seat_4",
+          "match_key": "dates",
+          "capacity": 1
+        },
+        {
+          "id": "seat_5",
+          "match_key": "grapes",
+          "capacity": 1
+        },
+        {
+          "id": "seat_6",
+          "match_key": "figs",
+          "capacity": 1
+        }
+      ],
+      "items": [
+        {
+          "id": "dates",
+          "match_key": "dates"
+        },
+        {
+          "id": "flowers",
+          "match_key": "flowers"
+        },
+        {
+          "id": "water",
+          "match_key": "water"
+        },
+        {
+          "id": "figs",
+          "match_key": "figs"
+        },
+        {
+          "id": "grapes",
+          "match_key": "grapes"
+        },
+        {
+          "id": "bread",
+          "match_key": "bread"
+        }
+      ]
+    },
+    {
+      "mode": "esther_table",
+      "scene": "esther_banquet",
+      "round_number": 3,
+      "targets": [
+        {
+          "id": "seat_1",
+          "match_key": "figs",
+          "capacity": 1
+        },
+        {
+          "id": "seat_2",
+          "match_key": "water",
+          "capacity": 1
+        },
+        {
+          "id": "seat_3",
+          "match_key": "dates",
+          "capacity": 1
+        },
+        {
+          "id": "seat_4",
+          "match_key": "grapes",
+          "capacity": 1
+        },
+        {
+          "id": "seat_5",
+          "match_key": "bread",
+          "capacity": 1
+        },
+        {
+          "id": "seat_6",
+          "match_key": "flowers",
+          "capacity": 1
+        }
+      ],
+      "items": [
+        {
+          "id": "dates",
+          "match_key": "dates"
+        },
+        {
+          "id": "flowers",
+          "match_key": "flowers"
+        },
+        {
+          "id": "water",
+          "match_key": "water"
+        },
+        {
+          "id": "figs",
+          "match_key": "figs"
+        },
+        {
+          "id": "grapes",
+          "match_key": "grapes"
+        },
+        {
+          "id": "bread",
+          "match_key": "bread"
+        }
+      ]
+    }
+  ],
+  "contract_version": 1,
+  "golden": [
+    {
+      "config": {
+        "mode": "sheep_reunion",
+        "scene": "sheep_meadow",
+        "round_number": 1,
+        "targets": [
+          {
+            "id": "family_1",
+            "match_key": "coral_dots",
+            "capacity": 2
+          },
+          {
+            "id": "family_2",
+            "match_key": "teal_stripes",
+            "capacity": 2
+          },
+          {
+            "id": "family_3",
+            "match_key": "gold_zigzag",
+            "capacity": 2
+          }
+        ],
+        "items": [
+          {
+            "id": "lamb_1",
+            "match_key": "teal_stripes"
+          },
+          {
+            "id": "lamb_2",
+            "match_key": "coral_dots"
+          },
+          {
+            "id": "lamb_3",
+            "match_key": "gold_zigzag"
+          },
+          {
+            "id": "lamb_4",
+            "match_key": "coral_dots"
+          },
+          {
+            "id": "lamb_5",
+            "match_key": "gold_zigzag"
+          },
+          {
+            "id": "lamb_6",
+            "match_key": "teal_stripes"
+          }
+        ]
+      },
+      "result": {
+        "actions": [
+          {
+            "item_id": "lamb_1",
+            "target_id": "family_2"
+          },
+          {
+            "item_id": "lamb_2",
+            "target_id": "family_1"
+          },
+          {
+            "item_id": "lamb_3",
+            "target_id": "family_3"
+          },
+          {
+            "item_id": "lamb_4",
+            "target_id": "family_1"
+          },
+          {
+            "item_id": "lamb_5",
+            "target_id": "family_3"
+          },
+          {
+            "item_id": "lamb_6",
+            "target_id": "family_2"
+          }
+        ]
+      },
+      "outcome": {
+        "completed": true,
+        "score": 100,
+        "placements": {
+          "lamb_1": "family_2",
+          "lamb_2": "family_1",
+          "lamb_3": "family_3",
+          "lamb_4": "family_1",
+          "lamb_5": "family_3",
+          "lamb_6": "family_2"
+        },
+        "correct_placements": 6,
+        "item_count": 6,
+        "attempts": 6,
+        "mistakes": 0
+      }
+    },
+    {
+      "config": {
+        "mode": "sheep_reunion",
+        "scene": "sheep_meadow",
+        "round_number": 2,
+        "targets": [
+          {
+            "id": "family_1",
+            "match_key": "coral_dots",
+            "capacity": 2
+          },
+          {
+            "id": "family_2",
+            "match_key": "coral_stripes",
+            "capacity": 2
+          },
+          {
+            "id": "family_3",
+            "match_key": "teal_zigzag",
+            "capacity": 2
+          }
+        ],
+        "items": [
+          {
+            "id": "lamb_1",
+            "match_key": "coral_stripes"
+          },
+          {
+            "id": "lamb_2",
+            "match_key": "coral_dots"
+          },
+          {
+            "id": "lamb_3",
+            "match_key": "teal_zigzag"
+          },
+          {
+            "id": "lamb_4",
+            "match_key": "coral_dots"
+          },
+          {
+            "id": "lamb_5",
+            "match_key": "teal_zigzag"
+          },
+          {
+            "id": "lamb_6",
+            "match_key": "coral_stripes"
+          }
+        ]
+      },
+      "result": {
+        "actions": [
+          {
+            "item_id": "lamb_1",
+            "target_id": "family_2"
+          },
+          {
+            "item_id": "lamb_2",
+            "target_id": "family_1"
+          },
+          {
+            "item_id": "lamb_3",
+            "target_id": "family_3"
+          },
+          {
+            "item_id": "lamb_4",
+            "target_id": "family_1"
+          },
+          {
+            "item_id": "lamb_5",
+            "target_id": "family_3"
+          },
+          {
+            "item_id": "lamb_6",
+            "target_id": "family_2"
+          }
+        ]
+      },
+      "outcome": {
+        "completed": true,
+        "score": 100,
+        "placements": {
+          "lamb_1": "family_2",
+          "lamb_2": "family_1",
+          "lamb_3": "family_3",
+          "lamb_4": "family_1",
+          "lamb_5": "family_3",
+          "lamb_6": "family_2"
+        },
+        "correct_placements": 6,
+        "item_count": 6,
+        "attempts": 6,
+        "mistakes": 0
+      }
+    },
+    {
+      "config": {
+        "mode": "sheep_reunion",
+        "scene": "sheep_meadow",
+        "round_number": 3,
+        "targets": [
+          {
+            "id": "family_1",
+            "match_key": "teal_dots",
+            "capacity": 2
+          },
+          {
+            "id": "family_2",
+            "match_key": "teal_stripes",
+            "capacity": 2
+          },
+          {
+            "id": "family_3",
+            "match_key": "teal_zigzag",
+            "capacity": 2
+          }
+        ],
+        "items": [
+          {
+            "id": "lamb_1",
+            "match_key": "teal_stripes"
+          },
+          {
+            "id": "lamb_2",
+            "match_key": "teal_dots"
+          },
+          {
+            "id": "lamb_3",
+            "match_key": "teal_zigzag"
+          },
+          {
+            "id": "lamb_4",
+            "match_key": "teal_dots"
+          },
+          {
+            "id": "lamb_5",
+            "match_key": "teal_zigzag"
+          },
+          {
+            "id": "lamb_6",
+            "match_key": "teal_stripes"
+          }
+        ]
+      },
+      "result": {
+        "actions": [
+          {
+            "item_id": "lamb_1",
+            "target_id": "family_2"
+          },
+          {
+            "item_id": "lamb_2",
+            "target_id": "family_1"
+          },
+          {
+            "item_id": "lamb_3",
+            "target_id": "family_3"
+          },
+          {
+            "item_id": "lamb_4",
+            "target_id": "family_1"
+          },
+          {
+            "item_id": "lamb_5",
+            "target_id": "family_3"
+          },
+          {
+            "item_id": "lamb_6",
+            "target_id": "family_2"
+          }
+        ]
+      },
+      "outcome": {
+        "completed": true,
+        "score": 100,
+        "placements": {
+          "lamb_1": "family_2",
+          "lamb_2": "family_1",
+          "lamb_3": "family_3",
+          "lamb_4": "family_1",
+          "lamb_5": "family_3",
+          "lamb_6": "family_2"
+        },
+        "correct_placements": 6,
+        "item_count": 6,
+        "attempts": 6,
+        "mistakes": 0
+      }
+    },
+    {
+      "config": {
+        "mode": "creation_bloom",
+        "scene": "creation_garden",
+        "round_number": 1,
+        "targets": [
+          {
+            "id": "sky",
+            "match_key": "sky",
+            "capacity": 2
+          },
+          {
+            "id": "water",
+            "match_key": "water",
+            "capacity": 1
+          },
+          {
+            "id": "forest",
+            "match_key": "forest",
+            "capacity": 1
+          },
+          {
+            "id": "meadow",
+            "match_key": "meadow",
+            "capacity": 2
+          }
+        ],
+        "items": [
+          {
+            "id": "sun",
+            "match_key": "sky"
+          },
+          {
+            "id": "fish",
+            "match_key": "water"
+          },
+          {
+            "id": "tree",
+            "match_key": "forest"
+          },
+          {
+            "id": "bird",
+            "match_key": "sky"
+          },
+          {
+            "id": "flower",
+            "match_key": "meadow"
+          },
+          {
+            "id": "deer",
+            "match_key": "meadow"
+          }
+        ]
+      },
+      "result": {
+        "actions": [
+          {
+            "item_id": "sun",
+            "target_id": "sky"
+          },
+          {
+            "item_id": "fish",
+            "target_id": "water"
+          },
+          {
+            "item_id": "tree",
+            "target_id": "forest"
+          },
+          {
+            "item_id": "bird",
+            "target_id": "sky"
+          },
+          {
+            "item_id": "flower",
+            "target_id": "meadow"
+          },
+          {
+            "item_id": "deer",
+            "target_id": "meadow"
+          }
+        ]
+      },
+      "outcome": {
+        "completed": true,
+        "score": 100,
+        "placements": {
+          "sun": "sky",
+          "fish": "water",
+          "tree": "forest",
+          "bird": "sky",
+          "flower": "meadow",
+          "deer": "meadow"
+        },
+        "correct_placements": 6,
+        "item_count": 6,
+        "attempts": 6,
+        "mistakes": 0
+      }
+    },
+    {
+      "config": {
+        "mode": "creation_bloom",
+        "scene": "creation_garden",
+        "round_number": 2,
+        "targets": [
+          {
+            "id": "sky",
+            "match_key": "sky",
+            "capacity": 2
+          },
+          {
+            "id": "water",
+            "match_key": "water",
+            "capacity": 1
+          },
+          {
+            "id": "forest",
+            "match_key": "forest",
+            "capacity": 1
+          },
+          {
+            "id": "meadow",
+            "match_key": "meadow",
+            "capacity": 2
+          }
+        ],
+        "items": [
+          {
+            "id": "deer",
+            "match_key": "meadow"
+          },
+          {
+            "id": "bird",
+            "match_key": "sky"
+          },
+          {
+            "id": "flower",
+            "match_key": "meadow"
+          },
+          {
+            "id": "tree",
+            "match_key": "forest"
+          },
+          {
+            "id": "fish",
+            "match_key": "water"
+          },
+          {
+            "id": "sun",
+            "match_key": "sky"
+          }
+        ]
+      },
+      "result": {
+        "actions": [
+          {
+            "item_id": "deer",
+            "target_id": "meadow"
+          },
+          {
+            "item_id": "bird",
+            "target_id": "sky"
+          },
+          {
+            "item_id": "flower",
+            "target_id": "meadow"
+          },
+          {
+            "item_id": "tree",
+            "target_id": "forest"
+          },
+          {
+            "item_id": "fish",
+            "target_id": "water"
+          },
+          {
+            "item_id": "sun",
+            "target_id": "sky"
+          }
+        ]
+      },
+      "outcome": {
+        "completed": true,
+        "score": 100,
+        "placements": {
+          "deer": "meadow",
+          "bird": "sky",
+          "flower": "meadow",
+          "tree": "forest",
+          "fish": "water",
+          "sun": "sky"
+        },
+        "correct_placements": 6,
+        "item_count": 6,
+        "attempts": 6,
+        "mistakes": 0
+      }
+    },
+    {
+      "config": {
+        "mode": "creation_bloom",
+        "scene": "creation_garden",
+        "round_number": 3,
+        "targets": [
+          {
+            "id": "sky",
+            "match_key": "sky",
+            "capacity": 2
+          },
+          {
+            "id": "water",
+            "match_key": "water",
+            "capacity": 1
+          },
+          {
+            "id": "forest",
+            "match_key": "forest",
+            "capacity": 1
+          },
+          {
+            "id": "meadow",
+            "match_key": "meadow",
+            "capacity": 2
+          }
+        ],
+        "items": [
+          {
+            "id": "fish",
+            "match_key": "water"
+          },
+          {
+            "id": "flower",
+            "match_key": "meadow"
+          },
+          {
+            "id": "sun",
+            "match_key": "sky"
+          },
+          {
+            "id": "deer",
+            "match_key": "meadow"
+          },
+          {
+            "id": "bird",
+            "match_key": "sky"
+          },
+          {
+            "id": "tree",
+            "match_key": "forest"
+          }
+        ]
+      },
+      "result": {
+        "actions": [
+          {
+            "item_id": "fish",
+            "target_id": "water"
+          },
+          {
+            "item_id": "flower",
+            "target_id": "meadow"
+          },
+          {
+            "item_id": "sun",
+            "target_id": "sky"
+          },
+          {
+            "item_id": "deer",
+            "target_id": "meadow"
+          },
+          {
+            "item_id": "bird",
+            "target_id": "sky"
+          },
+          {
+            "item_id": "tree",
+            "target_id": "forest"
+          }
+        ]
+      },
+      "outcome": {
+        "completed": true,
+        "score": 100,
+        "placements": {
+          "fish": "water",
+          "flower": "meadow",
+          "sun": "sky",
+          "deer": "meadow",
+          "bird": "sky",
+          "tree": "forest"
+        },
+        "correct_placements": 6,
+        "item_count": 6,
+        "attempts": 6,
+        "mistakes": 0
+      }
+    },
+    {
+      "config": {
+        "mode": "esther_table",
+        "scene": "esther_banquet",
+        "round_number": 1,
+        "targets": [
+          {
+            "id": "seat_1",
+            "match_key": "bread",
+            "capacity": 1
+          },
+          {
+            "id": "seat_2",
+            "match_key": "grapes",
+            "capacity": 1
+          },
+          {
+            "id": "seat_3",
+            "match_key": "figs",
+            "capacity": 1
+          },
+          {
+            "id": "seat_4",
+            "match_key": "water",
+            "capacity": 1
+          },
+          {
+            "id": "seat_5",
+            "match_key": "flowers",
+            "capacity": 1
+          },
+          {
+            "id": "seat_6",
+            "match_key": "dates",
+            "capacity": 1
+          }
+        ],
+        "items": [
+          {
+            "id": "dates",
+            "match_key": "dates"
+          },
+          {
+            "id": "flowers",
+            "match_key": "flowers"
+          },
+          {
+            "id": "water",
+            "match_key": "water"
+          },
+          {
+            "id": "figs",
+            "match_key": "figs"
+          },
+          {
+            "id": "grapes",
+            "match_key": "grapes"
+          },
+          {
+            "id": "bread",
+            "match_key": "bread"
+          }
+        ]
+      },
+      "result": {
+        "actions": [
+          {
+            "item_id": "dates",
+            "target_id": "seat_6"
+          },
+          {
+            "item_id": "flowers",
+            "target_id": "seat_5"
+          },
+          {
+            "item_id": "water",
+            "target_id": "seat_4"
+          },
+          {
+            "item_id": "figs",
+            "target_id": "seat_3"
+          },
+          {
+            "item_id": "grapes",
+            "target_id": "seat_2"
+          },
+          {
+            "item_id": "bread",
+            "target_id": "seat_1"
+          }
+        ]
+      },
+      "outcome": {
+        "completed": true,
+        "score": 100,
+        "placements": {
+          "dates": "seat_6",
+          "flowers": "seat_5",
+          "water": "seat_4",
+          "figs": "seat_3",
+          "grapes": "seat_2",
+          "bread": "seat_1"
+        },
+        "correct_placements": 6,
+        "item_count": 6,
+        "attempts": 6,
+        "mistakes": 0
+      }
+    },
+    {
+      "config": {
+        "mode": "esther_table",
+        "scene": "esther_banquet",
+        "round_number": 2,
+        "targets": [
+          {
+            "id": "seat_1",
+            "match_key": "flowers",
+            "capacity": 1
+          },
+          {
+            "id": "seat_2",
+            "match_key": "bread",
+            "capacity": 1
+          },
+          {
+            "id": "seat_3",
+            "match_key": "water",
+            "capacity": 1
+          },
+          {
+            "id": "seat_4",
+            "match_key": "dates",
+            "capacity": 1
+          },
+          {
+            "id": "seat_5",
+            "match_key": "grapes",
+            "capacity": 1
+          },
+          {
+            "id": "seat_6",
+            "match_key": "figs",
+            "capacity": 1
+          }
+        ],
+        "items": [
+          {
+            "id": "dates",
+            "match_key": "dates"
+          },
+          {
+            "id": "flowers",
+            "match_key": "flowers"
+          },
+          {
+            "id": "water",
+            "match_key": "water"
+          },
+          {
+            "id": "figs",
+            "match_key": "figs"
+          },
+          {
+            "id": "grapes",
+            "match_key": "grapes"
+          },
+          {
+            "id": "bread",
+            "match_key": "bread"
+          }
+        ]
+      },
+      "result": {
+        "actions": [
+          {
+            "item_id": "dates",
+            "target_id": "seat_4"
+          },
+          {
+            "item_id": "flowers",
+            "target_id": "seat_1"
+          },
+          {
+            "item_id": "water",
+            "target_id": "seat_3"
+          },
+          {
+            "item_id": "figs",
+            "target_id": "seat_6"
+          },
+          {
+            "item_id": "grapes",
+            "target_id": "seat_5"
+          },
+          {
+            "item_id": "bread",
+            "target_id": "seat_2"
+          }
+        ]
+      },
+      "outcome": {
+        "completed": true,
+        "score": 100,
+        "placements": {
+          "dates": "seat_4",
+          "flowers": "seat_1",
+          "water": "seat_3",
+          "figs": "seat_6",
+          "grapes": "seat_5",
+          "bread": "seat_2"
+        },
+        "correct_placements": 6,
+        "item_count": 6,
+        "attempts": 6,
+        "mistakes": 0
+      }
+    },
+    {
+      "config": {
+        "mode": "esther_table",
+        "scene": "esther_banquet",
+        "round_number": 3,
+        "targets": [
+          {
+            "id": "seat_1",
+            "match_key": "figs",
+            "capacity": 1
+          },
+          {
+            "id": "seat_2",
+            "match_key": "water",
+            "capacity": 1
+          },
+          {
+            "id": "seat_3",
+            "match_key": "dates",
+            "capacity": 1
+          },
+          {
+            "id": "seat_4",
+            "match_key": "grapes",
+            "capacity": 1
+          },
+          {
+            "id": "seat_5",
+            "match_key": "bread",
+            "capacity": 1
+          },
+          {
+            "id": "seat_6",
+            "match_key": "flowers",
+            "capacity": 1
+          }
+        ],
+        "items": [
+          {
+            "id": "dates",
+            "match_key": "dates"
+          },
+          {
+            "id": "flowers",
+            "match_key": "flowers"
+          },
+          {
+            "id": "water",
+            "match_key": "water"
+          },
+          {
+            "id": "figs",
+            "match_key": "figs"
+          },
+          {
+            "id": "grapes",
+            "match_key": "grapes"
+          },
+          {
+            "id": "bread",
+            "match_key": "bread"
+          }
+        ]
+      },
+      "result": {
+        "actions": [
+          {
+            "item_id": "dates",
+            "target_id": "seat_3"
+          },
+          {
+            "item_id": "flowers",
+            "target_id": "seat_6"
+          },
+          {
+            "item_id": "water",
+            "target_id": "seat_2"
+          },
+          {
+            "item_id": "figs",
+            "target_id": "seat_1"
+          },
+          {
+            "item_id": "grapes",
+            "target_id": "seat_4"
+          },
+          {
+            "item_id": "bread",
+            "target_id": "seat_5"
+          }
+        ]
+      },
+      "outcome": {
+        "completed": true,
+        "score": 100,
+        "placements": {
+          "dates": "seat_3",
+          "flowers": "seat_6",
+          "water": "seat_2",
+          "figs": "seat_1",
+          "grapes": "seat_4",
+          "bread": "seat_5"
+        },
+        "correct_placements": 6,
+        "item_count": 6,
+        "attempts": 6,
+        "mistakes": 0
+      }
+    }
+  ]
+}

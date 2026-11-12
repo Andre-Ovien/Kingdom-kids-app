@@ -28,6 +28,9 @@ class KidActivityEvent(models.Model):
         related_name='kid_activity_events',
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    # Server-owned snapshot. Historical activity contributes to lifetime XP
+    # without inventing a milestone receipt that was never presented.
+    reward_receipt = models.JSONField(default=dict)
 
     class Meta:
         ordering = ('-created_at',)
@@ -63,3 +66,60 @@ class KidActivityEvent(models.Model):
 
     def __str__(self) -> str:
         return f'{self.profile.display_name} · {self.event_type} · {self.story.title}'
+
+
+class StreakDailyVisit(models.Model):
+    """A server-owned daily app visit and its one streak presentation."""
+
+    class State(models.TextChoices):
+        FIRST_STREAK = 'first_streak', 'First streak'
+        CONTINUED = 'continued', 'Continued streak'
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    profile = models.ForeignKey(
+        KidProfile,
+        on_delete=models.CASCADE,
+        related_name='streak_daily_visits',
+    )
+    local_date = models.DateField()
+    state = models.CharField(max_length=16, choices=State.choices)
+    timezone_offset_minutes = models.SmallIntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    reward_receipt = models.JSONField(default=dict)
+
+    class Meta:
+        ordering = ('-created_at',)
+        constraints = (
+            models.UniqueConstraint(
+                fields=('profile', 'local_date'),
+                name='unique_kid_streak_daily_visit',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    state__in=(
+                        'first_streak',
+                        'continued',
+                    )
+                ),
+                name='kid_streak_daily_visit_state_valid',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    timezone_offset_minutes__gte=-840,
+                    timezone_offset_minutes__lte=840,
+                ),
+                name='kid_streak_visit_timezone_valid',
+            ),
+        )
+        indexes = (
+            models.Index(
+                fields=('profile', '-local_date'),
+                name='kid_visit_profile_date',
+            ),
+        )
+
+    def __str__(self) -> str:
+        return (
+            f'{self.profile.display_name} · {self.state} · '
+            f'{self.local_date.isoformat()}'
+        )

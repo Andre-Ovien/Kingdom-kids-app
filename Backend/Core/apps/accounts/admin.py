@@ -7,11 +7,35 @@ from .models import (
     KidProfile,
     KidProfilePreferences,
     User,
+    WaitlistSubscriber,
 )
 
 
+class SuperuserOnlySensitiveAdminMixin:
+    """Keep account and child PII away from ordinary content editors."""
+
+    @staticmethod
+    def _allowed(request):
+        return bool(request.user.is_active and request.user.is_superuser)
+
+    def has_module_permission(self, request):
+        return self._allowed(request)
+
+    def has_view_permission(self, request, obj=None):
+        return self._allowed(request)
+
+    def has_add_permission(self, request):
+        return self._allowed(request)
+
+    def has_change_permission(self, request, obj=None):
+        return self._allowed(request)
+
+    def has_delete_permission(self, request, obj=None):
+        return self._allowed(request)
+
+
 @admin.register(User)
-class ParentUserAdmin(UserAdmin):
+class ParentUserAdmin(SuperuserOnlySensitiveAdminMixin, UserAdmin):
     add_form = ParentUserCreationForm
     form = ParentUserChangeForm
     ordering = ('email',)
@@ -67,7 +91,7 @@ class ParentUserAdmin(UserAdmin):
 
 
 @admin.register(KidProfile)
-class KidProfileAdmin(admin.ModelAdmin):
+class KidProfileAdmin(SuperuserOnlySensitiveAdminMixin, admin.ModelAdmin):
     list_display = ('display_name', 'parent', 'avatar_key', 'created_at')
     list_filter = ('avatar_key',)
     search_fields = ('display_name', 'parent__email')
@@ -76,7 +100,10 @@ class KidProfileAdmin(admin.ModelAdmin):
 
 
 @admin.register(KidProfilePreferences)
-class KidProfilePreferencesAdmin(admin.ModelAdmin):
+class KidProfilePreferencesAdmin(
+    SuperuserOnlySensitiveAdminMixin,
+    admin.ModelAdmin,
+):
     list_display = (
         'profile',
         'story_text_scale',
@@ -90,7 +117,10 @@ class KidProfilePreferencesAdmin(admin.ModelAdmin):
 
 
 @admin.register(EmailVerificationChallenge)
-class EmailVerificationChallengeAdmin(admin.ModelAdmin):
+class EmailVerificationChallengeAdmin(
+    SuperuserOnlySensitiveAdminMixin,
+    admin.ModelAdmin,
+):
     list_display = (
         'user',
         'created_at',
@@ -114,6 +144,24 @@ class EmailVerificationChallengeAdmin(admin.ModelAdmin):
         'invalidated_at',
         'created_at',
     )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(WaitlistSubscriber)
+class WaitlistSubscriberAdmin(
+    SuperuserOnlySensitiveAdminMixin,
+    admin.ModelAdmin,
+):
+    list_display = ('email', 'consent_source', 'consented_at')
+    list_filter = ('consent_source',)
+    search_fields = ('email',)
+    date_hierarchy = 'consented_at'
+    readonly_fields = ('email', 'consent_source', 'consented_at')
 
     def has_add_permission(self, request):
         return False

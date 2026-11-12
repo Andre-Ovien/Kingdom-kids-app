@@ -1,4 +1,6 @@
 from rest_framework import serializers
+from Core.media_delivery import private_media_url
+from Core.media_serializers import PrivateMediaListSerializer, PrivateMediaRepresentation
 
 from .models import Game, GameLevel, KidGameProgress
 from .services import public_level_config
@@ -56,12 +58,14 @@ class GameLevelSerializer(serializers.ModelSerializer):
         return public_level_config(level)
 
 
-class GameListSerializer(serializers.ModelSerializer):
+class GameListSerializer(PrivateMediaRepresentation, serializers.ModelSerializer):
     total_levels = serializers.SerializerMethodField()
     progress = serializers.SerializerMethodField()
+    cover_image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Game
+        list_serializer_class = PrivateMediaListSerializer
         fields = (
             'id',
             'slug',
@@ -72,11 +76,19 @@ class GameListSerializer(serializers.ModelSerializer):
             'difficulty',
             'estimated_duration_seconds',
             'cover_asset_key',
+            'cover_image_url',
             'accent_color',
             'icon_key',
             'is_featured',
             'total_levels',
             'progress',
+        )
+
+    def get_cover_image_url(self, game: Game) -> str | None:
+        return private_media_url(
+            self.context.get('request'),
+            f'Frontend/mobile/{game.cover_asset_key}',
+            use=f'game-cover:{game.slug}',
         )
 
     def get_total_levels(self, game: Game) -> int:

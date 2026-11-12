@@ -1,0 +1,21 @@
+.env
+.env.*
+!.env.example
+.venv
+.venv-old
+Core/__pycache__
+Core/db.sqlite3
+# Development backups and SQLite journals must never enter a release image.
+Core/.cache
+**/*.sqlite3*
+media
+staticfiles
+*.py[cod]
+*.log
+.DS_Store
+# Publish only the reviewed release metadata, never local audio or working files.
+content/*
+!content/releases/
+content/releases/*
+!content/releases/character_narration_v1_manifest.json
+!content/releases/cloudinary_first_release_v1.json

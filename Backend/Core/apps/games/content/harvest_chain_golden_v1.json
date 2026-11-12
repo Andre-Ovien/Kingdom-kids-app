@@ -1,0 +1,653 @@
+{
+  "contract_version": 1,
+  "rounds": [
+    {
+      "config": {
+        "mode": "harvest_chain",
+        "scene": "ruth_field",
+        "round_number": 1,
+        "seed": 1021,
+        "rows": 6,
+        "columns": 5,
+        "grain_types": [
+          "wheat",
+          "barley",
+          "oats"
+        ],
+        "goals": {
+          "wheat": 9,
+          "barley": 6,
+          "oats": 6
+        },
+        "max_chains": 18,
+        "min_chain": 3
+      },
+      "initial": {
+        "completed": false,
+        "score": 0,
+        "collected": {
+          "wheat": 0,
+          "barley": 0,
+          "oats": 0
+        },
+        "chains_used": 0,
+        "max_chains": 18,
+        "board": [
+          "oats",
+          "wheat",
+          "barley",
+          "oats",
+          "wheat",
+          "oats",
+          "oats",
+          "barley",
+          "oats",
+          "wheat",
+          "wheat",
+          "wheat",
+          "barley",
+          "oats",
+          "wheat",
+          "barley",
+          "oats",
+          "wheat",
+          "barley",
+          "oats",
+          "oats",
+          "oats",
+          "wheat",
+          "barley",
+          "oats",
+          "oats",
+          "oats",
+          "wheat",
+          "wheat",
+          "oats"
+        ],
+        "random_state": 1924455416,
+        "board_repairs": 0
+      },
+      "first_chain": [
+        0,
+        5,
+        6
+      ],
+      "after_first": {
+        "completed": false,
+        "score": 8,
+        "collected": {
+          "wheat": 0,
+          "barley": 0,
+          "oats": 3
+        },
+        "chains_used": 1,
+        "max_chains": 18,
+        "board": [
+          "barley",
+          "oats",
+          "barley",
+          "oats",
+          "wheat",
+          "wheat",
+          "wheat",
+          "barley",
+          "oats",
+          "wheat",
+          "wheat",
+          "wheat",
+          "barley",
+          "oats",
+          "wheat",
+          "barley",
+          "oats",
+          "wheat",
+          "barley",
+          "oats",
+          "oats",
+          "oats",
+          "wheat",
+          "barley",
+          "oats",
+          "oats",
+          "oats",
+          "wheat",
+          "wheat",
+          "oats"
+        ],
+        "random_state": 2518953779,
+        "board_repairs": 0
+      },
+      "winning_result": {
+        "chains": [
+          [
+            0,
+            5,
+            6
+          ],
+          [
+            2,
+            7,
+            12
+          ],
+          [
+            2,
+            6,
+            5
+          ],
+          [
+            4,
+            9,
+            14
+          ],
+          [
+            0,
+            1,
+            5
+          ],
+          [
+            3,
+            4,
+            8
+          ],
+          [
+            5,
+            10,
+            11
+          ]
+        ]
+      },
+      "winning_outcome": {
+        "completed": true,
+        "score": 93,
+        "collected": {
+          "wheat": 9,
+          "barley": 6,
+          "oats": 6
+        },
+        "chains_used": 7,
+        "max_chains": 18,
+        "board": [
+          "wheat",
+          "barley",
+          "wheat",
+          "wheat",
+          "oats",
+          "wheat",
+          "barley",
+          "barley",
+          "barley",
+          "oats",
+          "oats",
+          "oats",
+          "barley",
+          "oats",
+          "wheat",
+          "barley",
+          "oats",
+          "wheat",
+          "barley",
+          "oats",
+          "oats",
+          "oats",
+          "wheat",
+          "barley",
+          "oats",
+          "oats",
+          "oats",
+          "wheat",
+          "wheat",
+          "oats"
+        ],
+        "random_state": 2026591807,
+        "board_repairs": 0
+      }
+    },
+    {
+      "config": {
+        "mode": "harvest_chain",
+        "scene": "ruth_field",
+        "round_number": 2,
+        "seed": 2047,
+        "rows": 6,
+        "columns": 5,
+        "grain_types": [
+          "wheat",
+          "barley",
+          "oats"
+        ],
+        "goals": {
+          "wheat": 12,
+          "barley": 9,
+          "oats": 9
+        },
+        "max_chains": 18,
+        "min_chain": 3
+      },
+      "initial": {
+        "completed": false,
+        "score": 0,
+        "collected": {
+          "wheat": 0,
+          "barley": 0,
+          "oats": 0
+        },
+        "chains_used": 0,
+        "max_chains": 18,
+        "board": [
+          "oats",
+          "oats",
+          "oats",
+          "wheat",
+          "wheat",
+          "barley",
+          "oats",
+          "wheat",
+          "oats",
+          "wheat",
+          "wheat",
+          "wheat",
+          "wheat",
+          "wheat",
+          "oats",
+          "wheat",
+          "barley",
+          "barley",
+          "oats",
+          "wheat",
+          "barley",
+          "wheat",
+          "barley",
+          "oats",
+          "wheat",
+          "barley",
+          "barley",
+          "wheat",
+          "oats",
+          "barley"
+        ],
+        "random_state": 210240046,
+        "board_repairs": 0
+      },
+      "first_chain": [
+        0,
+        1,
+        2
+      ],
+      "after_first": {
+        "completed": false,
+        "score": 5,
+        "collected": {
+          "wheat": 0,
+          "barley": 0,
+          "oats": 3
+        },
+        "chains_used": 1,
+        "max_chains": 18,
+        "board": [
+          "barley",
+          "barley",
+          "barley",
+          "wheat",
+          "wheat",
+          "barley",
+          "oats",
+          "wheat",
+          "oats",
+          "wheat",
+          "wheat",
+          "wheat",
+          "wheat",
+          "wheat",
+          "oats",
+          "wheat",
+          "barley",
+          "barley",
+          "oats",
+          "wheat",
+          "barley",
+          "wheat",
+          "barley",
+          "oats",
+          "wheat",
+          "barley",
+          "barley",
+          "wheat",
+          "oats",
+          "barley"
+        ],
+        "random_state": 1425154387,
+        "board_repairs": 0
+      },
+      "winning_result": {
+        "chains": [
+          [
+            0,
+            1,
+            2
+          ],
+          [
+            0,
+            1,
+            2
+          ],
+          [
+            2,
+            3,
+            4
+          ],
+          [
+            3,
+            7,
+            11
+          ],
+          [
+            6,
+            7,
+            8
+          ],
+          [
+            2,
+            3,
+            4
+          ],
+          [
+            6,
+            7,
+            12
+          ],
+          [
+            0,
+            1,
+            5
+          ],
+          [
+            2,
+            3,
+            7
+          ],
+          [
+            3,
+            9,
+            13
+          ]
+        ]
+      },
+      "winning_outcome": {
+        "completed": true,
+        "score": 89,
+        "collected": {
+          "wheat": 12,
+          "barley": 9,
+          "oats": 9
+        },
+        "chains_used": 10,
+        "max_chains": 18,
+        "board": [
+          "barley",
+          "barley",
+          "oats",
+          "barley",
+          "oats",
+          "barley",
+          "oats",
+          "oats",
+          "wheat",
+          "barley",
+          "wheat",
+          "oats",
+          "oats",
+          "barley",
+          "oats",
+          "wheat",
+          "barley",
+          "barley",
+          "oats",
+          "wheat",
+          "barley",
+          "wheat",
+          "barley",
+          "oats",
+          "wheat",
+          "barley",
+          "barley",
+          "wheat",
+          "oats",
+          "barley"
+        ],
+        "random_state": 211728566,
+        "board_repairs": 0
+      }
+    },
+    {
+      "config": {
+        "mode": "harvest_chain",
+        "scene": "ruth_field",
+        "round_number": 3,
+        "seed": 4093,
+        "rows": 6,
+        "columns": 5,
+        "grain_types": [
+          "wheat",
+          "barley",
+          "oats"
+        ],
+        "goals": {
+          "wheat": 15,
+          "barley": 12,
+          "oats": 12
+        },
+        "max_chains": 20,
+        "min_chain": 3
+      },
+      "initial": {
+        "completed": false,
+        "score": 0,
+        "collected": {
+          "wheat": 0,
+          "barley": 0,
+          "oats": 0
+        },
+        "chains_used": 0,
+        "max_chains": 20,
+        "board": [
+          "barley",
+          "barley",
+          "oats",
+          "wheat",
+          "barley",
+          "oats",
+          "oats",
+          "oats",
+          "wheat",
+          "wheat",
+          "wheat",
+          "oats",
+          "barley",
+          "wheat",
+          "wheat",
+          "oats",
+          "wheat",
+          "oats",
+          "oats",
+          "oats",
+          "barley",
+          "wheat",
+          "barley",
+          "barley",
+          "barley",
+          "barley",
+          "oats",
+          "wheat",
+          "barley",
+          "barley"
+        ],
+        "random_state": 672645391,
+        "board_repairs": 0
+      },
+      "first_chain": [
+        2,
+        6,
+        5
+      ],
+      "after_first": {
+        "completed": false,
+        "score": 4,
+        "collected": {
+          "wheat": 0,
+          "barley": 0,
+          "oats": 3
+        },
+        "chains_used": 1,
+        "max_chains": 20,
+        "board": [
+          "barley",
+          "oats",
+          "oats",
+          "wheat",
+          "barley",
+          "barley",
+          "barley",
+          "oats",
+          "wheat",
+          "wheat",
+          "wheat",
+          "oats",
+          "barley",
+          "wheat",
+          "wheat",
+          "oats",
+          "wheat",
+          "oats",
+          "oats",
+          "oats",
+          "barley",
+          "wheat",
+          "barley",
+          "barley",
+          "barley",
+          "barley",
+          "oats",
+          "wheat",
+          "barley",
+          "barley"
+        ],
+        "random_state": 2610705290,
+        "board_repairs": 0
+      },
+      "winning_result": {
+        "chains": [
+          [
+            2,
+            6,
+            5
+          ],
+          [
+            0,
+            5,
+            6
+          ],
+          [
+            3,
+            8,
+            9
+          ],
+          [
+            10,
+            16,
+            21
+          ],
+          [
+            2,
+            6,
+            7
+          ],
+          [
+            2,
+            3,
+            8
+          ],
+          [
+            0,
+            5,
+            6
+          ],
+          [
+            0,
+            5,
+            6
+          ],
+          [
+            0,
+            6,
+            10
+          ],
+          [
+            6,
+            7,
+            13
+          ],
+          [
+            2,
+            6,
+            11
+          ],
+          [
+            4,
+            3,
+            7
+          ],
+          [
+            1,
+            6,
+            10
+          ]
+        ]
+      },
+      "winning_outcome": {
+        "completed": true,
+        "score": 87,
+        "collected": {
+          "wheat": 15,
+          "barley": 12,
+          "oats": 12
+        },
+        "chains_used": 13,
+        "max_chains": 20,
+        "board": [
+          "wheat",
+          "barley",
+          "barley",
+          "wheat",
+          "oats",
+          "oats",
+          "wheat",
+          "barley",
+          "barley",
+          "barley",
+          "oats",
+          "wheat",
+          "barley",
+          "barley",
+          "wheat",
+          "oats",
+          "oats",
+          "oats",
+          "oats",
+          "oats",
+          "barley",
+          "oats",
+          "barley",
+          "barley",
+          "barley",
+          "barley",
+          "oats",
+          "wheat",
+          "barley",
+          "barley"
+        ],
+        "random_state": 493178350,
+        "board_repairs": 0
+      }
+    }
+  ]
+}

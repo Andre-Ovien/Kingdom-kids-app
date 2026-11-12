@@ -21,6 +21,7 @@ class Game(models.Model):
         MAZE = 'maze', 'Maze'
         PATH = 'path', 'Path finding'
         AIM = 'aim', 'Aim'
+        PUZZLE = 'puzzle', 'Puzzle'
 
     class Difficulty(models.TextChoices):
         EASY = 'Easy', 'Easy'
@@ -53,6 +54,41 @@ class Game(models.Model):
 
     def __str__(self) -> str:
         return self.title
+
+    def clean(self):
+        super().clean()
+        if self._state.adding:
+            return
+        previous_type = (
+            self.__class__.objects.filter(pk=self.pk)
+            .values_list('game_type', flat=True)
+            .first()
+        )
+        if previous_type == self.game_type:
+            return
+        from .validators import validate_level_definition
+
+        for level in self.levels.all():
+            try:
+                validate_level_definition(
+                    game_type=self.game_type,
+                    config=level.config,
+                    max_score=level.max_score,
+                    star_thresholds=level.star_thresholds,
+                )
+            except ValidationError as exc:
+                raise ValidationError(
+                    {
+                        'game_type': (
+                            f'Level {level.level_number} is incompatible with '
+                            f'{self.get_game_type_display()}: {exc}'
+                        )
+                    }
+                ) from exc
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
 
 
 class GameLevel(models.Model):
@@ -210,3 +246,11 @@ class GameAttempt(models.Model):
 
     def __str__(self) -> str:
         return f'{self.profile.display_name} · {self.game.slug} · {self.score}'
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise ValidationError('Game attempts are immutable.')
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError('Game attempts are immutable.')

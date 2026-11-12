@@ -3,6 +3,7 @@ import uuid
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.conf import settings
 from django.db import models
+from django.db.models.functions import Lower
 from django.utils import timezone
 
 
@@ -58,6 +59,14 @@ class User(AbstractUser):
 
     objects = UserManager()
 
+    class Meta(AbstractUser.Meta):
+        constraints = (
+            models.UniqueConstraint(
+                Lower('email'),
+                name='user_email_ci_unique',
+            ),
+        )
+
     def save(self, *args, **kwargs):
         self.email = self.__class__.objects.normalize_email(self.email)
         super().save(*args, **kwargs)
@@ -104,6 +113,136 @@ class EmailVerificationChallenge(models.Model):
 
     def __str__(self) -> str:
         return f'{self.user.email} ({self.created_at:%Y-%m-%d %H:%M})'
+
+
+class PasswordResetChallenge(models.Model):
+    """A short-lived, single-use password recovery proof."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='password_reset_challenges',
+    )
+    code_digest = models.CharField(max_length=64)
+    expires_at = models.DateTimeField()
+    attempt_count = models.PositiveSmallIntegerField(default=0)
+    max_attempts = models.PositiveSmallIntegerField(default=5)
+    consumed_at = models.DateTimeField(null=True, blank=True)
+    invalidated_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ('-created_at',)
+        indexes = (
+            models.Index(
+                fields=('user', '-created_at'),
+                name='pwd_reset_user_created',
+            ),
+            models.Index(fields=('expires_at',), name='pwd_reset_expires'),
+        )
+        constraints = (
+            models.CheckConstraint(
+                condition=(
+                    models.Q(max_attempts__gt=0)
+                    & models.Q(attempt_count__lte=models.F('max_attempts'))
+                ),
+                name='pwd_reset_attempts_valid',
+            ),
+            models.UniqueConstraint(
+                fields=('user',),
+                condition=(
+                    models.Q(consumed_at__isnull=True)
+                    & models.Q(invalidated_at__isnull=True)
+                ),
+                name='unique_active_password_reset',
+            ),
+        )
+
+    def __str__(self) -> str:
+        # Avoid putting a parent's email or the bearer-like challenge ID into
+        # incidental admin and log representations.
+        return f'Password reset challenge ({self.created_at:%Y-%m-%d %H:%M})'
+
+
+class AccountDeletionChallenge(models.Model):
+    """A short-lived, single-use proof authorizing account deletion."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='account_deletion_challenges',
+    )
+    code_digest = models.CharField(max_length=64)
+    expires_at = models.DateTimeField()
+    attempt_count = models.PositiveSmallIntegerField(default=0)
+    max_attempts = models.PositiveSmallIntegerField(default=5)
+    consumed_at = models.DateTimeField(null=True, blank=True)
+    invalidated_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ('-created_at',)
+        indexes = (
+            models.Index(
+                fields=('user', '-created_at'),
+                name='acct_delete_user_created',
+            ),
+            models.Index(fields=('expires_at',), name='acct_delete_expires'),
+        )
+        constraints = (
+            models.CheckConstraint(
+                condition=(
+                    models.Q(max_attempts__gt=0)
+                    & models.Q(attempt_count__lte=models.F('max_attempts'))
+                ),
+                name='acct_delete_attempts_valid',
+            ),
+            models.UniqueConstraint(
+                fields=('user',),
+                condition=(
+                    models.Q(consumed_at__isnull=True)
+                    & models.Q(invalidated_at__isnull=True)
+                ),
+                name='unique_active_account_deletion',
+            ),
+        )
+
+    def __str__(self) -> str:
+        return f'Account deletion challenge ({self.created_at:%Y-%m-%d %H:%M})'
+
+
+class WaitlistSubscriber(models.Model):
+    """An explicit request to hear when Kingdom Kids becomes available."""
+
+    class ConsentSource(models.TextChoices):
+        WEBSITE_FOOTER = 'website_footer', 'Website footer'
+
+    email = models.EmailField(max_length=254)
+    consented_at = models.DateTimeField(default=timezone.now, editable=False)
+    consent_source = models.CharField(
+        max_length=32,
+        choices=ConsentSource.choices,
+        default=ConsentSource.WEBSITE_FOOTER,
+        editable=False,
+    )
+
+    class Meta:
+        ordering = ('-consented_at',)
+        constraints = (
+            models.UniqueConstraint(
+                Lower('email'),
+                name='waitlist_email_ci_unique',
+            ),
+        )
+
+    def save(self, *args, **kwargs):
+        self.email = User.objects.normalize_email(self.email)
+        super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return self.email
 
 
 class KidProfile(models.Model):
@@ -165,11 +304,30 @@ class KidProfilePreferences(models.Model):
         default=StoryTextScale.COMFORTABLE,
     )
     narration_enabled = models.BooleanField(default=True)
+    # The first streak claim binds a profile to one device offset. Changing it
+    # is deliberately rate-limited by the streak service to prevent instant
+    # multi-day claims while still allowing travel and daylight-saving changes.
+    streak_timezone_offset_minutes = models.SmallIntegerField(
+        null=True,
+        blank=True,
+    )
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = 'kid profile preferences'
         verbose_name_plural = 'kid profile preferences'
+        constraints = (
+            models.CheckConstraint(
+                condition=(
+                    models.Q(streak_timezone_offset_minutes__isnull=True)
+                    | models.Q(
+                        streak_timezone_offset_minutes__gte=-840,
+                        streak_timezone_offset_minutes__lte=840,
+                    )
+                ),
+                name='kid_preferences_streak_timezone_valid',
+            ),
+        )
 
     def __str__(self) -> str:
         return f'{self.profile.display_name} preferences'

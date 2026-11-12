@@ -13,9 +13,15 @@ from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase, APITransactionTestCase
+from rest_framework_simplejwt.token_blacklist.models import OutstandingToken
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import EmailVerificationChallenge, KidProfile, KidProfilePreferences
+from .models import (
+    EmailVerificationChallenge,
+    KidProfile,
+    KidProfilePreferences,
+    WaitlistSubscriber,
+)
 from .serializers import RegistrationSerializer
 
 
@@ -74,7 +80,6 @@ class AccountsApiTests(APITestCase):
         self.assertNotIn('access', response.data)
         self.assertNotIn('refresh', response.data)
         verification = response.data['verification']
-        self.assertEqual(verification['email'], 'parent@example.com')
         self.assertEqual(verification['destination_hint'], 'p***@example.com')
         self.assertGreater(verification['expires_in'], 0)
         self.assertGreater(verification['resend_after'], 0)
@@ -123,66 +128,50 @@ class AccountsApiTests(APITestCase):
         self.assertEqual(mismatch.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('password_confirmation', mismatch.data)
 
-    def test_registration_reclaims_unverified_parent_and_rotates_challenge(self):
+    def test_duplicate_registration_cannot_plant_a_pending_account_password(self):
         first = self.register()
         first_challenge_id = first.data['verification']['challenge_id']
         first_code = self.verification_code()
         original_user = User.objects.get(email='parent@example.com')
-        first_challenge = EmailVerificationChallenge.objects.get(
-            pk=first_challenge_id
-        )
-        first_challenge.resend_available_at = timezone.now() - timedelta(seconds=1)
-        first_challenge.save(update_fields=('resend_available_at',))
 
-        second = self.register(
+        duplicate = self.register(
             email='PARENT@EXAMPLE.COM',
             password=NEW_PASSWORD,
             password_confirmation=NEW_PASSWORD,
         )
 
-        self.assertEqual(second.status_code, status.HTTP_202_ACCEPTED)
-        self.assertNotIn('access', second.data)
-        self.assertNotIn('refresh', second.data)
-        second_challenge_id = second.data['verification']['challenge_id']
-        self.assertNotEqual(second_challenge_id, first_challenge_id)
+        self.assertEqual(duplicate.status_code, status.HTTP_202_ACCEPTED)
+        decoy_id = duplicate.data['verification']['challenge_id']
+        self.assertNotEqual(decoy_id, first_challenge_id)
+        self.assertFalse(
+            EmailVerificationChallenge.objects.filter(pk=decoy_id).exists()
+        )
+        rejected_decoy = self.confirm(decoy_id, '000000')
+        self.assertEqual(rejected_decoy.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(User.objects.count(), 1)
-        reclaimed_user = User.objects.get(email='parent@example.com')
-        self.assertEqual(reclaimed_user.pk, original_user.pk)
-        self.assertTrue(reclaimed_user.check_password(NEW_PASSWORD))
-        self.assertFalse(reclaimed_user.check_password(PASSWORD))
-        self.assertIsNone(reclaimed_user.email_verified_at)
+        protected_user = User.objects.get(email='parent@example.com')
+        self.assertEqual(protected_user.pk, original_user.pk)
+        self.assertTrue(protected_user.check_password(PASSWORD))
+        self.assertFalse(protected_user.check_password(NEW_PASSWORD))
+        self.assertEqual(EmailVerificationChallenge.objects.count(), 1)
+        self.assertEqual(len(mail.outbox), 1)
+        protected_user.refresh_from_db()
+        self.assertEqual(protected_user.email_verification_failed_attempts, 0)
 
-        first_challenge.refresh_from_db()
-        second_challenge = EmailVerificationChallenge.objects.get(
-            pk=second_challenge_id
+        verified = self.confirm(first_challenge_id, first_code)
+        self.assertEqual(verified.status_code, status.HTTP_200_OK)
+        attacker_login = self.client.post(
+            reverse('accounts:login'),
+            {'email': 'parent@example.com', 'password': NEW_PASSWORD},
+            format='json',
         )
-        self.assertIsNotNone(first_challenge.invalidated_at)
-        self.assertIsNone(first_challenge.consumed_at)
-        self.assertIsNone(second_challenge.invalidated_at)
-        self.assertIsNone(second_challenge.consumed_at)
-        self.assertEqual(len(mail.outbox), 2)
+        self.assertEqual(attacker_login.status_code, status.HTTP_401_UNAUTHORIZED)
 
-        old_confirmation = self.confirm(first_challenge_id, first_code)
-        self.assertEqual(
-            old_confirmation.status_code,
-            status.HTTP_400_BAD_REQUEST,
-        )
-
-        new_confirmation = self.confirm(
-            second_challenge_id,
-            self.verification_code(),
-        )
-        self.assertEqual(new_confirmation.status_code, status.HTTP_200_OK)
-
-    def test_rapid_re_registration_reuses_challenge_and_does_not_send_again(self):
+    def test_matching_pending_credentials_can_resume_the_live_challenge(self):
         first = self.register()
         first_challenge_id = first.data['verification']['challenge_id']
 
-        second = self.register(
-            email='PARENT@EXAMPLE.COM',
-            password=NEW_PASSWORD,
-            password_confirmation=NEW_PASSWORD,
-        )
+        second = self.register(email='PARENT@Example.COM')
 
         self.assertEqual(second.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(
@@ -192,11 +181,8 @@ class AccountsApiTests(APITestCase):
         self.assertGreater(second.data['verification']['resend_after'], 0)
         self.assertEqual(EmailVerificationChallenge.objects.count(), 1)
         self.assertEqual(len(mail.outbox), 1)
-        challenge = EmailVerificationChallenge.objects.get(pk=first_challenge_id)
-        self.assertIsNone(challenge.invalidated_at)
         parent = User.objects.get(email='parent@example.com')
-        self.assertTrue(parent.check_password(NEW_PASSWORD))
-        self.assertFalse(parent.check_password(PASSWORD))
+        self.assertTrue(parent.check_password(PASSWORD))
 
     def test_verified_parent_is_protected_from_re_registration(self):
         registered = self.register()
@@ -211,8 +197,11 @@ class AccountsApiTests(APITestCase):
             password_confirmation=NEW_PASSWORD,
         )
 
-        self.assertEqual(duplicate.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('email', duplicate.data)
+        self.assertEqual(duplicate.status_code, status.HTTP_202_ACCEPTED)
+        self.assertNotEqual(
+            duplicate.data['verification']['challenge_id'],
+            challenge_id,
+        )
         self.assertEqual(User.objects.count(), 1)
         parent.refresh_from_db()
         self.assertTrue(parent.check_password(PASSWORD))
@@ -232,8 +221,7 @@ class AccountsApiTests(APITestCase):
             password_confirmation=NEW_PASSWORD,
         )
 
-        self.assertEqual(duplicate.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('email', duplicate.data)
+        self.assertEqual(duplicate.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(User.objects.count(), 1)
         parent.refresh_from_db()
         self.assertTrue(parent.check_password(PASSWORD))
@@ -254,7 +242,7 @@ class AccountsApiTests(APITestCase):
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
         # Model a stale initial lookup followed by another transaction winning
-        # the unique-email insert. The retry must lock and reclaim that row.
+        # the unique-email insert. The retry must not mutate that row.
         with patch.object(
             User.objects,
             'select_for_update',
@@ -264,13 +252,14 @@ class AccountsApiTests(APITestCase):
             'create_user',
             side_effect=IntegrityError('duplicate email'),
         ):
-            reclaimed = serializer.save()
+            result = serializer.save()
 
-        self.assertEqual(reclaimed.pk, parent.pk)
+        self.assertFalse(result.issue_challenge)
+        self.assertIsNone(result.user)
         self.assertEqual(User.objects.count(), 1)
         parent.refresh_from_db()
-        self.assertTrue(parent.check_password(NEW_PASSWORD))
-        self.assertFalse(parent.check_password(PASSWORD))
+        self.assertTrue(parent.check_password(PASSWORD))
+        self.assertFalse(parent.check_password(NEW_PASSWORD))
         self.assertIsNone(parent.email_verified_at)
 
     def test_correct_code_verifies_parent_and_returns_normal_session(self):
@@ -295,6 +284,21 @@ class AccountsApiTests(APITestCase):
         self.assertEqual(reused.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(reused.data['code'], 'invalid_or_expired_code')
 
+    def test_disabled_pending_parent_cannot_confirm_or_receive_tokens(self):
+        registered = self.register()
+        challenge_id = registered.data['verification']['challenge_id']
+        parent = User.objects.get(email='parent@example.com')
+        parent.is_active = False
+        parent.save(update_fields=('is_active',))
+
+        response = self.confirm(challenge_id, self.verification_code())
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertNotIn('access', response.data)
+        self.assertNotIn('refresh', response.data)
+        parent.refresh_from_db()
+        self.assertIsNone(parent.email_verified_at)
+
     def test_attempt_budget_survives_rotations_locks_and_then_recovers(self):
         registered = self.register()
         first_id = registered.data['verification']['challenge_id']
@@ -310,8 +314,8 @@ class AccountsApiTests(APITestCase):
         first.resend_available_at = timezone.now() - timedelta(seconds=1)
         first.save(update_fields=('resend_available_at',))
         re_registered = self.register(
-            password=NEW_PASSWORD,
-            password_confirmation=NEW_PASSWORD,
+            password=PASSWORD,
+            password_confirmation=PASSWORD,
         )
         self.assertEqual(re_registered.status_code, status.HTTP_202_ACCEPTED)
         second_id = re_registered.data['verification']['challenge_id']
@@ -460,7 +464,7 @@ class AccountsApiTests(APITestCase):
         self.assertEqual(resent.status_code, status.HTTP_202_ACCEPTED)
         replacement = resent.data['verification']
         self.assertNotEqual(replacement['challenge_id'], old_id)
-        self.assertEqual(replacement['email'], 'parent@example.com')
+        self.assertEqual(replacement['destination_hint'], 'p***@example.com')
         self.assertEqual(len(mail.outbox), 2)
         new_code = self.verification_code()
 
@@ -482,7 +486,10 @@ class AccountsApiTests(APITestCase):
 
         self.assertEqual(login.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(login.data['code'], 'email_verification_required')
-        self.assertEqual(login.data['verification']['email'], parent.email)
+        self.assertEqual(
+            login.data['verification']['destination_hint'],
+            'p***@example.com',
+        )
         self.assertNotIn('access', login.data)
         self.assertEqual(len(mail.outbox), 1)
 
@@ -555,6 +562,23 @@ class AccountsApiTests(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
+    def test_password_change_immediately_revokes_access_and_refresh_tokens(self):
+        parent = self.create_parent()
+        refresh = self.authenticate(parent)
+
+        parent.set_password(NEW_PASSWORD)
+        parent.save(update_fields=('password',))
+
+        access_attempt = self.client.get(reverse('accounts:me'))
+        self.assertEqual(access_attempt.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.client.credentials()
+        refresh_attempt = self.client.post(
+            reverse('accounts:token-refresh'),
+            {'refresh': refresh},
+            format='json',
+        )
+        self.assertEqual(refresh_attempt.status_code, status.HTTP_401_UNAUTHORIZED)
+
     def test_logout_blacklists_only_the_authenticated_parents_refresh_token(self):
         parent = self.create_parent()
         other_parent = self.create_parent(email='other@example.com')
@@ -606,6 +630,111 @@ class AccountsApiTests(APITestCase):
         self.assertEqual(response.data['email'], parent.email)
         self.assertEqual(len(response.data['kid_profiles']), 1)
         self.assertEqual(response.data['kid_profiles'][0]['display_name'], 'Ada')
+
+    def test_account_deletion_requires_password_and_erases_owned_data(self):
+        parent = self.create_parent()
+        profile = KidProfile.objects.create(
+            parent=parent,
+            display_name='Ada',
+            avatar_key=KidProfile.AvatarKey.DOVE,
+        )
+        WaitlistSubscriber.objects.create(email=parent.email)
+        refresh = self.authenticate(parent)
+        self.assertTrue(OutstandingToken.objects.filter(user=parent).exists())
+
+        rejected = self.client.delete(
+            reverse('accounts:me'),
+            {'password': 'wrong-password'},
+            format='json',
+        )
+        self.assertEqual(rejected.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertTrue(User.objects.filter(pk=parent.pk).exists())
+
+        deleted = self.client.delete(
+            reverse('accounts:me'),
+            {'password': PASSWORD},
+            format='json',
+        )
+        self.assertEqual(deleted.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(User.objects.filter(pk=parent.pk).exists())
+        self.assertFalse(KidProfile.objects.filter(pk=profile.pk).exists())
+        self.assertFalse(
+            WaitlistSubscriber.objects.filter(email=parent.email).exists()
+        )
+        self.assertFalse(OutstandingToken.objects.filter(user_id=parent.pk).exists())
+        old_access = self.client.get(reverse('accounts:me'))
+        self.assertEqual(old_access.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.client.credentials()
+        old_refresh = self.client.post(
+            reverse('accounts:token-refresh'),
+            {'refresh': refresh},
+            format='json',
+        )
+        self.assertEqual(old_refresh.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_unverified_account_can_be_deleted_without_a_session(self):
+        pending = User.objects.create_user(
+            email='pending-delete@example.com',
+            password=PASSWORD,
+        )
+        RefreshToken.for_user(pending)
+        self.assertTrue(OutstandingToken.objects.filter(user=pending).exists())
+
+        response = self.client.delete(
+            reverse('accounts:unverified-account-delete'),
+            {
+                'email': pending.email,
+                'password': PASSWORD,
+                'confirmation': 'DELETE',
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(User.objects.filter(pk=pending.pk).exists())
+        self.assertFalse(OutstandingToken.objects.filter(user_id=pending.pk).exists())
+
+    def test_unverified_deletion_is_generic_and_never_deletes_verified_account(self):
+        pending = User.objects.create_user(
+            email='pending-stays@example.com',
+            password=PASSWORD,
+        )
+        verified = self.create_parent(email='verified-stays@example.com')
+        url = reverse('accounts:unverified-account-delete')
+
+        wrong_password = self.client.delete(
+            url,
+            {
+                'email': pending.email,
+                'password': 'wrong-password',
+                'confirmation': 'DELETE',
+            },
+            format='json',
+        )
+        verified_response = self.client.delete(
+            url,
+            {
+                'email': verified.email,
+                'password': PASSWORD,
+                'confirmation': 'DELETE',
+            },
+            format='json',
+        )
+        missing_response = self.client.delete(
+            url,
+            {
+                'email': 'missing-delete@example.com',
+                'password': PASSWORD,
+                'confirmation': 'DELETE',
+            },
+            format='json',
+        )
+
+        self.assertEqual(wrong_password.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(verified_response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(missing_response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertTrue(User.objects.filter(pk=pending.pk).exists())
+        self.assertTrue(User.objects.filter(pk=verified.pk).exists())
 
     def test_parent_can_create_update_and_delete_only_their_kid_profiles(self):
         parent = self.create_parent()
@@ -682,6 +811,61 @@ class AccountsApiTests(APITestCase):
             ).count(),
             1,
         )
+
+    def test_kid_profile_conflicting_idempotency_replay_returns_conflict(self):
+        parent = self.create_parent()
+        self.authenticate(parent)
+        operation_id = str(uuid.uuid4())
+        first = self.client.post(
+            reverse('accounts:kid-profile-list'),
+            {
+                'display_name': 'Ada',
+                'avatar_key': 'dove',
+                'operation_id': operation_id,
+            },
+            format='json',
+        )
+        conflict = self.client.post(
+            reverse('accounts:kid-profile-list'),
+            {
+                'display_name': 'Ada',
+                'avatar_key': 'star',
+                'operation_id': operation_id,
+            },
+            format='json',
+        )
+
+        self.assertEqual(first.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(conflict.status_code, status.HTTP_409_CONFLICT)
+        self.assertEqual(KidProfile.objects.filter(parent=parent).count(), 1)
+
+    @override_settings(MAX_KID_PROFILES=2)
+    def test_kid_profile_creation_enforces_the_account_limit(self):
+        parent = self.create_parent()
+        self.authenticate(parent)
+        for index in range(2):
+            created = self.client.post(
+                reverse('accounts:kid-profile-list'),
+                {
+                    'display_name': f'Kid {index}',
+                    'avatar_key': 'dove',
+                    'operation_id': str(uuid.uuid4()),
+                },
+                format='json',
+            )
+            self.assertEqual(created.status_code, status.HTTP_201_CREATED)
+
+        rejected = self.client.post(
+            reverse('accounts:kid-profile-list'),
+            {
+                'display_name': 'One too many',
+                'avatar_key': 'star',
+                'operation_id': str(uuid.uuid4()),
+            },
+            format='json',
+        )
+        self.assertEqual(rejected.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(KidProfile.objects.filter(parent=parent).count(), 2)
 
     def test_kid_profile_operation_id_has_a_per_parent_database_barrier(self):
         parent = self.create_parent()
@@ -794,6 +978,7 @@ class KidProfilePreferencesApiTests(APITestCase):
                 'profile_id',
                 'story_text_scale',
                 'narration_enabled',
+                'streak_timezone_offset_minutes',
                 'updated_at',
             },
         )

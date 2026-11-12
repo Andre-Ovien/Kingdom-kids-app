@@ -1,11 +1,78 @@
+import hashlib
 import uuid
+from urllib.parse import urlparse
 
+from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.validators import (
     FileExtensionValidator,
     MaxValueValidator,
     MinValueValidator,
 )
 from django.db import models
+
+
+def is_owned_https_media_url(value) -> bool:
+    """Return whether a URL is safe to expose to a child's device."""
+
+    if not value:
+        return False
+    try:
+        parsed = urlparse(value)
+        hostname = (parsed.hostname or '').lower()
+        port = parsed.port
+    except ValueError:
+        return False
+    return (
+        parsed.scheme.lower() == 'https'
+        and bool(hostname)
+        and hostname in settings.CONTENT_MEDIA_HOSTS
+        and parsed.username is None
+        and parsed.password is None
+        and not parsed.fragment
+        and port in {None, 443}
+    )
+
+
+def validate_owned_https_media_url(value):
+    """Allow child-facing media only from explicitly owned HTTPS hosts."""
+
+    if not value:
+        return
+    try:
+        parsed = urlparse(value)
+        hostname = (parsed.hostname or '').lower()
+    except ValueError as exc:
+        raise ValidationError(
+            'External media URLs must be valid HTTPS URLs.'
+        ) from exc
+    if parsed.scheme.lower() != 'https' or not hostname:
+        raise ValidationError('External media URLs must use HTTPS.')
+    if not is_owned_https_media_url(value):
+        raise ValidationError(
+            'External media must use a host listed in DJANGO_CONTENT_MEDIA_HOSTS.'
+        )
+
+
+def validate_audio_upload(upload):
+    """Apply a small size limit and reject obvious extension spoofing."""
+
+    if upload.size > settings.MAX_NARRATOR_AUDIO_BYTES:
+        raise ValidationError('Narrator audio exceeds the configured size limit.')
+
+    original_position = upload.tell() if hasattr(upload, 'tell') else None
+    header = upload.read(12)
+    if original_position is not None:
+        upload.seek(original_position)
+    signatures = (
+        header.startswith(b'ID3'),
+        header.startswith((b'\xff\xfb', b'\xff\xf3', b'\xff\xf2')),
+        header.startswith((b'\xff\xf1', b'\xff\xf9')),
+        header.startswith(b'RIFF') and header[8:12] == b'WAVE',
+        len(header) >= 8 and header[4:8] == b'ftyp',
+    )
+    if not any(signatures):
+        raise ValidationError('Narrator audio content does not match an allowed format.')
 
 
 class Story(models.Model):
@@ -21,7 +88,11 @@ class Story(models.Model):
     # The first catalogue ships with bundled artwork. A hosted URL can replace
     # it later without changing the API contract or app model.
     cover_asset_key = models.CharField(max_length=180, blank=True)
-    cover_image_url = models.URLField(blank=True, null=True)
+    cover_image_url = models.URLField(
+        blank=True,
+        null=True,
+        validators=(validate_owned_https_media_url,),
+    )
     cover_focus_x = models.FloatField(
         default=0,
         validators=(MinValueValidator(-1), MaxValueValidator(1)),
@@ -78,9 +149,14 @@ class NarratorVoice(models.Model):
             FileExtensionValidator(
                 allowed_extensions=('mp3', 'm4a', 'aac', 'wav'),
             ),
+            validate_audio_upload,
         ),
     )
-    sample_url = models.URLField(blank=True, null=True)
+    sample_url = models.URLField(
+        blank=True,
+        null=True,
+        validators=(validate_owned_https_media_url,),
+    )
     # Provider settings are intentionally private and are never serialized.
     provider = models.CharField(max_length=40, blank=True)
     provider_voice_id = models.CharField(max_length=160, blank=True)
@@ -106,6 +182,19 @@ class NarratorVoice(models.Model):
             # A missing/unmounted development media directory must not make the
             # story-detail endpoint fail. The hosted URL can still be used.
             return False
+
+    @property
+    def available_sample_url(self) -> str | None:
+        if self.cached_sample_available:
+            try:
+                url = self.sample_audio.url
+                if settings.DEBUG or is_owned_https_media_url(url):
+                    return url
+            except (OSError, ValueError):
+                pass
+        if is_owned_https_media_url(self.sample_url):
+            return self.sample_url
+        return None
 
 
 class StoryNarration(models.Model):
@@ -133,7 +222,25 @@ class StoryNarration(models.Model):
         choices=Status.choices,
         default=Status.DEVICE_TTS,
     )
-    audio_url = models.URLField(blank=True, null=True)
+    audio_url = models.URLField(
+        blank=True,
+        null=True,
+        validators=(validate_owned_https_media_url,),
+    )
+    audio_file = models.FileField(
+        upload_to='character_narration/',
+        blank=True,
+        max_length=255,
+        validators=(
+            FileExtensionValidator(allowed_extensions=('mp3', 'm4a', 'aac', 'wav')),
+            validate_audio_upload,
+        ),
+    )
+    # Bind generated audio and its passage timings to the exact story revision.
+    # Old tracks must not keep reading a different body after an editor changes it.
+    text_sha256 = models.CharField(max_length=64, blank=True)
+    segments = models.JSONField(default=list, blank=True)
+    words = models.JSONField(default=list, blank=True)
     duration_seconds = models.PositiveIntegerField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -149,7 +256,31 @@ class StoryNarration(models.Model):
 
     @property
     def audio_available(self) -> bool:
-        return self.status == self.Status.READY and bool(self.audio_url)
+        if self.status != self.Status.READY:
+            return False
+        if self.text_sha256 and not self.matches_story_text:
+            return False
+        return bool(self.available_audio_url)
+
+    @property
+    def matches_story_text(self) -> bool:
+        return self.text_sha256 == hashlib.sha256(
+            self.story.body.encode('utf-8'),
+        ).hexdigest()
+
+    @property
+    def available_audio_url(self) -> str | None:
+        if self.audio_file and self.matches_story_text:
+            try:
+                if self.audio_file.storage.exists(self.audio_file.name):
+                    url = self.audio_file.url
+                    if settings.DEBUG or is_owned_https_media_url(url):
+                        return url
+            except (OSError, ValueError):
+                pass
+        if is_owned_https_media_url(self.audio_url):
+            return self.audio_url
+        return None
 
     def __str__(self) -> str:
         return f'{self.story.title} — {self.narrator.display_name}'

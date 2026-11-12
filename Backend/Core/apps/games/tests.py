@@ -1,5 +1,7 @@
 import uuid
 from collections import deque
+from datetime import date, timedelta
+from unittest.mock import patch
 
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import IntegrityError, transaction
@@ -9,16 +11,47 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.accounts.models import KidProfile, User
+from apps.progress.models import KidActivityEvent, StreakDailyVisit
+from apps.progress.services import build_profile_level
+from apps.stories.models import Story
 
 from .models import Game, GameAttempt, GameLevel, KidGameProgress
 from .services import evaluate_level
+from .wise_builders import example_builders_result
 
 
 PASSWORD = 'A-strong-password-123!'
 
 
 class GameApiTests(TestCase):
+    """Shared authentication, receipts and legacy-engine compatibility.
+
+    Ark Traffic, Living World and Builders exercise their current command
+    protocols in their dedicated API suites. Keep the legacy ordering and
+    boarding fixtures here so the older supported engines remain covered.
+    """
+
     def setUp(self):
+        # Retired quests are published only in these legacy fixtures so their
+        # preserved scorers remain covered.
+        Game.objects.filter(slug__in=(
+            'daniel-memory', 'ark-animal-match', 'moses-match', 'red-sea-path',
+            'creation-order',
+            'wise-and-foolish-builders',
+            'david-sling-shot', 'jonah-ocean-maze',
+        )).update(is_published=True)
+        for level in GameLevel.objects.filter(
+            game__slug__in=('creation-order', 'ark-animal-match'),
+        ).select_related('game'):
+            config = dict(level.config)
+            if config.get('mode') == 'living_world':
+                config.pop('mode')
+                config.pop('world')
+            elif config.get('mode') == 'ark_traffic':
+                config['mode'] = 'ark_boarding'
+                config.pop('traffic')
+            level.config = config
+            level.save(update_fields=('config',))
         self.parent = User.objects.create_user(
             email='games@example.com',
             password=PASSWORD,
@@ -59,6 +92,305 @@ class GameApiTests(TestCase):
             },
             format='json',
         )
+
+    def set_completed_progress(self, game, stars_by_level, *, profile=None):
+        entries = {
+            str(number): {
+                'best_score': 100 if stars == 3 else 60,
+                'best_stars': stars,
+                'completed': True,
+                'attempts': 1,
+            }
+            for number, stars in stars_by_level.items()
+        }
+        return KidGameProgress.objects.create(
+            profile=profile or self.profile,
+            game=game,
+            highest_completed_level=len(entries),
+            total_stars=sum(stars_by_level.values()),
+            level_progress=entries,
+        )
+
+    def test_overall_level_seven_to_eight_is_stored_with_its_attempt(self):
+        target = GameLevel.objects.get(game__slug='esther-quiz', level_number=1)
+        seeded_levels = list(
+            GameLevel.objects.exclude(game=target.game)
+            .select_related('game')
+            .order_by('game__sort_order', 'level_number')[:13]
+        )
+        by_game = {}
+        for index, level in enumerate(seeded_levels):
+            game, entries = by_game.setdefault(level.game_id, (level.game, {}))
+            entries[level.level_number] = 3 if index < 12 else 0
+        for game, entries in by_game.values():
+            self.set_completed_progress(game, entries)
+        self.assertEqual(build_profile_level(self.profile)['xp'], 2020)
+        self.assertEqual(build_profile_level(self.profile)['number'], 7)
+
+        response = self.submit(target.game.slug, self.perfect_result(target))
+
+        self.assertEqual(response.status_code, 201)
+        expected = {
+            'previous_level': 7,
+            'level': {
+                'number': 8,
+                'title': 'Courageous Heart',
+                'xp': 2130,
+                'next_level_xp': 2400,
+                'max_level': 15,
+                'is_max_level': False,
+            },
+        }
+        self.assertEqual(response.data['level_milestone'], expected)
+        self.assertEqual(build_profile_level(self.profile), expected['level'])
+        attempt = GameAttempt.objects.get(pk=response.data['attempt_id'])
+        self.assertEqual(attempt.evaluation['_level_milestone'], expected)
+        self.assertIn('correct_answers', attempt.evaluation)
+
+    def test_saved_attempt_without_overall_advancement_has_no_milestone(self):
+        level = GameLevel.objects.get(game__slug='creation-order', level_number=1)
+
+        first = self.submit(level.game.slug, self.perfect_result(level))
+        again = self.submit(level.game.slug, self.perfect_result(level))
+
+        self.assertEqual(first.status_code, 201)
+        self.assertEqual(again.status_code, 201)
+        self.assertIsNone(first.data['level_milestone'])
+        self.assertIsNone(again.data['level_milestone'])
+        self.assertEqual(build_profile_level(self.profile)['xp'], 110)
+        progress = KidGameProgress.objects.get(profile=self.profile, game=level.game)
+        self.assertEqual(progress.level_progress['1']['completion_xp'], 50)
+        self.assertEqual(GameAttempt.objects.count(), 2)
+
+    def test_quest_advancement_includes_earned_reading_and_streak_xp(self):
+        story = Story.objects.filter(is_published=True).first()
+        KidActivityEvent.objects.create(
+            profile=self.profile,
+            story=story,
+            operation_id=uuid.uuid4(),
+            event_type=KidActivityEvent.EventType.STORY_COMPLETED,
+        )
+        for days_ago in range(7):
+            StreakDailyVisit.objects.create(
+                profile=self.profile,
+                local_date=date(2026, 7, 25) - timedelta(days=days_ago),
+                state=StreakDailyVisit.State.CONTINUED,
+                timezone_offset_minutes=0,
+            )
+        self.assertEqual(build_profile_level(self.profile)['xp'], 240)
+        target = GameLevel.objects.get(game__slug='creation-order', level_number=1)
+        response = self.submit(target.game.slug, self.perfect_result(target))
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data['level_milestone']['previous_level'], 1)
+        self.assertEqual(response.data['level_milestone']['level']['number'], 2)
+        self.assertEqual(response.data['level_milestone']['level']['xp'], 350)
+        self.assertEqual(build_profile_level(self.profile)['xp'], 350)
+
+    def test_better_stars_on_completed_quest_can_advance_overall_level(self):
+        target = GameLevel.objects.get(game__slug='creation-order', level_number=1)
+        other = Game.objects.get(slug='ark-animal-match')
+        self.set_completed_progress(target.game, {1: 1})
+        self.set_completed_progress(other, {1: 2})
+        self.assertEqual(build_profile_level(self.profile)['xp'], 260)
+
+        response = self.submit(target.game.slug, self.perfect_result(target))
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(
+            response.data['level_milestone'],
+            {
+                'previous_level': 1,
+                'level': {
+                    'number': 2,
+                    'title': 'Story Scout',
+                    'xp': 300,
+                    'next_level_xp': 600,
+                    'max_level': 15,
+                    'is_max_level': False,
+                },
+            },
+        )
+        self.assertEqual(response.data['progress']['completed_levels'], 1)
+        progress = KidGameProgress.objects.get(profile=self.profile, game=target.game)
+        self.assertEqual(progress.level_progress['1']['completion_xp'], 100)
+
+    def test_failed_first_attempt_then_completion_earns_50_and_keeps_it_on_replay(self):
+        level = GameLevel.objects.get(game__slug='creation-order', level_number=1)
+        result = self.perfect_result(level)
+        failed = self.submit(level.game.slug, {'sequence': list(reversed(result['sequence']))})
+        self.assertEqual(failed.status_code, 201)
+        self.assertEqual(build_profile_level(self.profile)['xp'], 0)
+        operation_id = uuid.uuid4()
+        earned = self.submit(level.game.slug, result, operation_id=operation_id)
+        replay = self.submit(level.game.slug, result, operation_id=operation_id)
+        self.assertEqual(replay.status_code, 200)
+        self.assertEqual(replay.data['attempt_id'], earned.data['attempt_id'])
+        self.assertEqual(build_profile_level(self.profile)['xp'], 110)
+        progress = KidGameProgress.objects.get(profile=self.profile, game=level.game)
+        self.assertEqual(progress.level_progress['1']['completion_xp'], 50)
+        self.assertEqual(progress.level_progress['1']['attempts'], 2)
+
+    def test_legacy_and_new_completions_in_one_game_keep_different_awards(self):
+        game = Game.objects.get(slug='creation-order')
+        self.set_completed_progress(game, {1: 3})
+        second = game.levels.get(level_number=2)
+        self.assertEqual(build_profile_level(self.profile)['xp'], 160)
+        self.submit(game.slug, self.perfect_result(second), level=2)
+        self.assertEqual(build_profile_level(self.profile)['xp'], 270)
+        first = game.levels.get(level_number=1)
+        self.submit(game.slug, self.perfect_result(first))
+        self.assertEqual(build_profile_level(self.profile)['xp'], 270)
+        progress = KidGameProgress.objects.get(profile=self.profile, game=game)
+        self.assertEqual(progress.level_progress['1']['completion_xp'], 100)
+        self.assertEqual(progress.level_progress['2']['completion_xp'], 50)
+
+    def test_quest_at_max_level_earns_xp_without_a_sixteenth_level(self):
+        for days_ago in range(210):
+            StreakDailyVisit.objects.create(
+                profile=self.profile,
+                local_date=date(2026, 7, 25) - timedelta(days=days_ago),
+                state=StreakDailyVisit.State.CONTINUED,
+                timezone_offset_minutes=0,
+            )
+        level = GameLevel.objects.get(game__slug='creation-order', level_number=1)
+        earned = self.submit(level.game.slug, self.perfect_result(level))
+        self.assertEqual(earned.status_code, 201)
+        self.assertIsNone(earned.data['level_milestone'])
+        current = build_profile_level(self.profile)
+        self.assertEqual(current['xp'], 4310)
+        self.assertEqual(current['number'], 15)
+        self.assertTrue(current['is_max_level'])
+
+    def test_historical_game_milestone_above_fifteen_is_not_replayed(self):
+        level = GameLevel.objects.get(game__slug='creation-order', level_number=1)
+        result = self.perfect_result(level)
+        self.set_completed_progress(level.game, {1: 3})
+        milestone = {
+            'previous_level': 15,
+            'level': {'number': 16, 'title': 'Kingdom Champion', 'xp': 4500, 'next_level_xp': 4800},
+        }
+        attempt = GameAttempt.objects.create(
+            profile=self.profile,
+            game=level.game,
+            level=level,
+            operation_id=uuid.uuid4(),
+            submitted_result=result,
+            completed=True,
+            stars=3,
+            score=100,
+            feedback='Historical result',
+            evaluation={'_level_milestone': milestone},
+        )
+        replay = self.submit(level.game.slug, result, operation_id=attempt.operation_id)
+        self.assertEqual(replay.status_code, 200)
+        self.assertIsNone(replay.data['level_milestone'])
+        attempt.refresh_from_db()
+        self.assertEqual(attempt.evaluation['_level_milestone'], milestone)
+        self.assertEqual(build_profile_level(self.profile)['xp'], 160)
+
+    def test_milestone_replay_keeps_original_transition_after_later_level_up(self):
+        levels = [
+            GameLevel.objects.get(game__slug=slug, level_number=1)
+            for slug in (
+                'creation-order',
+                'ark-animal-match',
+                'esther-quiz',
+                'david-sling-shot',
+            )
+        ]
+        self.submit(levels[0].game.slug, self.perfect_result(levels[0]))
+        for days_ago in range(4):
+            StreakDailyVisit.objects.create(
+                profile=self.profile,
+                local_date=date(2026, 7, 25) - timedelta(days=days_ago),
+                state=StreakDailyVisit.State.CONTINUED,
+                timezone_offset_minutes=0,
+            )
+        operation_id = uuid.uuid4()
+        result = self.perfect_result(levels[1])
+        earned = self.submit(
+            levels[1].game.slug, result, operation_id=operation_id,
+        )
+        for level in levels[2:]:
+            self.submit(level.game.slug, self.perfect_result(level))
+        for days_ago in range(4, 8):
+            StreakDailyVisit.objects.create(
+                profile=self.profile,
+                local_date=date(2026, 7, 25) - timedelta(days=days_ago),
+                state=StreakDailyVisit.State.CONTINUED,
+                timezone_offset_minutes=0,
+            )
+        self.assertEqual(build_profile_level(self.profile)['number'], 3)
+
+        replay = self.submit(
+            levels[1].game.slug, result, operation_id=operation_id,
+        )
+
+        self.assertEqual(replay.status_code, 200)
+        self.assertTrue(replay.data['idempotent_replay'])
+        self.assertEqual(replay.data['attempt_id'], earned.data['attempt_id'])
+        self.assertEqual(replay.data['level_milestone'], earned.data['level_milestone'])
+        self.assertEqual(replay.data['level_milestone']['level']['number'], 2)
+        self.assertEqual(GameAttempt.objects.count(), 4)
+
+    def test_historical_attempt_does_not_invent_a_level_milestone(self):
+        level = GameLevel.objects.get(game__slug='creation-order', level_number=1)
+        result = self.perfect_result(level)
+        operation_id = uuid.uuid4()
+        self.set_completed_progress(level.game, {1: 3})
+        self.set_completed_progress(Game.objects.get(slug='ark-animal-match'), {1: 3})
+        GameAttempt.objects.create(
+            profile=self.profile,
+            game=level.game,
+            level=level,
+            operation_id=operation_id,
+            submitted_result=result,
+            completed=True,
+            score=100,
+            stars=3,
+            feedback='Historical result',
+            evaluation={'correct_positions': len(result['sequence'])},
+        )
+        self.assertEqual(build_profile_level(self.profile)['number'], 2)
+
+        replay = self.submit(level.game.slug, result, operation_id=operation_id)
+
+        self.assertEqual(replay.status_code, 200)
+        self.assertTrue(replay.data['idempotent_replay'])
+        self.assertIsNone(replay.data['level_milestone'])
+        self.assertEqual(GameAttempt.objects.count(), 1)
+
+    def test_client_cannot_inject_level_milestone_metadata(self):
+        level = GameLevel.objects.get(game__slug='creation-order', level_number=1)
+
+        response = self.submit(
+            level.game.slug,
+            {
+                **self.perfect_result(level),
+                '_level_milestone': {'previous_level': 7, 'level': {'number': 8}},
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(GameAttempt.objects.count(), 0)
+        self.assertEqual(KidGameProgress.objects.count(), 0)
+
+    def test_attempt_write_failure_rolls_back_progress_and_milestone(self):
+        target = GameLevel.objects.get(game__slug='creation-order', level_number=1)
+        self.set_completed_progress(target.game, {1: 1})
+        self.set_completed_progress(Game.objects.get(slug='ark-animal-match'), {1: 2})
+
+        with patch(
+            'apps.games.views.GameAttempt.objects.create',
+            side_effect=IntegrityError('The attempt could not be recorded.'),
+        ), self.assertRaises(IntegrityError):
+            self.submit(target.game.slug, self.perfect_result(target))
+
+        progress = KidGameProgress.objects.get(profile=self.profile, game=target.game)
+        self.assertEqual(progress.level_progress['1']['best_stars'], 1)
+        self.assertEqual(progress.level_progress['1']['attempts'], 1)
+        self.assertEqual(build_profile_level(self.profile)['xp'], 260)
+        self.assertEqual(GameAttempt.objects.count(), 0)
 
     def test_catalogue_requires_verified_authentication_and_profile(self):
         anonymous = APIClient()
@@ -101,13 +433,14 @@ class GameApiTests(TestCase):
         self.assertEqual(response.status_code, 404)
         self.assertEqual(GameAttempt.objects.count(), 0)
 
-    def test_seeded_catalogue_has_eight_games_and_profile_progress(self):
+    def test_expanded_catalogue_keeps_original_games_and_profile_progress(self):
         response = self.catalogue()
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.data), 8)
+        # Twelve shipped games plus the six scoped legacy-engine fixtures.
+        self.assertEqual(len(response.data), 18)
         self.assertEqual(
-            [game['slug'] for game in response.data],
+            [game['slug'] for game in response.data[:9]],
             [
                 'ark-animal-match',
                 'creation-order',
@@ -117,6 +450,7 @@ class GameApiTests(TestCase):
                 'daniel-memory',
                 'esther-quiz',
                 'moses-match',
+                'puzzle-quest',
             ],
         )
         first = response.data[0]
@@ -130,7 +464,7 @@ class GameApiTests(TestCase):
         self.assertEqual(first['progress']['completed_levels'], 0)
         self.assertIsNone(first['progress']['last_played_at'])
         self.assertEqual(
-            {game['slug']: game['cover_asset_key'] for game in response.data},
+            {game['slug']: game['cover_asset_key'] for game in response.data[:9]},
             {
                 'ark-animal-match': 'assets/images/stories/noah-builds-the-ark-v2.webp',
                 'creation-order': 'assets/images/stories/creation-week-v2.webp',
@@ -140,6 +474,10 @@ class GameApiTests(TestCase):
                 'daniel-memory': 'assets/images/stories/daniel-in-the-lions-den-v2.webp',
                 'esther-quiz': 'assets/images/stories/esther-speaks-up-v2.webp',
                 'moses-match': 'assets/images/stories/moses-follows-god-v2.webp',
+                'puzzle-quest': (
+                    'assets/images/games/puzzle_quest/'
+                    'puzzle-quest-cover-v1.webp'
+                ),
             },
         )
 
@@ -169,9 +507,9 @@ class GameApiTests(TestCase):
         self.assertIn('match_key', memory['cards'][0])
         self.assertEqual(len(memory['cards']), 6)
 
-    def test_all_twenty_four_seeded_levels_have_a_perfect_playable_result(self):
-        self.assertEqual(Game.objects.count(), 8)
-        self.assertEqual(GameLevel.objects.count(), 24)
+    def test_all_catalogue_levels_have_a_valid_complete_result(self):
+        self.assertEqual(Game.objects.count(), 29)
+        self.assertEqual(GameLevel.objects.count(), 87)
 
         for level in GameLevel.objects.select_related('game'):
             with self.subTest(game=level.game.slug, level=level.level_number):
@@ -206,6 +544,28 @@ class GameApiTests(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertIn('computed by the server', str(response.data))
+        self.assertEqual(GameAttempt.objects.count(), 0)
+
+    def test_every_engine_rejects_unknown_result_fields(self):
+        levels_by_type = {}
+        for level in GameLevel.objects.select_related('game').order_by(
+            'game__sort_order',
+            'level_number',
+        ):
+            levels_by_type.setdefault(level.game.game_type, level)
+
+        for game_type, level in levels_by_type.items():
+            with self.subTest(game_type=game_type):
+                response = self.submit(
+                    level.game.slug,
+                    {
+                        **self.perfect_result(level),
+                        'child_note': 'arbitrary retained data',
+                    },
+                )
+                self.assertEqual(response.status_code, 400)
+                self.assertIn('only contain', str(response.data))
+
         self.assertEqual(GameAttempt.objects.count(), 0)
 
     def test_wrong_quiz_answers_do_not_unlock_the_next_level(self):
@@ -389,6 +749,36 @@ class GameApiTests(TestCase):
             )
         self.assertIn('level_number', skipped_level.exception.message_dict)
 
+    def test_changing_game_type_revalidates_existing_levels(self):
+        game = Game.objects.get(slug='creation-order')
+        game.game_type = Game.Type.QUIZ
+
+        with self.assertRaises(DjangoValidationError) as incompatible:
+            game.save(update_fields=('game_type',))
+
+        self.assertIn('game_type', incompatible.exception.message_dict)
+
+    def test_game_attempt_model_rejects_updates_and_direct_deletes(self):
+        level = GameLevel.objects.get(game__slug='creation-order', level_number=1)
+        attempt = GameAttempt.objects.create(
+            operation_id=uuid.uuid4(),
+            profile=self.profile,
+            game=level.game,
+            level=level,
+            submitted_result=self.perfect_result(level),
+            completed=True,
+            score=100,
+            stars=3,
+            feedback='Complete',
+            evaluation={},
+        )
+
+        attempt.feedback = 'Tampered'
+        with self.assertRaises(DjangoValidationError):
+            attempt.save(update_fields=('feedback',))
+        with self.assertRaises(DjangoValidationError):
+            attempt.delete()
+
     @classmethod
     def perfect_result(cls, level):
         config = level.config
@@ -404,14 +794,19 @@ class GameApiTests(TestCase):
                 ]
             }
         if game_type == Game.Type.ORDERING:
+            if config.get('mode') == 'wise_builders':
+                return example_builders_result(config)
             return {'sequence': config['answer_sequence']}
         if game_type == Game.Type.MATCHING:
-            return {
+            result = {
                 'pairs': [
                     {'left_id': left_id, 'right_id': right_id}
                     for left_id, right_id in config['expected_pairs'].items()
                 ]
             }
+            if config.get('mode') == 'ark_boarding':
+                result['elapsed_seconds'] = 1
+            return result
         if game_type == Game.Type.MEMORY:
             by_match = {}
             for card in config['cards']:
@@ -431,6 +826,15 @@ class GameApiTests(TestCase):
                         'y': config['target']['y'],
                     }
                 ]
+            }
+        if game_type == Game.Type.PUZZLE:
+            return {
+                'placements': [
+                    {'piece_id': piece_id, 'slot_id': slot_id}
+                    for piece_id, slot_id in config['solution'].items()
+                ],
+                'moves': len(config['solution']),
+                'elapsed_seconds': 0,
             }
         raise AssertionError(f'Unsupported test game type: {game_type}')
 

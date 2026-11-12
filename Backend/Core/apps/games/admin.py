@@ -34,6 +34,11 @@ class GameLevelAdmin(admin.ModelAdmin):
     ordering = ('game__sort_order', 'level_number')
     search_fields = ('game__title', 'title', 'instructions')
 
+    def get_actions(self, request):
+        actions = super().get_actions(request)
+        actions.pop('delete_selected', None)
+        return actions
+
 
 @admin.register(KidGameProgress)
 class KidGameProgressAdmin(admin.ModelAdmin):
@@ -46,7 +51,25 @@ class KidGameProgressAdmin(admin.ModelAdmin):
     )
     list_filter = ('game',)
     search_fields = ('profile__display_name', 'profile__parent__email', 'game__title')
-    readonly_fields = ('created_at', 'updated_at')
+    readonly_fields = (
+        'profile',
+        'game',
+        'highest_completed_level',
+        'total_stars',
+        'level_progress',
+        'last_played_at',
+        'created_at',
+        'updated_at',
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(GameAttempt)
@@ -84,4 +107,7 @@ class GameAttemptAdmin(admin.ModelAdmin):
         return False
 
     def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
         return False

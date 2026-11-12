@@ -1,0 +1,1010 @@
+{
+  "games": [
+    {
+      "accent_color": "#438878",
+      "cover_asset_key": "assets/images/stories/creation-week-v2.webp",
+      "description": "Help a little illustrated world come alive. Match birds to sky, fish to water and growing things to their garden homes.",
+      "difficulty": "Easy",
+      "estimated_duration_seconds": 90,
+      "game_type": "matching",
+      "icon_key": "eco",
+      "is_featured": false,
+      "levels": [
+        {
+          "config": {
+            "items": [
+              {
+                "id": "sun",
+                "match_key": "sky"
+              },
+              {
+                "id": "fish",
+                "match_key": "water"
+              },
+              {
+                "id": "tree",
+                "match_key": "forest"
+              },
+              {
+                "id": "bird",
+                "match_key": "sky"
+              },
+              {
+                "id": "flower",
+                "match_key": "meadow"
+              },
+              {
+                "id": "deer",
+                "match_key": "meadow"
+              }
+            ],
+            "mode": "creation_bloom",
+            "round_number": 1,
+            "scene": "creation_garden",
+            "targets": [
+              {
+                "capacity": 2,
+                "id": "sky",
+                "match_key": "sky"
+              },
+              {
+                "capacity": 1,
+                "id": "water",
+                "match_key": "water"
+              },
+              {
+                "capacity": 1,
+                "id": "forest",
+                "match_key": "forest"
+              },
+              {
+                "capacity": 2,
+                "id": "meadow",
+                "match_key": "meadow"
+              }
+            ]
+          },
+          "instructions": "Find the right habitat for each living piece.",
+          "level_number": 1,
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "title": "A little living world"
+        },
+        {
+          "config": {
+            "items": [
+              {
+                "id": "deer",
+                "match_key": "meadow"
+              },
+              {
+                "id": "bird",
+                "match_key": "sky"
+              },
+              {
+                "id": "flower",
+                "match_key": "meadow"
+              },
+              {
+                "id": "tree",
+                "match_key": "forest"
+              },
+              {
+                "id": "fish",
+                "match_key": "water"
+              },
+              {
+                "id": "sun",
+                "match_key": "sky"
+              }
+            ],
+            "mode": "creation_bloom",
+            "round_number": 2,
+            "scene": "creation_garden",
+            "targets": [
+              {
+                "capacity": 2,
+                "id": "sky",
+                "match_key": "sky"
+              },
+              {
+                "capacity": 1,
+                "id": "water",
+                "match_key": "water"
+              },
+              {
+                "capacity": 1,
+                "id": "forest",
+                "match_key": "forest"
+              },
+              {
+                "capacity": 2,
+                "id": "meadow",
+                "match_key": "meadow"
+              }
+            ]
+          },
+          "instructions": "Find the right habitat for each living piece.",
+          "level_number": 2,
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "title": "Places to flourish"
+        },
+        {
+          "config": {
+            "items": [
+              {
+                "id": "fish",
+                "match_key": "water"
+              },
+              {
+                "id": "flower",
+                "match_key": "meadow"
+              },
+              {
+                "id": "sun",
+                "match_key": "sky"
+              },
+              {
+                "id": "deer",
+                "match_key": "meadow"
+              },
+              {
+                "id": "bird",
+                "match_key": "sky"
+              },
+              {
+                "id": "tree",
+                "match_key": "forest"
+              }
+            ],
+            "mode": "creation_bloom",
+            "round_number": 3,
+            "scene": "creation_garden",
+            "targets": [
+              {
+                "capacity": 2,
+                "id": "sky",
+                "match_key": "sky"
+              },
+              {
+                "capacity": 1,
+                "id": "water",
+                "match_key": "water"
+              },
+              {
+                "capacity": 1,
+                "id": "forest",
+                "match_key": "forest"
+              },
+              {
+                "capacity": 2,
+                "id": "meadow",
+                "match_key": "meadow"
+              }
+            ]
+          },
+          "instructions": "Find the right habitat for each living piece.",
+          "level_number": 3,
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "title": "A garden of wonder"
+        }
+      ],
+      "slug": "creation-match-bloom",
+      "sort_order": 53,
+      "subtitle": "Find a home. Watch it grow.",
+      "title": "Creation: Match & Bloom"
+    },
+    {
+      "accent_color": "#A56B56",
+      "cover_asset_key": "assets/images/stories/esther-speaks-up-v2.webp",
+      "description": "Help Esther prepare a beautiful celebration. Look at each guest’s illustrated request and bring the matching dish to the table.",
+      "difficulty": "Easy",
+      "estimated_duration_seconds": 90,
+      "game_type": "matching",
+      "icon_key": "celebration",
+      "is_featured": false,
+      "levels": [
+        {
+          "config": {
+            "items": [
+              {
+                "id": "dates",
+                "match_key": "dates"
+              },
+              {
+                "id": "flowers",
+                "match_key": "flowers"
+              },
+              {
+                "id": "water",
+                "match_key": "water"
+              },
+              {
+                "id": "figs",
+                "match_key": "figs"
+              },
+              {
+                "id": "grapes",
+                "match_key": "grapes"
+              },
+              {
+                "id": "bread",
+                "match_key": "bread"
+              }
+            ],
+            "mode": "esther_table",
+            "round_number": 1,
+            "scene": "esther_banquet",
+            "targets": [
+              {
+                "capacity": 1,
+                "id": "seat_1",
+                "match_key": "bread"
+              },
+              {
+                "capacity": 1,
+                "id": "seat_2",
+                "match_key": "grapes"
+              },
+              {
+                "capacity": 1,
+                "id": "seat_3",
+                "match_key": "figs"
+              },
+              {
+                "capacity": 1,
+                "id": "seat_4",
+                "match_key": "water"
+              },
+              {
+                "capacity": 1,
+                "id": "seat_5",
+                "match_key": "flowers"
+              },
+              {
+                "capacity": 1,
+                "id": "seat_6",
+                "match_key": "dates"
+              }
+            ]
+          },
+          "instructions": "Match each serving piece to its place at Esther’s table.",
+          "level_number": 1,
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "title": "A warm welcome"
+        },
+        {
+          "config": {
+            "items": [
+              {
+                "id": "dates",
+                "match_key": "dates"
+              },
+              {
+                "id": "flowers",
+                "match_key": "flowers"
+              },
+              {
+                "id": "water",
+                "match_key": "water"
+              },
+              {
+                "id": "figs",
+                "match_key": "figs"
+              },
+              {
+                "id": "grapes",
+                "match_key": "grapes"
+              },
+              {
+                "id": "bread",
+                "match_key": "bread"
+              }
+            ],
+            "mode": "esther_table",
+            "round_number": 2,
+            "scene": "esther_banquet",
+            "targets": [
+              {
+                "capacity": 1,
+                "id": "seat_1",
+                "match_key": "flowers"
+              },
+              {
+                "capacity": 1,
+                "id": "seat_2",
+                "match_key": "bread"
+              },
+              {
+                "capacity": 1,
+                "id": "seat_3",
+                "match_key": "water"
+              },
+              {
+                "capacity": 1,
+                "id": "seat_4",
+                "match_key": "dates"
+              },
+              {
+                "capacity": 1,
+                "id": "seat_5",
+                "match_key": "grapes"
+              },
+              {
+                "capacity": 1,
+                "id": "seat_6",
+                "match_key": "figs"
+              }
+            ]
+          },
+          "instructions": "Match each serving piece to its place at Esther’s table.",
+          "level_number": 2,
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "title": "A table to share"
+        },
+        {
+          "config": {
+            "items": [
+              {
+                "id": "dates",
+                "match_key": "dates"
+              },
+              {
+                "id": "flowers",
+                "match_key": "flowers"
+              },
+              {
+                "id": "water",
+                "match_key": "water"
+              },
+              {
+                "id": "figs",
+                "match_key": "figs"
+              },
+              {
+                "id": "grapes",
+                "match_key": "grapes"
+              },
+              {
+                "id": "bread",
+                "match_key": "bread"
+              }
+            ],
+            "mode": "esther_table",
+            "round_number": 3,
+            "scene": "esther_banquet",
+            "targets": [
+              {
+                "capacity": 1,
+                "id": "seat_1",
+                "match_key": "figs"
+              },
+              {
+                "capacity": 1,
+                "id": "seat_2",
+                "match_key": "water"
+              },
+              {
+                "capacity": 1,
+                "id": "seat_3",
+                "match_key": "dates"
+              },
+              {
+                "capacity": 1,
+                "id": "seat_4",
+                "match_key": "grapes"
+              },
+              {
+                "capacity": 1,
+                "id": "seat_5",
+                "match_key": "bread"
+              },
+              {
+                "capacity": 1,
+                "id": "seat_6",
+                "match_key": "flowers"
+              }
+            ]
+          },
+          "instructions": "Match each serving piece to its place at Esther’s table.",
+          "level_number": 3,
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "title": "The celebration begins"
+        }
+      ],
+      "slug": "esthers-celebration-table",
+      "sort_order": 54,
+      "subtitle": "A place for everyone.",
+      "title": "Esther’s Celebration Table"
+    },
+    {
+      "accent_color": "#6D8757",
+      "cover_asset_key": "assets/images/stories/lost-sheep-storybook-v1.webp",
+      "description": "Look closely at each lamb’s patterned scarf. Guide the lost lambs home to their matching families in a sunny meadow.",
+      "difficulty": "Easy",
+      "estimated_duration_seconds": 90,
+      "game_type": "matching",
+      "icon_key": "pets",
+      "is_featured": false,
+      "levels": [
+        {
+          "config": {
+            "items": [
+              {
+                "id": "lamb_1",
+                "match_key": "teal_stripes"
+              },
+              {
+                "id": "lamb_2",
+                "match_key": "coral_dots"
+              },
+              {
+                "id": "lamb_3",
+                "match_key": "gold_zigzag"
+              },
+              {
+                "id": "lamb_4",
+                "match_key": "coral_dots"
+              },
+              {
+                "id": "lamb_5",
+                "match_key": "gold_zigzag"
+              },
+              {
+                "id": "lamb_6",
+                "match_key": "teal_stripes"
+              }
+            ],
+            "mode": "sheep_reunion",
+            "round_number": 1,
+            "scene": "sheep_meadow",
+            "targets": [
+              {
+                "capacity": 2,
+                "id": "family_1",
+                "match_key": "coral_dots"
+              },
+              {
+                "capacity": 2,
+                "id": "family_2",
+                "match_key": "teal_stripes"
+              },
+              {
+                "capacity": 2,
+                "id": "family_3",
+                "match_key": "gold_zigzag"
+              }
+            ]
+          },
+          "instructions": "Match each lamb’s scarf colour and pattern to its family.",
+          "level_number": 1,
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "title": "Home in the meadow"
+        },
+        {
+          "config": {
+            "items": [
+              {
+                "id": "lamb_1",
+                "match_key": "coral_stripes"
+              },
+              {
+                "id": "lamb_2",
+                "match_key": "coral_dots"
+              },
+              {
+                "id": "lamb_3",
+                "match_key": "teal_zigzag"
+              },
+              {
+                "id": "lamb_4",
+                "match_key": "coral_dots"
+              },
+              {
+                "id": "lamb_5",
+                "match_key": "teal_zigzag"
+              },
+              {
+                "id": "lamb_6",
+                "match_key": "coral_stripes"
+              }
+            ],
+            "mode": "sheep_reunion",
+            "round_number": 2,
+            "scene": "sheep_meadow",
+            "targets": [
+              {
+                "capacity": 2,
+                "id": "family_1",
+                "match_key": "coral_dots"
+              },
+              {
+                "capacity": 2,
+                "id": "family_2",
+                "match_key": "coral_stripes"
+              },
+              {
+                "capacity": 2,
+                "id": "family_3",
+                "match_key": "teal_zigzag"
+              }
+            ]
+          },
+          "instructions": "Match each lamb’s scarf colour and pattern to its family.",
+          "level_number": 2,
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "title": "Look a little closer"
+        },
+        {
+          "config": {
+            "items": [
+              {
+                "id": "lamb_1",
+                "match_key": "teal_stripes"
+              },
+              {
+                "id": "lamb_2",
+                "match_key": "teal_dots"
+              },
+              {
+                "id": "lamb_3",
+                "match_key": "teal_zigzag"
+              },
+              {
+                "id": "lamb_4",
+                "match_key": "teal_dots"
+              },
+              {
+                "id": "lamb_5",
+                "match_key": "teal_zigzag"
+              },
+              {
+                "id": "lamb_6",
+                "match_key": "teal_stripes"
+              }
+            ],
+            "mode": "sheep_reunion",
+            "round_number": 3,
+            "scene": "sheep_meadow",
+            "targets": [
+              {
+                "capacity": 2,
+                "id": "family_1",
+                "match_key": "teal_dots"
+              },
+              {
+                "capacity": 2,
+                "id": "family_2",
+                "match_key": "teal_stripes"
+              },
+              {
+                "capacity": 2,
+                "id": "family_3",
+                "match_key": "teal_zigzag"
+              }
+            ]
+          },
+          "instructions": "Match each lamb’s scarf colour and pattern to its family.",
+          "level_number": 3,
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "title": "Happy families"
+        }
+      ],
+      "slug": "find-my-sheep",
+      "sort_order": 52,
+      "subtitle": "Little lambs. A happy home.",
+      "title": "Find My Sheep"
+    },
+    {
+      "accent_color": "#C96B4A",
+      "cover_asset_key": "assets/images/stories/joseph-colorful-coat-storybook-v1.webp",
+      "description": "Become a little coat designer. Find each fabric’s colour and pattern, stitch it into Joseph’s coat, and watch your creation come to life.",
+      "difficulty": "Easy",
+      "estimated_duration_seconds": 90,
+      "game_type": "matching",
+      "icon_key": "palette",
+      "is_featured": false,
+      "levels": [
+        {
+          "config": {
+            "mode": "coat_studio",
+            "panels": [
+              {
+                "color": "coral",
+                "id": "left_shoulder",
+                "pattern": "dots"
+              },
+              {
+                "color": "gold",
+                "id": "right_shoulder",
+                "pattern": "stripes"
+              },
+              {
+                "color": "teal",
+                "id": "left_body",
+                "pattern": "zigzag"
+              },
+              {
+                "color": "forest",
+                "id": "right_body",
+                "pattern": "dots"
+              },
+              {
+                "color": "sky",
+                "id": "left_hem",
+                "pattern": "stripes"
+              },
+              {
+                "color": "lilac",
+                "id": "right_hem",
+                "pattern": "zigzag"
+              }
+            ],
+            "round_number": 1,
+            "scene": "joseph_studio",
+            "swatches": [
+              {
+                "color": "forest",
+                "id": "fabric_1",
+                "pattern": "dots"
+              },
+              {
+                "color": "coral",
+                "id": "fabric_2",
+                "pattern": "dots"
+              },
+              {
+                "color": "sky",
+                "id": "fabric_3",
+                "pattern": "stripes"
+              },
+              {
+                "color": "gold",
+                "id": "fabric_4",
+                "pattern": "stripes"
+              },
+              {
+                "color": "lilac",
+                "id": "fabric_5",
+                "pattern": "zigzag"
+              },
+              {
+                "color": "teal",
+                "id": "fabric_6",
+                "pattern": "zigzag"
+              }
+            ]
+          },
+          "instructions": "Match each fabric’s colour and pattern to Joseph’s coat.",
+          "level_number": 1,
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "title": "First stitches"
+        },
+        {
+          "config": {
+            "mode": "coat_studio",
+            "panels": [
+              {
+                "color": "coral",
+                "id": "left_shoulder",
+                "pattern": "zigzag"
+              },
+              {
+                "color": "coral",
+                "id": "right_shoulder",
+                "pattern": "dots"
+              },
+              {
+                "color": "teal",
+                "id": "left_body",
+                "pattern": "stripes"
+              },
+              {
+                "color": "teal",
+                "id": "right_body",
+                "pattern": "zigzag"
+              },
+              {
+                "color": "gold",
+                "id": "left_hem",
+                "pattern": "dots"
+              },
+              {
+                "color": "gold",
+                "id": "right_hem",
+                "pattern": "stripes"
+              }
+            ],
+            "round_number": 2,
+            "scene": "joseph_studio",
+            "swatches": [
+              {
+                "color": "gold",
+                "id": "fabric_1",
+                "pattern": "dots"
+              },
+              {
+                "color": "teal",
+                "id": "fabric_2",
+                "pattern": "stripes"
+              },
+              {
+                "color": "coral",
+                "id": "fabric_3",
+                "pattern": "zigzag"
+              },
+              {
+                "color": "gold",
+                "id": "fabric_4",
+                "pattern": "stripes"
+              },
+              {
+                "color": "teal",
+                "id": "fabric_5",
+                "pattern": "zigzag"
+              },
+              {
+                "color": "coral",
+                "id": "fabric_6",
+                "pattern": "dots"
+              }
+            ]
+          },
+          "instructions": "Match each fabric’s colour and pattern to Joseph’s coat.",
+          "level_number": 2,
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "title": "Colour play"
+        },
+        {
+          "config": {
+            "mode": "coat_studio",
+            "panels": [
+              {
+                "color": "forest",
+                "id": "left_shoulder",
+                "pattern": "stripes"
+              },
+              {
+                "color": "forest",
+                "id": "right_shoulder",
+                "pattern": "zigzag"
+              },
+              {
+                "color": "sky",
+                "id": "left_body",
+                "pattern": "dots"
+              },
+              {
+                "color": "sky",
+                "id": "right_body",
+                "pattern": "stripes"
+              },
+              {
+                "color": "lilac",
+                "id": "left_hem",
+                "pattern": "zigzag"
+              },
+              {
+                "color": "lilac",
+                "id": "right_hem",
+                "pattern": "dots"
+              }
+            ],
+            "round_number": 3,
+            "scene": "joseph_studio",
+            "swatches": [
+              {
+                "color": "lilac",
+                "id": "fabric_1",
+                "pattern": "dots"
+              },
+              {
+                "color": "sky",
+                "id": "fabric_2",
+                "pattern": "stripes"
+              },
+              {
+                "color": "forest",
+                "id": "fabric_3",
+                "pattern": "zigzag"
+              },
+              {
+                "color": "lilac",
+                "id": "fabric_4",
+                "pattern": "zigzag"
+              },
+              {
+                "color": "sky",
+                "id": "fabric_5",
+                "pattern": "dots"
+              },
+              {
+                "color": "forest",
+                "id": "fabric_6",
+                "pattern": "stripes"
+              }
+            ]
+          },
+          "instructions": "Match each fabric’s colour and pattern to Joseph’s coat.",
+          "level_number": 3,
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "title": "Masterpiece"
+        }
+      ],
+      "slug": "josephs-coat-studio",
+      "sort_order": 50,
+      "subtitle": "A little stitch. A lot of colour.",
+      "title": "Joseph’s Coat Studio"
+    },
+    {
+      "accent_color": "#A57B33",
+      "cover_asset_key": "assets/images/stories/ruth-and-naomi-storybook-v1.webp",
+      "description": "Trace a path through matching grain bundles to gather a generous harvest. Fill Naomi’s three baskets with wheat, barley and oats.",
+      "difficulty": "Easy",
+      "estimated_duration_seconds": 120,
+      "game_type": "matching",
+      "icon_key": "grass",
+      "is_featured": false,
+      "levels": [
+        {
+          "config": {
+            "columns": 5,
+            "goals": {
+              "barley": 6,
+              "oats": 6,
+              "wheat": 9
+            },
+            "grain_types": [
+              "wheat",
+              "barley",
+              "oats"
+            ],
+            "max_chains": 18,
+            "min_chain": 3,
+            "mode": "harvest_chain",
+            "round_number": 1,
+            "rows": 6,
+            "scene": "ruth_field",
+            "seed": 1021
+          },
+          "instructions": "Join three or more matching grain bundles to fill Naomi’s baskets.",
+          "level_number": 1,
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "title": "Morning gathering"
+        },
+        {
+          "config": {
+            "columns": 5,
+            "goals": {
+              "barley": 9,
+              "oats": 9,
+              "wheat": 12
+            },
+            "grain_types": [
+              "wheat",
+              "barley",
+              "oats"
+            ],
+            "max_chains": 18,
+            "min_chain": 3,
+            "mode": "harvest_chain",
+            "round_number": 2,
+            "rows": 6,
+            "scene": "ruth_field",
+            "seed": 2047
+          },
+          "instructions": "Join three or more matching grain bundles to fill Naomi’s baskets.",
+          "level_number": 2,
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "title": "A generous basket"
+        },
+        {
+          "config": {
+            "columns": 5,
+            "goals": {
+              "barley": 12,
+              "oats": 12,
+              "wheat": 15
+            },
+            "grain_types": [
+              "wheat",
+              "barley",
+              "oats"
+            ],
+            "max_chains": 20,
+            "min_chain": 3,
+            "mode": "harvest_chain",
+            "round_number": 3,
+            "rows": 6,
+            "scene": "ruth_field",
+            "seed": 4093
+          },
+          "instructions": "Join three or more matching grain bundles to fill Naomi’s baskets.",
+          "level_number": 3,
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "title": "Harvest of kindness"
+        }
+      ],
+      "slug": "ruths-harvest",
+      "sort_order": 51,
+      "subtitle": "Little bundles. Big kindness.",
+      "title": "Ruth’s Harvest"
+    }
+  ],
+  "release_id": "published-matching-v1",
+  "version": 1
+}

@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "status": "preparation_only_not_deployed",
+  "deployment_ready": false,
+  "checked_on": "2026-11-12",
+  "service": {
+    "runtime": "docker",
+    "type": "web",
+    "root_directory": "Backend",
+    "dockerfile_path_relative_to_root": "./Dockerfile",
+    "docker_build_context_relative_to_root": ".",
+    "auto_deploy": "off",
+    "health_check_path": "/health/ready/",
+    "service_name": null,
+    "account": null,
+    "region": null,
+    "plan": null,
+    "commit_or_image_digest": null,
+    "public_hosts": []
+  },
+  "source_check": "python3 Backend/scripts/render_preflight.py",
+  "future_image_check": "python scripts/render_preflight.py --image",
+  "future_release_commands_once_after_backup": [
+    "python scripts/render_preflight.py --image",
+    "python Core/manage.py check --deploy",
+    "python Core/manage.py migrate --noinput"
+  ],
+  "activation_overrides": {
+    "SQUARE_SANDBOX_ENABLED": false,
+    "SQUARE_SANDBOX_CHECKOUT_ENABLED": false,
+    "SQUARE_SANDBOX_RECONCILIATION_ENABLED": false,
+    "SQUARE_SANDBOX_CANCELLATION_ENABLED": false,
+    "SQUARE_SANDBOX_TERM_BILLING_ENABLED": false,
+    "SQUARE_SANDBOX_TERM_RECONCILIATION_ENABLED": false,
+    "PAID_CONTENT_ENFORCEMENT_ENABLED": false,
+    "CLOUDINARY_PRIVATE_DELIVERY_ENABLED": false,
+    "SQUARE_SANDBOX_HTTP_TRANSPORT_ENABLED": false,
+    "PARENT_CHECKOUT_SANDBOX_ENABLED": false,
+    "PARENT_CONTENT_ACCESS_STATUS_ENABLED": false
+  },
+  "required_production_inputs_not_collected": [
+    "owner-selected Render account, service name, repository commit, same-region topology and compute plans",
+    "exact API/admin hostnames and verified ingress forwarding/proxy count",
+    "independent Django and JWT secrets plus three independent account-challenge peppers",
+    "stable JWT issuer and audience",
+    "qualified PostgreSQL connection, TLS configuration, restore-tested backups and retention",
+    "shared cache connection with qualified transport/auth/persistence and memory policy",
+    "qualified SMTP sender domain, transport and secret-manager credentials",
+    "approved content-only bootstrap and narration metadata installation workflow",
+    "image digest, in-image dependency/static/ZoneInfo check and staging release acceptance",
+    "actual production legal contact, retention and media-rights sign-off remain separate release inputs"
+  ],
+  "known_constraints": {
+    "render_http_health_accepts_3xx": true,
+    "render_health_budget_seconds": 5,
+    "application_dependency_failure_timeouts_may_exceed_health_budget": true,
+    "free_web_blocks_smtp_465_and_587": true,
+    "pre_deploy_requires_paid_service": true,
+    "free_postgres_expiry_days": 30,
+    "no_runtime_media_binaries_packaged": true,
+    "production_media_and_financial_activation_qualified": false
+  },
+  "actions_performed": {
+    "provider_calls": false,
+    "credentials_read": false,
+    "services_created": false,
+    "containers_built": false,
+    "remote_deployed": false,
+    "live_migrations": false,
+    "live_database_access": false,
+    "mobile_sources_changed": false
+  },
+  "primary_sources": [
+    "https://render.com/docs/web-services",
+    "https://render.com/docs/docker",
+    "https://render.com/docs/health-checks",
+    "https://render.com/docs/deploys#pre-deploy-command",
+    "https://render.com/docs/free",
+    "https://render.com/docs/postgresql-creating-connecting",
+    "https://render.com/docs/key-value",
+    "https://render.com/docs/blueprint-spec",
+    "https://github.com/docker-library/python/blob/master/3.14/slim-trixie/Dockerfile",
+    "https://render.com/docs/monorepo-support"
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "access_feature": "all_stories_and_games",
+  "amount_minor": 999,
+  "app_store_launch_country": "US",
+  "billing_cadence": "MONTHLY",
+  "can_prorate": false,
+  "currency": "USD",
+  "first_charge": "full_amount_immediately",
+  "first_two_charges_disclosure_required": true,
+  "free_period": false,
+  "monthly_billing_anchor_date": 28,
+  "policy_id": "all-content-monthly-usd-999-v1",
+  "renewal_charge": "full_amount_on_next_28th_then_monthly",
+  "square_merchant_country": "US",
+  "version": 1
+}

@@ -34,3 +34,36 @@ class ProfileSummaryQuerySerializer(serializers.Serializer):
         min_value=-840,
         max_value=840,
     )
+
+    def to_internal_value(self, data):
+        if isinstance(data, Mapping):
+            unknown_fields = sorted(set(data) - set(self.fields))
+            if unknown_fields:
+                raise serializers.ValidationError(
+                    {
+                        field: ['Unknown query parameter.']
+                        for field in unknown_fields
+                    }
+                )
+        return super().to_internal_value(data)
+
+
+class StreakPresentationClaimSerializer(serializers.Serializer):
+    """Validate the device offset used for the server-owned local-day claim."""
+
+    timezone_offset_minutes = serializers.IntegerField(
+        min_value=-840,
+        max_value=840,
+    )
+
+    def to_internal_value(self, data):
+        if isinstance(data, Mapping):
+            unknown_fields = sorted(set(data) - set(self.fields))
+            if unknown_fields:
+                raise serializers.ValidationError(
+                    {
+                        field: ['Unknown field.']
+                        for field in unknown_fields
+                    }
+                )
+        return super().to_internal_value(data)

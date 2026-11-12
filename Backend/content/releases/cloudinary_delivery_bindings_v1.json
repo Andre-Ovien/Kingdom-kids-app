@@ -1,0 +1,167 @@
+{
+  "schema_version": 1,
+  "scope": "first_release_only",
+  "notes": "Frozen canonical owner bindings; no URLs, credentials, game levels or runtime cutover. A final independently byte-verified transfer proof is required to produce the actual delivery map.",
+  "bindings": {
+    "Backend/media/character_narration/auditions/kai_boy2.mp3": [
+      "sample:lion"
+    ],
+    "Backend/media/character_narration/auditions/nia.mp3": [
+      "sample:dove"
+    ],
+    "Backend/media/character_narration/auditions/zuri.mp3": [
+      "sample:rainbow"
+    ],
+    "Backend/media/character_narration/creation-week/kai.mp3": [
+      "narration:creation-week:lion:de79457b8179d6f246ecd859b188b66ada3aee9828876678efdb7095919b54b2"
+    ],
+    "Backend/media/character_narration/creation-week/nia-repair-902b38ce9db85e9a.mp3": [
+      "narration:creation-week:dove:de79457b8179d6f246ecd859b188b66ada3aee9828876678efdb7095919b54b2"
+    ],
+    "Backend/media/character_narration/creation-week/zuri.mp3": [
+      "narration:creation-week:rainbow:de79457b8179d6f246ecd859b188b66ada3aee9828876678efdb7095919b54b2"
+    ],
+    "Backend/media/character_narration/crossing-the-red-sea/kai.mp3": [
+      "narration:crossing-the-red-sea:lion:4307dbb6bd1a7013914ab50ecac8c93eb63f4cc61ed6208e717850d649c451c7"
+    ],
+    "Backend/media/character_narration/crossing-the-red-sea/nia.mp3": [
+      "narration:crossing-the-red-sea:dove:4307dbb6bd1a7013914ab50ecac8c93eb63f4cc61ed6208e717850d649c451c7"
+    ],
+    "Backend/media/character_narration/crossing-the-red-sea/zuri.mp3": [
+      "narration:crossing-the-red-sea:rainbow:4307dbb6bd1a7013914ab50ecac8c93eb63f4cc61ed6208e717850d649c451c7"
+    ],
+    "Backend/media/character_narration/daniel-in-the-lions-den/kai.mp3": [
+      "narration:daniel-in-the-lions-den:lion:c3475d6f6dd8a3043b16896b85b277128ca2738e49003013dcd0e2b23cdeaffa"
+    ],
+    "Backend/media/character_narration/daniel-in-the-lions-den/nia.mp3": [
+      "narration:daniel-in-the-lions-den:dove:c3475d6f6dd8a3043b16896b85b277128ca2738e49003013dcd0e2b23cdeaffa"
+    ],
+    "Backend/media/character_narration/daniel-in-the-lions-den/zuri.mp3": [
+      "narration:daniel-in-the-lions-den:rainbow:c3475d6f6dd8a3043b16896b85b277128ca2738e49003013dcd0e2b23cdeaffa"
+    ],
+    "Backend/media/character_narration/david-and-goliath/kai.mp3": [
+      "narration:david-and-goliath:lion:467213467bb7e4bd0085ab2a1458725bdf725bf88c25d0430c00f1cc47eedf61"
+    ],
+    "Backend/media/character_narration/david-and-goliath/nia.mp3": [
+      "narration:david-and-goliath:dove:467213467bb7e4bd0085ab2a1458725bdf725bf88c25d0430c00f1cc47eedf61"
+    ],
+    "Backend/media/character_narration/david-and-goliath/zuri-repair-3a7a56d2737c4892.mp3": [
+      "narration:david-and-goliath:rainbow:467213467bb7e4bd0085ab2a1458725bdf725bf88c25d0430c00f1cc47eedf61"
+    ],
+    "Backend/media/character_narration/esther-speaks-up/kai.mp3": [
+      "narration:esther-speaks-up:lion:e648de783d42c011aeca192a1a50549c0e83da9c6b05badeeb4c8dd4a25dfc98"
+    ],
+    "Backend/media/character_narration/esther-speaks-up/nia.mp3": [
+      "narration:esther-speaks-up:dove:e648de783d42c011aeca192a1a50549c0e83da9c6b05badeeb4c8dd4a25dfc98"
+    ],
+    "Backend/media/character_narration/esther-speaks-up/zuri.mp3": [
+      "narration:esther-speaks-up:rainbow:e648de783d42c011aeca192a1a50549c0e83da9c6b05badeeb4c8dd4a25dfc98"
+    ],
+    "Backend/media/character_narration/jonah-and-the-big-fish/kai.mp3": [
+      "narration:jonah-and-the-big-fish:lion:ea5bfdd11a5aa0bb0feed81f87271819b1bbc9ee8a8739cf51c763f6d6ee0bc8"
+    ],
+    "Backend/media/character_narration/jonah-and-the-big-fish/nia.mp3": [
+      "narration:jonah-and-the-big-fish:dove:ea5bfdd11a5aa0bb0feed81f87271819b1bbc9ee8a8739cf51c763f6d6ee0bc8"
+    ],
+    "Backend/media/character_narration/jonah-and-the-big-fish/zuri.mp3": [
+      "narration:jonah-and-the-big-fish:rainbow:ea5bfdd11a5aa0bb0feed81f87271819b1bbc9ee8a8739cf51c763f6d6ee0bc8"
+    ],
+    "Backend/media/character_narration/moses-follows-god/kai.mp3": [
+      "narration:moses-follows-god:lion:4d54593dc633d4162374b9e392f2aabb8edb04befbd70302c74d039f790ad146"
+    ],
+    "Backend/media/character_narration/moses-follows-god/nia.mp3": [
+      "narration:moses-follows-god:dove:4d54593dc633d4162374b9e392f2aabb8edb04befbd70302c74d039f790ad146"
+    ],
+    "Backend/media/character_narration/moses-follows-god/zuri.mp3": [
+      "narration:moses-follows-god:rainbow:4d54593dc633d4162374b9e392f2aabb8edb04befbd70302c74d039f790ad146"
+    ],
+    "Backend/media/character_narration/noah-builds-the-ark/kai.mp3": [
+      "narration:noah-builds-the-ark:lion:837e1361429e33410c779949f94f2fc1ed412aa87f02c4556a3c12104a8d38cf"
+    ],
+    "Backend/media/character_narration/noah-builds-the-ark/nia.mp3": [
+      "narration:noah-builds-the-ark:dove:837e1361429e33410c779949f94f2fc1ed412aa87f02c4556a3c12104a8d38cf"
+    ],
+    "Backend/media/character_narration/noah-builds-the-ark/zuri.mp3": [
+      "narration:noah-builds-the-ark:rainbow:837e1361429e33410c779949f94f2fc1ed412aa87f02c4556a3c12104a8d38cf"
+    ],
+    "Backend/media/character_narration_additional_v1/joseph-colorful-coat/kai.mp3": [
+      "narration:joseph-colorful-coat:lion:416986056168b65186f66645d151fdcbd04acd9bd5d1646da99aae15b90ae348"
+    ],
+    "Backend/media/character_narration_additional_v1/joseph-colorful-coat/nia.mp3": [
+      "narration:joseph-colorful-coat:dove:416986056168b65186f66645d151fdcbd04acd9bd5d1646da99aae15b90ae348"
+    ],
+    "Backend/media/character_narration_additional_v1/joseph-colorful-coat/zuri.mp3": [
+      "narration:joseph-colorful-coat:rainbow:416986056168b65186f66645d151fdcbd04acd9bd5d1646da99aae15b90ae348"
+    ],
+    "Backend/media/character_narration_additional_v1/ruth-and-naomi/kai-repair-27987927cf7ece05.mp3": [
+      "narration:ruth-and-naomi:lion:5327f036e022edca6d38bf72f9eed3fb470f92c9feb1dcde5dccee6864f4d8bc"
+    ],
+    "Backend/media/character_narration_additional_v1/ruth-and-naomi/nia.mp3": [
+      "narration:ruth-and-naomi:dove:5327f036e022edca6d38bf72f9eed3fb470f92c9feb1dcde5dccee6864f4d8bc"
+    ],
+    "Backend/media/character_narration_additional_v1/ruth-and-naomi/zuri.mp3": [
+      "narration:ruth-and-naomi:rainbow:5327f036e022edca6d38bf72f9eed3fb470f92c9feb1dcde5dccee6864f4d8bc"
+    ],
+    "Backend/media/character_narration_additional_v1/walls-of-jericho/kai.mp3": [
+      "narration:walls-of-jericho:lion:763b15236dac1384f0fc921af5d88491e97fe10d87619f158c2880f75f6a76f6"
+    ],
+    "Backend/media/character_narration_additional_v1/walls-of-jericho/nia.mp3": [
+      "narration:walls-of-jericho:dove:763b15236dac1384f0fc921af5d88491e97fe10d87619f158c2880f75f6a76f6"
+    ],
+    "Backend/media/character_narration_additional_v1/walls-of-jericho/zuri.mp3": [
+      "narration:walls-of-jericho:rainbow:763b15236dac1384f0fc921af5d88491e97fe10d87619f158c2880f75f6a76f6"
+    ],
+    "Frontend/mobile/assets/images/games/puzzle_quest/puzzle-quest-cover-v1.webp": [
+      "game-cover:puzzle-quest"
+    ],
+    "Frontend/mobile/assets/images/stories/creation-week-v2.webp": [
+      "game-cover:creation-match-bloom",
+      "story-cover:creation-week"
+    ],
+    "Frontend/mobile/assets/images/stories/crossing-the-red-sea-v2.webp": [
+      "story-cover:crossing-the-red-sea"
+    ],
+    "Frontend/mobile/assets/images/stories/daniel-in-the-lions-den-v2.webp": [
+      "story-cover:daniel-in-the-lions-den"
+    ],
+    "Frontend/mobile/assets/images/stories/david-and-goliath-v2.webp": [
+      "game-cover:david-quiz",
+      "game-cover:puzzle-david",
+      "story-cover:david-and-goliath"
+    ],
+    "Frontend/mobile/assets/images/stories/esther-speaks-up-v2.webp": [
+      "game-cover:esther-quiz",
+      "game-cover:esthers-celebration-table",
+      "game-cover:puzzle-esther",
+      "story-cover:esther-speaks-up"
+    ],
+    "Frontend/mobile/assets/images/stories/jonah-and-the-big-fish-v2.webp": [
+      "game-cover:jonah-quiz",
+      "story-cover:jonah-and-the-big-fish"
+    ],
+    "Frontend/mobile/assets/images/stories/joseph-colorful-coat-storybook-v1.webp": [
+      "game-cover:josephs-coat-studio",
+      "story-cover:joseph-colorful-coat"
+    ],
+    "Frontend/mobile/assets/images/stories/lost-sheep-storybook-v1.webp": [
+      "game-cover:find-my-sheep",
+      "game-cover:lost-sheep-quiz",
+      "game-cover:puzzle-lost-sheep"
+    ],
+    "Frontend/mobile/assets/images/stories/moses-follows-god-v2.webp": [
+      "story-cover:moses-follows-god"
+    ],
+    "Frontend/mobile/assets/images/stories/noah-builds-the-ark-v2.webp": [
+      "game-cover:noah-quiz",
+      "game-cover:puzzle-noah",
+      "story-cover:noah-builds-the-ark"
+    ],
+    "Frontend/mobile/assets/images/stories/ruth-and-naomi-storybook-v1.webp": [
+      "game-cover:ruths-harvest",
+      "story-cover:ruth-and-naomi"
+    ],
+    "Frontend/mobile/assets/images/stories/walls-of-jericho-storybook-v1.webp": [
+      "story-cover:walls-of-jericho"
+    ]
+  }
+}

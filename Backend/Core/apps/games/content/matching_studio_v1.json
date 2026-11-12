@@ -1,0 +1,274 @@
+{
+  "contract_version": 1,
+  "coat_rounds": [
+    {
+      "mode": "coat_studio",
+      "scene": "joseph_studio",
+      "round_number": 1,
+      "panels": [
+        {
+          "id": "left_shoulder",
+          "color": "coral",
+          "pattern": "dots"
+        },
+        {
+          "id": "right_shoulder",
+          "color": "gold",
+          "pattern": "stripes"
+        },
+        {
+          "id": "left_body",
+          "color": "teal",
+          "pattern": "zigzag"
+        },
+        {
+          "id": "right_body",
+          "color": "forest",
+          "pattern": "dots"
+        },
+        {
+          "id": "left_hem",
+          "color": "sky",
+          "pattern": "stripes"
+        },
+        {
+          "id": "right_hem",
+          "color": "lilac",
+          "pattern": "zigzag"
+        }
+      ],
+      "swatches": [
+        {
+          "id": "fabric_1",
+          "color": "forest",
+          "pattern": "dots"
+        },
+        {
+          "id": "fabric_2",
+          "color": "coral",
+          "pattern": "dots"
+        },
+        {
+          "id": "fabric_3",
+          "color": "sky",
+          "pattern": "stripes"
+        },
+        {
+          "id": "fabric_4",
+          "color": "gold",
+          "pattern": "stripes"
+        },
+        {
+          "id": "fabric_5",
+          "color": "lilac",
+          "pattern": "zigzag"
+        },
+        {
+          "id": "fabric_6",
+          "color": "teal",
+          "pattern": "zigzag"
+        }
+      ]
+    },
+    {
+      "mode": "coat_studio",
+      "scene": "joseph_studio",
+      "round_number": 2,
+      "panels": [
+        {
+          "id": "left_shoulder",
+          "color": "coral",
+          "pattern": "zigzag"
+        },
+        {
+          "id": "right_shoulder",
+          "color": "coral",
+          "pattern": "dots"
+        },
+        {
+          "id": "left_body",
+          "color": "teal",
+          "pattern": "stripes"
+        },
+        {
+          "id": "right_body",
+          "color": "teal",
+          "pattern": "zigzag"
+        },
+        {
+          "id": "left_hem",
+          "color": "gold",
+          "pattern": "dots"
+        },
+        {
+          "id": "right_hem",
+          "color": "gold",
+          "pattern": "stripes"
+        }
+      ],
+      "swatches": [
+        {
+          "id": "fabric_1",
+          "color": "gold",
+          "pattern": "dots"
+        },
+        {
+          "id": "fabric_2",
+          "color": "teal",
+          "pattern": "stripes"
+        },
+        {
+          "id": "fabric_3",
+          "color": "coral",
+          "pattern": "zigzag"
+        },
+        {
+          "id": "fabric_4",
+          "color": "gold",
+          "pattern": "stripes"
+        },
+        {
+          "id": "fabric_5",
+          "color": "teal",
+          "pattern": "zigzag"
+        },
+        {
+          "id": "fabric_6",
+          "color": "coral",
+          "pattern": "dots"
+        }
+      ]
+    },
+    {
+      "mode": "coat_studio",
+      "scene": "joseph_studio",
+      "round_number": 3,
+      "panels": [
+        {
+          "id": "left_shoulder",
+          "color": "forest",
+          "pattern": "stripes"
+        },
+        {
+          "id": "right_shoulder",
+          "color": "forest",
+          "pattern": "zigzag"
+        },
+        {
+          "id": "left_body",
+          "color": "sky",
+          "pattern": "dots"
+        },
+        {
+          "id": "right_body",
+          "color": "sky",
+          "pattern": "stripes"
+        },
+        {
+          "id": "left_hem",
+          "color": "lilac",
+          "pattern": "zigzag"
+        },
+        {
+          "id": "right_hem",
+          "color": "lilac",
+          "pattern": "dots"
+        }
+      ],
+      "swatches": [
+        {
+          "id": "fabric_1",
+          "color": "lilac",
+          "pattern": "dots"
+        },
+        {
+          "id": "fabric_2",
+          "color": "sky",
+          "pattern": "stripes"
+        },
+        {
+          "id": "fabric_3",
+          "color": "forest",
+          "pattern": "zigzag"
+        },
+        {
+          "id": "fabric_4",
+          "color": "lilac",
+          "pattern": "zigzag"
+        },
+        {
+          "id": "fabric_5",
+          "color": "sky",
+          "pattern": "dots"
+        },
+        {
+          "id": "fabric_6",
+          "color": "forest",
+          "pattern": "stripes"
+        }
+      ]
+    }
+  ],
+  "harvest_rounds": [
+    {
+      "mode": "harvest_chain",
+      "scene": "ruth_field",
+      "round_number": 1,
+      "seed": 1021,
+      "rows": 6,
+      "columns": 5,
+      "grain_types": [
+        "wheat",
+        "barley",
+        "oats"
+      ],
+      "goals": {
+        "wheat": 9,
+        "barley": 6,
+        "oats": 6
+      },
+      "max_chains": 18,
+      "min_chain": 3
+    },
+    {
+      "mode": "harvest_chain",
+      "scene": "ruth_field",
+      "round_number": 2,
+      "seed": 2047,
+      "rows": 6,
+      "columns": 5,
+      "grain_types": [
+        "wheat",
+        "barley",
+        "oats"
+      ],
+      "goals": {
+        "wheat": 12,
+        "barley": 9,
+        "oats": 9
+      },
+      "max_chains": 18,
+      "min_chain": 3
+    },
+    {
+      "mode": "harvest_chain",
+      "scene": "ruth_field",
+      "round_number": 3,
+      "seed": 4093,
+      "rows": 6,
+      "columns": 5,
+      "grain_types": [
+        "wheat",
+        "barley",
+        "oats"
+      ],
+      "goals": {
+        "wheat": 15,
+        "barley": 12,
+        "oats": 12
+      },
+      "max_chains": 20,
+      "min_chain": 3
+    }
+  ]
+}

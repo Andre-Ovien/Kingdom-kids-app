@@ -18,6 +18,7 @@ from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from urllib.error import HTTPError, URLError
+from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
 
@@ -249,6 +250,10 @@ def selected_auditions(character: str, variant: str) -> tuple[Audition, ...]:
 
 
 def request_speech(api_key: str, audition: Audition) -> bytes:
+    endpoint = urlparse(SPEECH_ENDPOINT)
+    if endpoint.scheme != "https" or endpoint.hostname != "api.openai.com":
+        raise RuntimeError("The speech endpoint must be the OpenAI HTTPS host.")
+
     payload = {
         "model": MODEL,
         "voice": audition.voice,
@@ -256,7 +261,7 @@ def request_speech(api_key: str, audition: Audition) -> bytes:
         "instructions": audition.instructions,
         "response_format": "mp3",
     }
-    request = Request(
+    request = Request(  # noqa: S310 -- exact HTTPS host validated above.
         SPEECH_ENDPOINT,
         data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
         headers={
@@ -268,7 +273,10 @@ def request_speech(api_key: str, audition: Audition) -> bytes:
     )
 
     try:
-        with urlopen(request, timeout=180) as response:
+        with urlopen(  # noqa: S310 -- Request URL validated above.
+            request,
+            timeout=180,
+        ) as response:
             audio = response.read()
     except HTTPError as exc:
         body = exc.read().decode("utf-8", errors="replace")[:1200]

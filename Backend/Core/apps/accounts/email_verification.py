@@ -3,14 +3,19 @@ import hmac
 import math
 import secrets
 from functools import partial
-from uuid import UUID
+import logging
+from uuid import UUID, uuid4
 
 from django.conf import settings
+from Core.email_capability import require_email_delivery
 from django.core.mail import send_mail
 from django.db import transaction
 from django.utils import timezone
 
 from .models import EmailVerificationChallenge, User
+
+
+logger = logging.getLogger(__name__)
 
 
 class InvalidVerificationChallenge(Exception):
@@ -47,17 +52,37 @@ def verification_payload(challenge: EmailVerificationChallenge) -> dict[str, obj
         resend_available_at = locked_until
     return {
         'challenge_id': str(challenge.pk),
-        'email': challenge.user.email,
         'destination_hint': _masked_email(challenge.user.email),
         'expires_in': _seconds_until(challenge.expires_at, now),
         'resend_after': _seconds_until(resend_available_at, now),
     }
 
 
+def private_registration_payload(email: str) -> dict[str, object]:
+    """Return a non-actionable duplicate response without disclosing state.
+
+    Existing verified, disabled, and pending accounts all receive this same
+    shape. The random identifier is deliberately not stored, so an anonymous
+    caller cannot obtain or attack another parent's live verification challenge.
+    """
+
+    return {
+        'challenge_id': str(uuid4()),
+        'destination_hint': _masked_email(email),
+        'expires_in': int(settings.EMAIL_VERIFICATION_TTL.total_seconds()),
+        'resend_after': int(
+            settings.EMAIL_VERIFICATION_RESEND_COOLDOWN.total_seconds()
+        ),
+    }
+
+
 def issue_email_verification_challenge(user: User) -> EmailVerificationChallenge:
     """Return a cooling challenge or rotate it and send after commit."""
+    require_email_delivery()
     with transaction.atomic():
         locked_user = User.objects.select_for_update().get(pk=user.pk)
+        if not locked_user.is_active:
+            raise InvalidVerificationChallenge
         if locked_user.is_email_verified:
             raise EmailAlreadyVerified
 
@@ -108,6 +133,7 @@ def issue_email_verification_challenge(user: User) -> EmailVerificationChallenge
 
 def challenge_for_unverified_login(user: User) -> EmailVerificationChallenge:
     """Return a resendable challenge after valid credentials are supplied."""
+    require_email_delivery()
     with transaction.atomic():
         locked_user = User.objects.select_for_update().get(pk=user.pk)
         challenge = (
@@ -127,6 +153,7 @@ def challenge_for_unverified_login(user: User) -> EmailVerificationChallenge:
 
 def confirm_email_verification(challenge_id: UUID, code: str) -> User:
     """Consume a valid challenge under the parent's shared attempt budget."""
+    require_email_delivery()
     failure: Exception | None = None
     verified_user: User | None = None
 
@@ -145,7 +172,7 @@ def confirm_email_verification(challenge_id: UUID, code: str) -> User:
             failure = InvalidVerificationChallenge()
         else:
             now = timezone.now()
-            if locked_user.is_email_verified:
+            if not locked_user.is_active or locked_user.is_email_verified:
                 failure = InvalidVerificationCode()
             elif _normalize_attempt_state(locked_user, now):
                 failure = InvalidVerificationCode()
@@ -189,6 +216,7 @@ def confirm_email_verification(challenge_id: UUID, code: str) -> User:
 
 def resend_email_verification(challenge_id: UUID) -> EmailVerificationChallenge:
     """Rotate after both the account lockout and resend cooldown permit it."""
+    require_email_delivery()
     failure: Exception | None = None
     replacement: EmailVerificationChallenge | None = None
 
@@ -207,7 +235,9 @@ def resend_email_verification(challenge_id: UUID) -> EmailVerificationChallenge:
             failure = InvalidVerificationChallenge()
         else:
             now = timezone.now()
-            if locked_user.is_email_verified:
+            if not locked_user.is_active:
+                failure = InvalidVerificationChallenge()
+            elif locked_user.is_email_verified:
                 failure = EmailAlreadyVerified()
             elif (
                 challenge.consumed_at is not None
@@ -349,6 +379,7 @@ def _deliver_verification_email(
     email: str,
     code: str,
 ) -> None:
+    require_email_delivery()
     if (
         settings.DEBUG
         and settings.EMAIL_BACKEND
@@ -390,6 +421,12 @@ def _deliver_verification_email(
             consumed_at__isnull=True,
             invalidated_at__isnull=True,
         ).update(resend_available_at=timezone.now())
+        # Provider exceptions can contain the recipient, message body, or
+        # credentials. Keep logs actionable without copying that data.
+        logger.error(
+            'Verification email delivery failed challenge_id=%s',
+            challenge_id,
+        )
         raise VerificationDeliveryDelayed(challenge_id) from exc
 
 

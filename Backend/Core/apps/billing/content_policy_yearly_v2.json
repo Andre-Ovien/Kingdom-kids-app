@@ -1,0 +1,23 @@
+{
+  "access_feature": "all_stories_and_games",
+  "ambiguous_time": "later_instant",
+  "amount_minor": 9990,
+  "annual_undiscounted_minor": 11988,
+  "billing_period": "yearly",
+  "cadence": "ANNUAL",
+  "country": "US",
+  "coverage_rule": "calendar_year_1",
+  "coverage_start": "canonical_successful_payment_capture",
+  "currency": "USD",
+  "dst_gap": "normalize_forward_by_gap",
+  "duration_calendar_months": 12,
+  "first_charge": "full_immediately",
+  "free_period": false,
+  "leap_day": "february_28",
+  "monthly_comparison_minor": 999,
+  "policy_id": "all-content-yearly-usd-9990-v2",
+  "proration": false,
+  "renewal": "capture_anniversary_after_full_calendar_year",
+  "savings_minor": 1998,
+  "version": 2
+}

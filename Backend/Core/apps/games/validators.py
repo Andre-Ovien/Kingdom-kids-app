@@ -2,9 +2,24 @@ from collections import Counter, deque
 from math import isfinite
 
 from django.core.exceptions import ValidationError
+from .ark_garden import validate_ark_garden_config
+from .ark_traffic import validate_ark_traffic_config
+from .creation_world import validate_creation_world_config
+from .wise_builders import validate_wise_builders_config
+from .matching_studio import validate_coat_studio_config, validate_harvest_chain_config
+from .matching_collection import SCENES, validate_scene_matching_config
 
 
-GAME_TYPES = {'quiz', 'memory', 'ordering', 'matching', 'maze', 'path', 'aim'}
+GAME_TYPES = {
+    'quiz',
+    'memory',
+    'ordering',
+    'matching',
+    'maze',
+    'path',
+    'aim',
+    'puzzle',
+}
 
 
 def validate_level_definition(*, game_type, config, max_score, star_thresholds):
@@ -34,8 +49,14 @@ def validate_level_definition(*, game_type, config, max_score, star_thresholds):
             _validate_memory(config)
         elif game_type in {'maze', 'path'}:
             _validate_grid(config)
+            if game_type == 'maze' and 'sailing' in config:
+                validate_sailing_config(config['sailing'])
+            if game_type == 'path' and 'crossing' in config:
+                validate_crossing_config(config['crossing'])
         elif game_type == 'aim':
             _validate_aim(config)
+        elif game_type == 'puzzle':
+            _validate_puzzle(config)
         else:
             raise ValueError('Choose a supported game type.')
     except (KeyError, TypeError, ValueError) as exc:
@@ -83,6 +104,12 @@ def _validate_quiz(config, max_score):
 
 
 def _validate_ordering(config):
+    if config.get('mode') == 'living_world':
+        validate_creation_world_config(config)
+        return
+    if config.get('mode') == 'wise_builders':
+        validate_wise_builders_config(config)
+        return
     item_ids = _item_ids(config.get('items'), 'Ordering')
     sequence = config.get('answer_sequence')
     if not isinstance(sequence, list) or sequence != list(dict.fromkeys(sequence)):
@@ -92,6 +119,21 @@ def _validate_ordering(config):
 
 
 def _validate_matching(config):
+    if config.get('mode') in SCENES:
+        validate_scene_matching_config(config)
+        return
+    if config.get('mode') == 'coat_studio':
+        validate_coat_studio_config(config)
+        return
+    if config.get('mode') == 'harvest_chain':
+        validate_harvest_chain_config(config)
+        return
+    if config.get('mode') == 'ark_garden':
+        validate_ark_garden_config(config)
+        return
+    if config.get('mode') == 'ark_traffic':
+        validate_ark_traffic_config(config)
+        return
     left_ids = _item_ids(config.get('left_items'), 'Matching left')
     right_ids = _item_ids(config.get('right_items'), 'Matching right')
     pairs = config.get('expected_pairs')
@@ -101,6 +143,29 @@ def _validate_matching(config):
         raise ValueError('Matching pairs must use every left and right item exactly once.')
     if len(left_ids) != len(right_ids):
         raise ValueError('Matching levels need the same number of items on both sides.')
+    mode = config.get('mode')
+    if mode is not None and mode != 'ark_boarding':
+        raise ValueError('Choose a supported matching mode.')
+    if mode == 'ark_boarding':
+        limit = config.get('time_limit_seconds')
+        goal = config.get('goal_pairs')
+        if not _is_int(limit) or not 10 <= limit <= 180:
+            raise ValueError('Ark time_limit_seconds must be between 10 and 180.')
+        if not _is_int(goal) or not 1 <= goal <= len(left_ids):
+            raise ValueError('Ark goal_pairs must fit the available animal pairs.')
+        left_items = {value['id']: value for value in config['left_items']}
+        right_items = {value['id']: value for value in config['right_items']}
+        for left_id, right_id in pairs.items():
+            left_animal = left_items[left_id]
+            right_animal = right_items[right_id]
+            portrait = left_animal.get('asset_key')
+            if (
+                not isinstance(portrait, str)
+                or not portrait.startswith('animal:')
+                or portrait != right_animal.get('asset_key')
+                or left_animal['label'] != right_animal['label']
+            ):
+                raise ValueError('Each ark pair must show the same animal portrait and label.')
 
 
 def _validate_memory(config):
@@ -124,6 +189,130 @@ def _validate_memory(config):
     target = config.get('target_seconds', 45)
     if not _is_int(target) or not 1 <= target <= 3_600:
         raise ValueError('Memory target_seconds must be between one and 3600.')
+
+
+def validate_sailing_config(sailing):
+    """Validate the continuous ocean rules before either rendering or scoring."""
+
+    if not isinstance(sailing, dict):
+        raise ValueError('Sailing configuration must be an object.')
+    if not _is_int(sailing.get('duration_seconds')) or sailing['duration_seconds'] != 60:
+        raise ValueError('A sailing voyage must last 60 seconds.')
+    distance = sailing.get('distance_m')
+    if not _is_number(distance) or not 1 <= distance <= 100_000:
+        raise ValueError('Sailing distance must be positive and bounded.')
+    for field, minimum, maximum in (
+        ('ship_radius', 0.01, 0.2),
+        ('collision_window', 0.002, 0.015),
+        ('steer_speed', 0.1, 3.0),
+    ):
+        value = sailing.get(field)
+        if not _is_number(value) or not minimum <= value <= maximum:
+            raise ValueError(f'Sailing {field} must be finite and bounded.')
+    if not _is_int(sailing.get('max_hits')) or sailing['max_hits'] != 3:
+        raise ValueError('A sailing voyage allows three hits.')
+    obstacles = sailing.get('obstacles')
+    if not isinstance(obstacles, list) or not 1 <= len(obstacles) <= 20:
+        raise ValueError('Sailing needs between one and twenty obstacles.')
+    ids = []
+    previous_progress = None
+    for obstacle in obstacles:
+        if not isinstance(obstacle, dict):
+            raise ValueError('Every sailing obstacle must be an object.')
+        ids.append(_required_text(obstacle, 'id', 'sailing obstacle'))
+        progress = obstacle.get('progress')
+        x = obstacle.get('x')
+        radius = obstacle.get('radius')
+        if not _is_number(progress) or not 0.12 < progress < 0.9:
+            raise ValueError('Sailing obstacles must leave clear launch and landing water.')
+        if previous_progress is not None and progress - previous_progress < 0.035 - 1e-8:
+            raise ValueError('Sailing obstacles must be ordered with room to steer.')
+        if not _is_number(x) or not -1 <= x <= 1:
+            raise ValueError('Sailing obstacle x must stay inside the ocean.')
+        if not _is_number(radius) or not 0.12 <= radius <= 0.2:
+            raise ValueError('Sailing obstacle radius must be between 0.12 and 0.2.')
+        previous_progress = progress
+    _require_unique(ids, 'Sailing obstacle IDs')
+
+
+def validate_crossing_config(crossing):
+    """Validate the authored travellers and normalized dry-path drop area."""
+
+    if not isinstance(crossing, dict):
+        raise ValueError('Crossing configuration must be an object.')
+    limit = crossing.get('time_limit_seconds')
+    if not _is_int(limit) or not 10 <= limit <= 180:
+        raise ValueError('Crossing time limit must be between ten and 180 seconds.')
+    travellers = crossing.get('travellers')
+    if not isinstance(travellers, list) or not 1 <= len(travellers) <= 20:
+        raise ValueError('Crossing needs between one and twenty travellers.')
+    ids = []
+    for traveller in travellers:
+        if not isinstance(traveller, dict):
+            raise ValueError('Every crossing traveller must be an object.')
+        ids.append(_required_text(traveller, 'id', 'crossing traveller'))
+        _required_text(traveller, 'label', 'crossing traveller label')
+    _require_unique(ids, 'Crossing traveller IDs')
+    zone = crossing.get('drop_zone')
+    if not isinstance(zone, dict):
+        raise ValueError('Crossing needs a normalized drop_zone object.')
+    if not all(
+        _is_number(zone.get(field)) and 0 <= zone[field] <= 1
+        for field in ('left', 'top', 'right', 'bottom')
+    ):
+        raise ValueError('Crossing drop coordinates must be finite values from zero to one.')
+    if zone['right'] - zone['left'] < 0.05 or zone['bottom'] - zone['top'] < 0.05:
+        raise ValueError('Crossing drop zone needs enough dry space in both dimensions.')
+    if 'polygon' in zone:
+        _validate_crossing_polygon(zone['polygon'])
+
+
+def _validate_crossing_polygon(polygon):
+    if not isinstance(polygon, list) or not 3 <= len(polygon) <= 16:
+        raise ValueError('Crossing dry-path polygon needs between three and sixteen vertices.')
+    for point in polygon:
+        if (
+            not isinstance(point, list)
+            or len(point) != 2
+            or not all(_is_number(value) and 0 <= value <= 1 for value in point)
+        ):
+            raise ValueError('Crossing polygon vertices must be finite normalized [x, y] pairs.')
+    if len({tuple(point) for point in polygon}) != len(polygon):
+        raise ValueError('Crossing polygon vertices cannot repeat.')
+    area = sum(
+        start[0] * end[1] - end[0] * start[1]
+        for start, end in zip(polygon, polygon[1:] + polygon[:1])
+    )
+    if abs(area) <= 1e-6:
+        raise ValueError('Crossing dry-path polygon must enclose usable land.')
+    direction = 1 if area > 0 else -1
+    # Every vertex must lie on the inner side of every edge. This also rejects
+    # crossed edges and concave shapes, keeping client and server drop rules equal.
+    for start, end in zip(polygon, polygon[1:] + polygon[:1]):
+        for point in polygon:
+            cross = ((end[0] - start[0]) * (point[1] - start[1])
+                     - (end[1] - start[1]) * (point[0] - start[0]))
+            if cross * direction < -1e-9:
+                raise ValueError('Crossing dry-path polygon must be convex with uncrossed edges.')
+
+
+def crossing_drop_contains(zone, x, y):
+    """Use authored land edges when present; keep old rectangular courses playable."""
+
+    if not _is_number(x) or not _is_number(y):
+        return False
+    polygon = zone.get('polygon')
+    if polygon is None:
+        return zone['left'] <= x <= zone['right'] and zone['top'] <= y <= zone['bottom']
+    positive = negative = False
+    for start, end in zip(polygon, polygon[1:] + polygon[:1]):
+        cross = ((end[0] - start[0]) * (y - start[1])
+                 - (end[1] - start[1]) * (x - start[0]))
+        positive = positive or cross > 1e-9
+        negative = negative or cross < -1e-9
+        if positive and negative:
+            return False
+    return True
 
 
 def _validate_grid(config):
@@ -179,6 +368,116 @@ def _validate_aim(config):
     obstacles = config.get('obstacles', [])
     if not isinstance(obstacles, list) or any(not isinstance(item, dict) for item in obstacles):
         raise ValueError('Aim obstacles must be a list of objects.')
+
+
+def _validate_puzzle(config):
+    artwork = config.get('artwork')
+    if not isinstance(artwork, dict):
+        raise ValueError('Puzzle levels need an artwork object.')
+    _required_text(artwork, 'asset_key', 'puzzle artwork')
+    _required_text(artwork, 'title', 'puzzle artwork')
+    _required_text(artwork, 'alt_text', 'puzzle artwork')
+    aspect_ratio = artwork.get('aspect_ratio')
+    if not _is_number(aspect_ratio) or not 0.5 <= aspect_ratio <= 2:
+        raise ValueError('Puzzle artwork aspect_ratio must be between 0.5 and 2.')
+
+    grid = config.get('grid')
+    if not isinstance(grid, dict):
+        raise ValueError('Puzzle levels need a grid object.')
+    rows = grid.get('rows')
+    columns = grid.get('columns')
+    if (
+        not _is_int(rows)
+        or not _is_int(columns)
+        or not (2 <= rows <= 3 and 2 <= columns <= 3)
+    ):
+        raise ValueError('Puzzle rows and columns must each be between two and three.')
+    expected_positions = {
+        (row, column)
+        for row in range(rows)
+        for column in range(columns)
+    }
+    piece_count = rows * columns
+
+    slots = config.get('slots')
+    if not isinstance(slots, list) or len(slots) != piece_count:
+        raise ValueError('Puzzle slots must fill every grid position exactly once.')
+    slot_ids = []
+    slot_positions = {}
+    for slot in slots:
+        if not isinstance(slot, dict):
+            raise ValueError('Every puzzle slot must be an object.')
+        slot_id = _required_text(slot, 'id', 'puzzle slot')
+        position = _puzzle_position(
+            slot.get('row'),
+            slot.get('column'),
+            rows,
+            columns,
+            label='slot',
+        )
+        slot_ids.append(slot_id)
+        slot_positions[slot_id] = position
+    _require_unique(slot_ids, 'Puzzle slot IDs')
+    if set(slot_positions.values()) != expected_positions:
+        raise ValueError('Puzzle slots must fill every grid position exactly once.')
+
+    pieces = config.get('pieces')
+    if not isinstance(pieces, list) or len(pieces) != piece_count:
+        raise ValueError('Puzzle pieces must cover every artwork crop exactly once.')
+    piece_ids = []
+    piece_positions = {}
+    for piece in pieces:
+        if not isinstance(piece, dict):
+            raise ValueError('Every puzzle piece must be an object.')
+        piece_id = _required_text(piece, 'id', 'puzzle piece')
+        _required_text(piece, 'label', 'puzzle piece')
+        position = _puzzle_position(
+            piece.get('source_row'),
+            piece.get('source_column'),
+            rows,
+            columns,
+            label='piece source',
+        )
+        piece_ids.append(piece_id)
+        piece_positions[piece_id] = position
+    _require_unique(piece_ids, 'Puzzle piece IDs')
+    if set(piece_positions.values()) != expected_positions:
+        raise ValueError('Puzzle pieces must cover every artwork crop exactly once.')
+
+    solution = config.get('solution')
+    if not isinstance(solution, dict):
+        raise ValueError('Puzzle levels need a private solution object.')
+    if set(solution) != set(piece_ids) or set(solution.values()) != set(slot_ids):
+        raise ValueError('Puzzle solution must use every piece and slot exactly once.')
+    for piece_id, slot_id in solution.items():
+        if piece_positions[piece_id] != slot_positions[slot_id]:
+            raise ValueError(
+                'Each puzzle solution entry must match its artwork crop position.'
+            )
+
+    preview_seconds = config.get('preview_seconds', 5)
+    if not _is_int(preview_seconds) or not 1 <= preview_seconds <= 30:
+        raise ValueError('Puzzle preview_seconds must be between one and 30.')
+    target_moves = config.get('target_moves')
+    if (
+        not _is_int(target_moves)
+        or not piece_count <= target_moves <= 10_000
+    ):
+        raise ValueError(
+            'Puzzle target_moves must be at least the number of pieces and at most 10000.'
+        )
+    target_seconds = config.get('target_seconds')
+    if not _is_int(target_seconds) or not 1 <= target_seconds <= 3_600:
+        raise ValueError('Puzzle target_seconds must be between one and 3600.')
+
+
+def _puzzle_position(row, column, rows, columns, *, label):
+    if not _is_int(row) or not _is_int(column):
+        raise ValueError(f'Every puzzle {label} needs integer row and column values.')
+    position = row, column
+    if not (0 <= row < rows and 0 <= column < columns):
+        raise ValueError(f'Every puzzle {label} must stay inside the grid.')
+    return position
 
 
 def _item_ids(items, prefix):

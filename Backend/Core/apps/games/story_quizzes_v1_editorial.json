@@ -1,0 +1,2169 @@
+{
+  "version": 1,
+  "review_status": "approved",
+  "reviewed_question_count": 81,
+  "question_count": 81,
+  "quiz_count": 9,
+  "quizzes": [
+    {
+      "slug": "noah-quiz",
+      "title": "Noah’s Ark Quiz",
+      "story_slug": "noah-builds-the-ark",
+      "story_body_sha256": "837e1361429e33410c779949f94f2fc1ed412aa87f02c4556a3c12104a8d38cf",
+      "cover_asset_key": "assets/images/stories/noah-builds-the-ark-v2.webp",
+      "rounds": [
+        {
+          "level_number": 1,
+          "title": "Meet the Story",
+          "instructions": "Think back to the story and choose one answer for each question.",
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "config": {
+            "questions": [
+              {
+                "id": "noah-quiz-q1",
+                "prompt": "What did God ask Noah to build?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "An ark"
+                  },
+                  {
+                    "id": "b",
+                    "text": "A tower"
+                  },
+                  {
+                    "id": "c",
+                    "text": "A palace"
+                  }
+                ],
+                "correct_option_id": "a",
+                "source_excerpt": "God told Noah to build an ark"
+              },
+              {
+                "id": "noah-quiz-q2",
+                "prompt": "Why was Noah building the ark?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "A harvest was beginning"
+                  },
+                  {
+                    "id": "b",
+                    "text": "A king was visiting"
+                  },
+                  {
+                    "id": "c",
+                    "text": "A great flood was coming"
+                  }
+                ],
+                "correct_option_id": "c",
+                "source_excerpt": "a great flood was coming"
+              },
+              {
+                "id": "noah-quiz-q3",
+                "prompt": "Who did Noah welcome safely into the ark?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "A marching army"
+                  },
+                  {
+                    "id": "b",
+                    "text": "The animals"
+                  },
+                  {
+                    "id": "c",
+                    "text": "A group of builders"
+                  }
+                ],
+                "correct_option_id": "b",
+                "source_excerpt": "welcomed the animals safely into the ark"
+              }
+            ],
+            "pass_score": 60,
+            "story_slug": "noah-builds-the-ark"
+          }
+        },
+        {
+          "level_number": 2,
+          "title": "Follow the Adventure",
+          "instructions": "Follow the story clues. Choose one answer for each question.",
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "config": {
+            "questions": [
+              {
+                "id": "noah-quiz-q4",
+                "prompt": "How did Noah obey when the job seemed big?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "By giving up straight away"
+                  },
+                  {
+                    "id": "b",
+                    "text": "By ignoring the instructions"
+                  },
+                  {
+                    "id": "c",
+                    "text": "One step at a time"
+                  }
+                ],
+                "correct_option_id": "c",
+                "source_excerpt": "Noah obeyed one step at a time"
+              },
+              {
+                "id": "noah-quiz-q5",
+                "prompt": "What appeared in the sky as God’s promise?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "A rainbow"
+                  },
+                  {
+                    "id": "b",
+                    "text": "A new moon"
+                  },
+                  {
+                    "id": "c",
+                    "text": "A flock of birds"
+                  }
+                ],
+                "correct_option_id": "a",
+                "source_excerpt": "God placed a rainbow in the sky as a promise"
+              },
+              {
+                "id": "noah-quiz-q6",
+                "prompt": "What did Noah and his family do in the fresh new world?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Forgot to say thank you"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Praised God with thankful hearts"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Refused to begin again"
+                  }
+                ],
+                "correct_option_id": "b",
+                "source_excerpt": "They praised God together and began again with thankful hearts"
+              }
+            ],
+            "pass_score": 60,
+            "story_slug": "noah-builds-the-ark"
+          }
+        },
+        {
+          "level_number": 3,
+          "title": "Try It Today",
+          "instructions": "Choose the helpful action that matches the story’s lesson.",
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "config": {
+            "questions": [
+              {
+                "id": "noah-quiz-q7",
+                "prompt": "A helpful job feels very big. What can you learn from Noah?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Leave before trying"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Start with one small step"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Rush without listening"
+                  }
+                ],
+                "correct_option_id": "b",
+                "source_excerpt": "Noah obeyed one step at a time"
+              },
+              {
+                "id": "noah-quiz-q8",
+                "prompt": "A trusted grown-up explains a safe task. What shows careful listening?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Talk over the instructions"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Guess without listening"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Listen, then follow the steps"
+                  }
+                ],
+                "correct_option_id": "c",
+                "source_excerpt": "listened carefully"
+              },
+              {
+                "id": "noah-quiz-q9",
+                "prompt": "What is a caring way to help an animal, like Noah did?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Ask a grown-up to help meet its needs"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Ignore it when it needs care"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Keep its food away"
+                  }
+                ],
+                "correct_option_id": "a",
+                "source_excerpt": "welcomed the animals safely into the ark"
+              }
+            ],
+            "pass_score": 60,
+            "story_slug": "noah-builds-the-ark"
+          }
+        }
+      ]
+    },
+    {
+      "slug": "david-quiz",
+      "title": "David and Goliath Quiz",
+      "story_slug": "david-and-goliath",
+      "story_body_sha256": "467213467bb7e4bd0085ab2a1458725bdf725bf88c25d0430c00f1cc47eedf61",
+      "cover_asset_key": "assets/images/stories/david-and-goliath-v2.webp",
+      "rounds": [
+        {
+          "level_number": 1,
+          "title": "Meet the Story",
+          "instructions": "Think back to the story and choose one answer for each question.",
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "config": {
+            "questions": [
+              {
+                "id": "david-quiz-q1",
+                "prompt": "What did young David care for?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Fish"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Sheep"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Lions"
+                  }
+                ],
+                "correct_option_id": "b",
+                "source_excerpt": "David was a young shepherd"
+              },
+              {
+                "id": "david-quiz-q2",
+                "prompt": "Who frightened the army?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Goliath"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Noah"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Jonah"
+                  }
+                ],
+                "correct_option_id": "a",
+                "source_excerpt": "the giant Goliath frightened the army"
+              },
+              {
+                "id": "david-quiz-q3",
+                "prompt": "How many smooth stones did David take?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Two"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Ten"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Five"
+                  }
+                ],
+                "correct_option_id": "c",
+                "source_excerpt": "five smooth stones"
+              }
+            ],
+            "pass_score": 60,
+            "story_slug": "david-and-goliath"
+          }
+        },
+        {
+          "level_number": 2,
+          "title": "Follow the Adventure",
+          "instructions": "Follow the story clues. Choose one answer for each question.",
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "config": {
+            "questions": [
+              {
+                "id": "david-quiz-q4",
+                "prompt": "What did David remember before stepping forward?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "God had helped him protect his sheep"
+                  },
+                  {
+                    "id": "b",
+                    "text": "He had built a large ark"
+                  },
+                  {
+                    "id": "c",
+                    "text": "He had crossed a stormy sea"
+                  }
+                ],
+                "correct_option_id": "a",
+                "source_excerpt": "God had helped him protect his sheep before"
+              },
+              {
+                "id": "david-quiz-q5",
+                "prompt": "What did David carry along with his stones?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "A trumpet"
+                  },
+                  {
+                    "id": "b",
+                    "text": "A sling"
+                  },
+                  {
+                    "id": "c",
+                    "text": "A fishing net"
+                  }
+                ],
+                "correct_option_id": "b",
+                "source_excerpt": "With a sling"
+              },
+              {
+                "id": "david-quiz-q6",
+                "prompt": "Who did everyone see the victory belonged to?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "David’s armor"
+                  },
+                  {
+                    "id": "b",
+                    "text": "The stones alone"
+                  },
+                  {
+                    "id": "c",
+                    "text": "God"
+                  }
+                ],
+                "correct_option_id": "c",
+                "source_excerpt": "the victory belonged to God"
+              }
+            ],
+            "pass_score": 60,
+            "story_slug": "david-and-goliath"
+          }
+        },
+        {
+          "level_number": 3,
+          "title": "Try It Today",
+          "instructions": "Choose the helpful action that matches the story’s lesson.",
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "config": {
+            "questions": [
+              {
+                "id": "david-quiz-q7",
+                "prompt": "You feel nervous about doing something right. What matches David’s story?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Let fear make every choice"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Give up before asking for help"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Ask for help and take a brave step"
+                  }
+                ],
+                "correct_option_id": "c",
+                "source_excerpt": "small hands can do brave things with God’s help"
+              },
+              {
+                "id": "david-quiz-q8",
+                "prompt": "A younger child wants to help. What can David’s story remind you?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Small hands can do brave things too"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Only the biggest people can help"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Young children never have good ideas"
+                  }
+                ],
+                "correct_option_id": "a",
+                "source_excerpt": "small hands can do brave things with God’s help"
+              },
+              {
+                "id": "david-quiz-q9",
+                "prompt": "Which attitude fits the lesson about a listening spirit?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Ignore helpful advice"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Listen carefully before acting"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Interrupt every instruction"
+                  }
+                ],
+                "correct_option_id": "b",
+                "source_excerpt": "a faithful heart, a listening spirit"
+              }
+            ],
+            "pass_score": 60,
+            "story_slug": "david-and-goliath"
+          }
+        }
+      ]
+    },
+    {
+      "slug": "jonah-quiz",
+      "title": "Jonah and the Big Fish Quiz",
+      "story_slug": "jonah-and-the-big-fish",
+      "story_body_sha256": "ea5bfdd11a5aa0bb0feed81f87271819b1bbc9ee8a8739cf51c763f6d6ee0bc8",
+      "cover_asset_key": "assets/images/stories/jonah-and-the-big-fish-v2.webp",
+      "rounds": [
+        {
+          "level_number": 1,
+          "title": "Meet the Story",
+          "instructions": "Think back to the story and choose one answer for each question.",
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "config": {
+            "questions": [
+              {
+                "id": "jonah-quiz-q1",
+                "prompt": "What did Jonah first try to do?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Build an ark"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Gather grain in a field"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Run away from what God asked"
+                  }
+                ],
+                "correct_option_id": "c",
+                "source_excerpt": "Jonah tried to run away from what God asked him to do"
+              },
+              {
+                "id": "jonah-quiz-q2",
+                "prompt": "Which animal appears in Jonah’s story?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "A little sheep"
+                  },
+                  {
+                    "id": "b",
+                    "text": "A great fish"
+                  },
+                  {
+                    "id": "c",
+                    "text": "A lion"
+                  }
+                ],
+                "correct_option_id": "b",
+                "source_excerpt": "a great fish"
+              },
+              {
+                "id": "jonah-quiz-q3",
+                "prompt": "How many quiet days helped Jonah learn?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Three"
+                  },
+                  {
+                    "id": "b",
+                    "text": "One"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Seven"
+                  }
+                ],
+                "correct_option_id": "a",
+                "source_excerpt": "three quiet days"
+              }
+            ],
+            "pass_score": 60,
+            "story_slug": "jonah-and-the-big-fish"
+          }
+        },
+        {
+          "level_number": 2,
+          "title": "Follow the Adventure",
+          "instructions": "Follow the story clues. Choose one answer for each question.",
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "config": {
+            "questions": [
+              {
+                "id": "jonah-quiz-q4",
+                "prompt": "What kind of weather appears in the story?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "A snow shower"
+                  },
+                  {
+                    "id": "b",
+                    "text": "A storm"
+                  },
+                  {
+                    "id": "c",
+                    "text": "A gentle morning breeze"
+                  }
+                ],
+                "correct_option_id": "b",
+                "source_excerpt": "A storm"
+              },
+              {
+                "id": "jonah-quiz-q5",
+                "prompt": "What does the story say is bigger than fear?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Jonah’s plans"
+                  },
+                  {
+                    "id": "b",
+                    "text": "The waves alone"
+                  },
+                  {
+                    "id": "c",
+                    "text": "God’s mercy"
+                  }
+                ],
+                "correct_option_id": "c",
+                "source_excerpt": "God’s mercy is bigger than fear"
+              },
+              {
+                "id": "jonah-quiz-q6",
+                "prompt": "Who did Jonah learn God cares for?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "People we may not understand"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Only people who think like us"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Only people we already know"
+                  }
+                ],
+                "correct_option_id": "a",
+                "source_excerpt": "God cares for people we may not understand"
+              }
+            ],
+            "pass_score": 60,
+            "story_slug": "jonah-and-the-big-fish"
+          }
+        },
+        {
+          "level_number": 3,
+          "title": "Try It Today",
+          "instructions": "Choose the helpful action that matches the story’s lesson.",
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "config": {
+            "questions": [
+              {
+                "id": "jonah-quiz-q7",
+                "prompt": "You made a mistake. What matches the story’s lesson about second chances?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Listen, learn, and try again"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Decide you can never improve"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Keep making the same choice on purpose"
+                  }
+                ],
+                "correct_option_id": "a",
+                "source_excerpt": "second chances, listening to God"
+              },
+              {
+                "id": "jonah-quiz-q8",
+                "prompt": "Someone is different from you. Which choice matches Jonah’s lesson?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Leave them out because they are different"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Choose kindness toward them"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Refuse to learn about them"
+                  }
+                ],
+                "correct_option_id": "b",
+                "source_excerpt": "God cares for people we may not understand"
+              },
+              {
+                "id": "jonah-quiz-q9",
+                "prompt": "Being kind feels difficult today. What does Jonah’s story encourage?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Be kind only when it is easy"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Let fear choose for you"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Keep choosing kindness"
+                  }
+                ],
+                "correct_option_id": "c",
+                "source_excerpt": "choosing kindness even when it is hard"
+              }
+            ],
+            "pass_score": 60,
+            "story_slug": "jonah-and-the-big-fish"
+          }
+        }
+      ]
+    },
+    {
+      "slug": "creation-quiz",
+      "title": "Creation Week Quiz",
+      "story_slug": "creation-week",
+      "story_body_sha256": "de79457b8179d6f246ecd859b188b66ada3aee9828876678efdb7095919b54b2",
+      "cover_asset_key": "assets/images/stories/creation-week-v2.webp",
+      "rounds": [
+        {
+          "level_number": 1,
+          "title": "Meet the Story",
+          "instructions": "Think back to the story and choose one answer for each question.",
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "config": {
+            "questions": [
+              {
+                "id": "creation-quiz-q1",
+                "prompt": "Who made the heavens and the earth in this story?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "God"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Joseph"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Joshua"
+                  }
+                ],
+                "correct_option_id": "a",
+                "source_excerpt": "God made the heavens and the earth"
+              },
+              {
+                "id": "creation-quiz-q2",
+                "prompt": "Which living things are named in the story?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Castles and roads"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Boats and houses"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Animals and people"
+                  }
+                ],
+                "correct_option_id": "c",
+                "source_excerpt": "animals, and people"
+              },
+              {
+                "id": "creation-quiz-q3",
+                "prompt": "How does Creation Week end?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "With a race"
+                  },
+                  {
+                    "id": "b",
+                    "text": "With rest"
+                  },
+                  {
+                    "id": "c",
+                    "text": "With a battle"
+                  }
+                ],
+                "correct_option_id": "b",
+                "source_excerpt": "The story ends with rest"
+              }
+            ],
+            "pass_score": 60,
+            "story_slug": "creation-week"
+          }
+        },
+        {
+          "level_number": 2,
+          "title": "Follow the Adventure",
+          "instructions": "Follow the story clues. Choose one answer for each question.",
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "config": {
+            "questions": [
+              {
+                "id": "creation-quiz-q4",
+                "prompt": "Which pair of things did God fill the world with?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Towers and gates"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Coats and baskets"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Light and sky"
+                  }
+                ],
+                "correct_option_id": "c",
+                "source_excerpt": "light, sky"
+              },
+              {
+                "id": "creation-quiz-q5",
+                "prompt": "What does every flower, ocean, animal, and star point to?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "God’s care"
+                  },
+                  {
+                    "id": "b",
+                    "text": "A city’s strong walls"
+                  },
+                  {
+                    "id": "c",
+                    "text": "A traveler’s long road"
+                  }
+                ],
+                "correct_option_id": "a",
+                "source_excerpt": "Every flower, ocean, animal, and star points back to God’s care"
+              },
+              {
+                "id": "creation-quiz-q6",
+                "prompt": "How does the story describe God’s work?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Forgotten"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Good"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Unfinished"
+                  }
+                ],
+                "correct_option_id": "b",
+                "source_excerpt": "God’s work was good"
+              }
+            ],
+            "pass_score": 60,
+            "story_slug": "creation-week"
+          }
+        },
+        {
+          "level_number": 3,
+          "title": "Try It Today",
+          "instructions": "Choose the helpful action that matches the story’s lesson.",
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "config": {
+            "questions": [
+              {
+                "id": "creation-quiz-q7",
+                "prompt": "You see a beautiful flower. What fits Creation Week’s lesson?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Walk past without noticing"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Pause, notice it, and give thanks"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Pick it only to throw it away"
+                  }
+                ],
+                "correct_option_id": "b",
+                "source_excerpt": "slow down and notice God’s good world with wonder, gratitude, and joy"
+              },
+              {
+                "id": "creation-quiz-q8",
+                "prompt": "After doing useful work, what else belongs in a good rhythm?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "More work without a break"
+                  },
+                  {
+                    "id": "b",
+                    "text": "A race to stay busy"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Time to rest"
+                  }
+                ],
+                "correct_option_id": "c",
+                "source_excerpt": "a gentle rhythm for wonder, work, worship, and peace"
+              },
+              {
+                "id": "creation-quiz-q9",
+                "prompt": "Which words fit how Creation Week invites us to see the world?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Wonder, gratitude, and joy"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Hurry, worry, and noise"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Jealousy, fear, and anger"
+                  }
+                ],
+                "correct_option_id": "a",
+                "source_excerpt": "wonder, gratitude, and joy"
+              }
+            ],
+            "pass_score": 60,
+            "story_slug": "creation-week"
+          }
+        }
+      ]
+    },
+    {
+      "slug": "lost-sheep-quiz",
+      "title": "The Lost Sheep Quiz",
+      "story_slug": "lost-sheep",
+      "story_body_sha256": "6461f33c798d1c12ce8423f6f4382eb152ceb4cce9c9f4f6d7e29f168a774aec",
+      "cover_asset_key": "assets/images/stories/lost-sheep-storybook-v1.webp",
+      "rounds": [
+        {
+          "level_number": 1,
+          "title": "Meet the Story",
+          "instructions": "Think back to the story and choose one answer for each question.",
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "config": {
+            "questions": [
+              {
+                "id": "lost-sheep-quiz-q1",
+                "prompt": "Who told the story about the lost sheep?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Jacob"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Jesus"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Boaz"
+                  }
+                ],
+                "correct_option_id": "b",
+                "source_excerpt": "Jesus told them a story"
+              },
+              {
+                "id": "lost-sheep-quiz-q2",
+                "prompt": "How many sheep did the shepherd have?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "One hundred"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Ten"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Twenty"
+                  }
+                ],
+                "correct_option_id": "a",
+                "source_excerpt": "his one hundred sheep"
+              },
+              {
+                "id": "lost-sheep-quiz-q3",
+                "prompt": "How many sheep were missing?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Five"
+                  },
+                  {
+                    "id": "b",
+                    "text": "All of them"
+                  },
+                  {
+                    "id": "c",
+                    "text": "One"
+                  }
+                ],
+                "correct_option_id": "c",
+                "source_excerpt": "he noticed that one was missing"
+              }
+            ],
+            "pass_score": 60,
+            "story_slug": "lost-sheep"
+          }
+        },
+        {
+          "level_number": 2,
+          "title": "Follow the Adventure",
+          "instructions": "Follow the story clues. Choose one answer for each question.",
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "config": {
+            "questions": [
+              {
+                "id": "lost-sheep-quiz-q4",
+                "prompt": "How long did the shepherd keep searching?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Until he found the sheep"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Only until he became bored"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Only until someone called him"
+                  }
+                ],
+                "correct_option_id": "a",
+                "source_excerpt": "He kept searching until he found it"
+              },
+              {
+                "id": "lost-sheep-quiz-q5",
+                "prompt": "How did the shepherd carry the sheep home?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "In a boat"
+                  },
+                  {
+                    "id": "b",
+                    "text": "On his shoulders"
+                  },
+                  {
+                    "id": "c",
+                    "text": "In a basket of grain"
+                  }
+                ],
+                "correct_option_id": "b",
+                "source_excerpt": "lifted the sheep onto his shoulders and carried it home"
+              },
+              {
+                "id": "lost-sheep-quiz-q6",
+                "prompt": "Who did he call to celebrate?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Only the other sheep"
+                  },
+                  {
+                    "id": "b",
+                    "text": "No one at all"
+                  },
+                  {
+                    "id": "c",
+                    "text": "His friends and neighbors"
+                  }
+                ],
+                "correct_option_id": "c",
+                "source_excerpt": "He called his friends and neighbors to celebrate"
+              }
+            ],
+            "pass_score": 60,
+            "story_slug": "lost-sheep"
+          }
+        },
+        {
+          "level_number": 3,
+          "title": "Try It Today",
+          "instructions": "Choose the helpful action that matches the story’s lesson.",
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "config": {
+            "questions": [
+              {
+                "id": "lost-sheep-quiz-q7",
+                "prompt": "Someone feels left out. What matches the story’s lesson?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Tell them to stay away"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Pretend not to notice them"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Welcome them with patient kindness"
+                  }
+                ],
+                "correct_option_id": "c",
+                "source_excerpt": "When someone feels left out, we can welcome them with the same patient kindness"
+              },
+              {
+                "id": "lost-sheep-quiz-q8",
+                "prompt": "You made a mistake and need help. What can you do?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Tell the truth and ask for help"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Hide it so no one can help"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Blame someone else"
+                  }
+                ],
+                "correct_option_id": "a",
+                "source_excerpt": "ask for help, tell the truth about our mistakes, and begin again"
+              },
+              {
+                "id": "lost-sheep-quiz-q9",
+                "prompt": "One person in a group needs care. What can the shepherd teach us?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Only the biggest group matters"
+                  },
+                  {
+                    "id": "b",
+                    "text": "That one person matters too"
+                  },
+                  {
+                    "id": "c",
+                    "text": "One person is easy to forget"
+                  }
+                ],
+                "correct_option_id": "b",
+                "source_excerpt": "the missing sheep mattered too"
+              }
+            ],
+            "pass_score": 60,
+            "story_slug": "lost-sheep"
+          }
+        }
+      ]
+    },
+    {
+      "slug": "joseph-colorful-coat-quiz",
+      "title": "Joseph’s Colorful Coat Quiz",
+      "story_slug": "joseph-colorful-coat",
+      "story_body_sha256": "416986056168b65186f66645d151fdcbd04acd9bd5d1646da99aae15b90ae348",
+      "cover_asset_key": "assets/images/stories/joseph-colorful-coat-storybook-v1.webp",
+      "rounds": [
+        {
+          "level_number": 1,
+          "title": "Meet the Story",
+          "instructions": "Think back to the story and choose one answer for each question.",
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "config": {
+            "questions": [
+              {
+                "id": "joseph-colorful-coat-quiz-q1",
+                "prompt": "Who gave Joseph his special colorful coat?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Boaz"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Joshua"
+                  },
+                  {
+                    "id": "c",
+                    "text": "His father, Jacob"
+                  }
+                ],
+                "correct_option_id": "c",
+                "source_excerpt": "His father, Jacob, gave him a special colorful coat"
+              },
+              {
+                "id": "joseph-colorful-coat-quiz-q2",
+                "prompt": "How did Joseph’s brothers feel about his happiness?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Thankful for his help"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Jealous"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Pleased to share his joy"
+                  }
+                ],
+                "correct_option_id": "b",
+                "source_excerpt": "his brothers grew jealous"
+              },
+              {
+                "id": "joseph-colorful-coat-quiz-q3",
+                "prompt": "Where did the travelers take Joseph?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Egypt"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Bethlehem"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Jericho"
+                  }
+                ],
+                "correct_option_id": "a",
+                "source_excerpt": "travelers going to Egypt"
+              }
+            ],
+            "pass_score": 60,
+            "story_slug": "joseph-colorful-coat"
+          }
+        },
+        {
+          "level_number": 2,
+          "title": "Follow the Adventure",
+          "instructions": "Follow the story clues. Choose one answer for each question.",
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "config": {
+            "questions": [
+              {
+                "id": "joseph-colorful-coat-quiz-q4",
+                "prompt": "What did God help Joseph understand?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Animal routes"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Dreams"
+                  },
+                  {
+                    "id": "c",
+                    "text": "River maps"
+                  }
+                ],
+                "correct_option_id": "b",
+                "source_excerpt": "God helped him understand dreams"
+              },
+              {
+                "id": "joseph-colorful-coat-quiz-q5",
+                "prompt": "What did Joseph help store for the hungry years?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Colorful coats"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Building stones"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Grain"
+                  }
+                ],
+                "correct_option_id": "c",
+                "source_excerpt": "Joseph helped store grain so people would have food later"
+              },
+              {
+                "id": "joseph-colorful-coat-quiz-q6",
+                "prompt": "What did Joseph choose when he met his brothers again?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Forgiveness instead of revenge"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Revenge instead of kindness"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Turning his hungry family away"
+                  }
+                ],
+                "correct_option_id": "a",
+                "source_excerpt": "Joseph chose forgiveness instead of revenge"
+              }
+            ],
+            "pass_score": 60,
+            "story_slug": "joseph-colorful-coat"
+          }
+        },
+        {
+          "level_number": 3,
+          "title": "Try It Today",
+          "instructions": "Choose the helpful action that matches the story’s lesson.",
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "config": {
+            "questions": [
+              {
+                "id": "joseph-colorful-coat-quiz-q7",
+                "prompt": "A friend receives something special and you feel jealous. What fits this story?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Notice the feeling and ask for help choosing kindness"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Hurt the friend’s feelings"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Take the gift from them"
+                  }
+                ],
+                "correct_option_id": "a",
+                "source_excerpt": "notice jealousy, ask for help, and choose kindness"
+              },
+              {
+                "id": "joseph-colorful-coat-quiz-q8",
+                "prompt": "You know a harder time may be coming. Which action is like Joseph’s planning?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Use everything without planning"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Prepare what people may need later"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Refuse to think ahead"
+                  }
+                ],
+                "correct_option_id": "b",
+                "source_excerpt": "Joseph helped store grain so people would have food later"
+              },
+              {
+                "id": "joseph-colorful-coat-quiz-q9",
+                "prompt": "Someone has hurt you. Which choice matches Joseph’s lesson?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Hurt them back on purpose"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Decide kindness no longer matters"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Ask for help and choose kindness rather than revenge"
+                  }
+                ],
+                "correct_option_id": "c",
+                "source_excerpt": "Joseph chose forgiveness instead of revenge"
+              }
+            ],
+            "pass_score": 60,
+            "story_slug": "joseph-colorful-coat"
+          }
+        }
+      ]
+    },
+    {
+      "slug": "good-samaritan-quiz",
+      "title": "The Good Samaritan Quiz",
+      "story_slug": "good-samaritan",
+      "story_body_sha256": "4017a281c13ea6a4ea3eb8a362a380beffa8a87a87633bc250ff7551b41f28c2",
+      "cover_asset_key": "assets/images/stories/good-samaritan-storybook-v1.webp",
+      "rounds": [
+        {
+          "level_number": 1,
+          "title": "Meet the Story",
+          "instructions": "Think back to the story and choose one answer for each question.",
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "config": {
+            "questions": [
+              {
+                "id": "good-samaritan-quiz-q1",
+                "prompt": "Where was the man traveling?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "From Jerusalem to Jericho"
+                  },
+                  {
+                    "id": "b",
+                    "text": "From Moab to Bethlehem"
+                  },
+                  {
+                    "id": "c",
+                    "text": "From Egypt to a field"
+                  }
+                ],
+                "correct_option_id": "a",
+                "source_excerpt": "traveling from Jerusalem to Jericho"
+              },
+              {
+                "id": "good-samaritan-quiz-q2",
+                "prompt": "Who stopped to help the traveler?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "The priest"
+                  },
+                  {
+                    "id": "b",
+                    "text": "The Levite"
+                  },
+                  {
+                    "id": "c",
+                    "text": "A Samaritan"
+                  }
+                ],
+                "correct_option_id": "c",
+                "source_excerpt": "a Samaritan arrived"
+              },
+              {
+                "id": "good-samaritan-quiz-q3",
+                "prompt": "Where did the Samaritan bring the man to rest?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "An ark"
+                  },
+                  {
+                    "id": "b",
+                    "text": "An inn"
+                  },
+                  {
+                    "id": "c",
+                    "text": "A grain field"
+                  }
+                ],
+                "correct_option_id": "b",
+                "source_excerpt": "brought him to an inn, where he could rest"
+              }
+            ],
+            "pass_score": 60,
+            "story_slug": "good-samaritan"
+          }
+        },
+        {
+          "level_number": 2,
+          "title": "Follow the Adventure",
+          "instructions": "Follow the story clues. Choose one answer for each question.",
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "config": {
+            "questions": [
+              {
+                "id": "good-samaritan-quiz-q4",
+                "prompt": "What did the priest and the Levite do when they saw the man?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Brought him food together"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Paid the innkeeper together"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Passed by without helping"
+                  }
+                ],
+                "correct_option_id": "c",
+                "source_excerpt": "He also saw the man and passed by"
+              },
+              {
+                "id": "good-samaritan-quiz-q5",
+                "prompt": "How did the Samaritan care for the man’s wounds?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Gently cleaned and bandaged them"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Left them without care"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Asked the man to keep walking"
+                  }
+                ],
+                "correct_option_id": "a",
+                "source_excerpt": "gently cleaned and bandaged the man’s wounds"
+              },
+              {
+                "id": "good-samaritan-quiz-q6",
+                "prompt": "What did the Samaritan do the next day?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Told the innkeeper to send the man away"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Paid the innkeeper to keep caring for the man"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Asked the man to leave before resting"
+                  }
+                ],
+                "correct_option_id": "b",
+                "source_excerpt": "he paid the innkeeper to continue caring for him"
+              }
+            ],
+            "pass_score": 60,
+            "story_slug": "good-samaritan"
+          }
+        },
+        {
+          "level_number": 3,
+          "title": "Try It Today",
+          "instructions": "Choose the helpful action that matches the story’s lesson.",
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "config": {
+            "questions": [
+              {
+                "id": "good-samaritan-quiz-q7",
+                "prompt": "You see someone hurt. What is a safe, caring first step?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Walk away without telling anyone"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Find a trusted grown-up to help"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Try to do everything alone"
+                  }
+                ],
+                "correct_option_id": "b",
+                "source_excerpt": "we can find a trusted grown-up"
+              },
+              {
+                "id": "good-samaritan-quiz-q8",
+                "prompt": "Someone is different from you and needs kindness. What fits this story?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Help only people exactly like you"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Leave them alone because they are different"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Do not let differences stop you from caring"
+                  }
+                ],
+                "correct_option_id": "c",
+                "source_excerpt": "did not let differences stop him from caring"
+              },
+              {
+                "id": "good-samaritan-quiz-q9",
+                "prompt": "A child is lonely at playtime. What can a caring neighbor do?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Invite them to join in"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Notice them but do nothing"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Tell others to leave them out"
+                  }
+                ],
+                "correct_option_id": "a",
+                "source_excerpt": "offer gentle help, and include them"
+              }
+            ],
+            "pass_score": 60,
+            "story_slug": "good-samaritan"
+          }
+        }
+      ]
+    },
+    {
+      "slug": "walls-of-jericho-quiz",
+      "title": "The Walls of Jericho Quiz",
+      "story_slug": "walls-of-jericho",
+      "story_body_sha256": "763b15236dac1384f0fc921af5d88491e97fe10d87619f158c2880f75f6a76f6",
+      "cover_asset_key": "assets/images/stories/walls-of-jericho-storybook-v1.webp",
+      "rounds": [
+        {
+          "level_number": 1,
+          "title": "Meet the Story",
+          "instructions": "Think back to the story and choose one answer for each question.",
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "config": {
+            "questions": [
+              {
+                "id": "walls-of-jericho-quiz-q1",
+                "prompt": "Who led God’s people toward Jericho?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Joseph"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Joshua"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Noah"
+                  }
+                ],
+                "correct_option_id": "b",
+                "source_excerpt": "Joshua led God’s people toward Jericho"
+              },
+              {
+                "id": "walls-of-jericho-quiz-q2",
+                "prompt": "What stopped the people from simply walking into the city?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Strong walls and closed gates"
+                  },
+                  {
+                    "id": "b",
+                    "text": "A field of barley"
+                  },
+                  {
+                    "id": "c",
+                    "text": "A sleeping flock of sheep"
+                  }
+                ],
+                "correct_option_id": "a",
+                "source_excerpt": "strong walls and tightly closed gates"
+              },
+              {
+                "id": "walls-of-jericho-quiz-q3",
+                "prompt": "For the first six days, how often did they march around the city?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Seven times each day"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Only on the last day"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Once each day"
+                  }
+                ],
+                "correct_option_id": "c",
+                "source_excerpt": "For six days, the people marched around the city once each day"
+              }
+            ],
+            "pass_score": 60,
+            "story_slug": "walls-of-jericho"
+          }
+        },
+        {
+          "level_number": 2,
+          "title": "Follow the Adventure",
+          "instructions": "Follow the story clues. Choose one answer for each question.",
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "config": {
+            "questions": [
+              {
+                "id": "walls-of-jericho-quiz-q4",
+                "prompt": "How many times did they march on the seventh day?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Seven times"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Once"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Three times"
+                  }
+                ],
+                "correct_option_id": "a",
+                "source_excerpt": "On the seventh day, they marched around Jericho seven times"
+              },
+              {
+                "id": "walls-of-jericho-quiz-q5",
+                "prompt": "What happened after the trumpets and Joshua’s signal?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "The people quietly returned to camp again"
+                  },
+                  {
+                    "id": "b",
+                    "text": "The people shouted and the walls fell"
+                  },
+                  {
+                    "id": "c",
+                    "text": "The gates grew taller"
+                  }
+                ],
+                "correct_option_id": "b",
+                "source_excerpt": "The people shouted, and the walls fell"
+              },
+              {
+                "id": "walls-of-jericho-quiz-q6",
+                "prompt": "Who was brought to safety as promised?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Jacob and Joseph"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Ruth and Naomi"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Rahab and her family"
+                  }
+                ],
+                "correct_option_id": "c",
+                "source_excerpt": "Rahab and her family were brought to safety"
+              }
+            ],
+            "pass_score": 60,
+            "story_slug": "walls-of-jericho"
+          }
+        },
+        {
+          "level_number": 3,
+          "title": "Try It Today",
+          "instructions": "Choose the helpful action that matches the story’s lesson.",
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "config": {
+            "questions": [
+              {
+                "id": "walls-of-jericho-quiz-q7",
+                "prompt": "You are waiting for something good. What fits this story?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Give up because it has not happened yet"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Refuse to work with anyone"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Practice patience and take the next helpful step"
+                  }
+                ],
+                "correct_option_id": "c",
+                "source_excerpt": "practice patience, work together"
+              },
+              {
+                "id": "walls-of-jericho-quiz-q8",
+                "prompt": "Your group has a task with instructions. What helps you work like the people in this story?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Listen carefully and work together"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Everyone ignores the plan"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Everyone talks over the instructions"
+                  }
+                ],
+                "correct_option_id": "a",
+                "source_excerpt": "trust, patience, and careful listening"
+              },
+              {
+                "id": "walls-of-jericho-quiz-q9",
+                "prompt": "You made a promise to help. What does Jericho’s story remind you to do?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Forget it when it becomes inconvenient"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Keep your promise"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Make someone else keep it for you"
+                  }
+                ],
+                "correct_option_id": "b",
+                "source_excerpt": "trust includes listening and keeping our promises"
+              }
+            ],
+            "pass_score": 60,
+            "story_slug": "walls-of-jericho"
+          }
+        }
+      ]
+    },
+    {
+      "slug": "ruth-and-naomi-quiz",
+      "title": "Ruth and Naomi Quiz",
+      "story_slug": "ruth-and-naomi",
+      "story_body_sha256": "5327f036e022edca6d38bf72f9eed3fb470f92c9feb1dcde5dccee6864f4d8bc",
+      "cover_asset_key": "assets/images/stories/ruth-and-naomi-storybook-v1.webp",
+      "rounds": [
+        {
+          "level_number": 1,
+          "title": "Meet the Story",
+          "instructions": "Think back to the story and choose one answer for each question.",
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "config": {
+            "questions": [
+              {
+                "id": "ruth-and-naomi-quiz-q1",
+                "prompt": "Who chose to stay beside Naomi on her journey?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Esther"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Rahab"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Ruth"
+                  }
+                ],
+                "correct_option_id": "c",
+                "source_excerpt": "Ruth chose to stay beside Naomi"
+              },
+              {
+                "id": "ruth-and-naomi-quiz-q2",
+                "prompt": "Where did Ruth and Naomi arrive together?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Egypt"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Bethlehem"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Jericho"
+                  }
+                ],
+                "correct_option_id": "b",
+                "source_excerpt": "Together, they reached Bethlehem"
+              },
+              {
+                "id": "ruth-and-naomi-quiz-q3",
+                "prompt": "What harvest was beginning when they arrived?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "The barley harvest"
+                  },
+                  {
+                    "id": "b",
+                    "text": "The apple harvest"
+                  },
+                  {
+                    "id": "c",
+                    "text": "The grape harvest"
+                  }
+                ],
+                "correct_option_id": "a",
+                "source_excerpt": "the beginning of the barley harvest"
+              }
+            ],
+            "pass_score": 60,
+            "story_slug": "ruth-and-naomi"
+          }
+        },
+        {
+          "level_number": 2,
+          "title": "Follow the Adventure",
+          "instructions": "Follow the story clues. Choose one answer for each question.",
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "config": {
+            "questions": [
+              {
+                "id": "ruth-and-naomi-quiz-q4",
+                "prompt": "What does gleaning mean in Ruth’s story?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Building a house in a field"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Gathering grain the harvesters left behind"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Buying a colorful coat"
+                  }
+                ],
+                "correct_option_id": "b",
+                "source_excerpt": "gather grain that the harvesters left behind"
+              },
+              {
+                "id": "ruth-and-naomi-quiz-q5",
+                "prompt": "Whose field did Ruth gather grain in?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Joshua’s field"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Jonah’s field"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Boaz’s field"
+                  }
+                ],
+                "correct_option_id": "c",
+                "source_excerpt": "The field belonged to Boaz"
+              },
+              {
+                "id": "ruth-and-naomi-quiz-q6",
+                "prompt": "What did Ruth bring back to Naomi that evening?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Grain and leftover food"
+                  },
+                  {
+                    "id": "b",
+                    "text": "A trumpet and a shield"
+                  },
+                  {
+                    "id": "c",
+                    "text": "A coat and a crown"
+                  }
+                ],
+                "correct_option_id": "a",
+                "source_excerpt": "Ruth brought grain and leftover food back to Naomi"
+              }
+            ],
+            "pass_score": 60,
+            "story_slug": "ruth-and-naomi"
+          }
+        },
+        {
+          "level_number": 3,
+          "title": "Try It Today",
+          "instructions": "Choose the helpful action that matches the story’s lesson.",
+          "max_score": 100,
+          "star_thresholds": [
+            60,
+            80,
+            95
+          ],
+          "config": {
+            "questions": [
+              {
+                "id": "ruth-and-naomi-quiz-q7",
+                "prompt": "Which small action can show care for your family, like Ruth did?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Help with a useful task"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Leave every task for someone else"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Promise to help but never begin"
+                  }
+                ],
+                "correct_option_id": "a",
+                "source_excerpt": "care for our families through small helpful actions"
+              },
+              {
+                "id": "ruth-and-naomi-quiz-q8",
+                "prompt": "Someone is new in your class. What matches this story’s lesson?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Tell them they cannot join"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Welcome them as they start in a new place"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Ignore them because they are new"
+                  }
+                ],
+                "correct_option_id": "b",
+                "source_excerpt": "welcome people who are starting again in a new place"
+              },
+              {
+                "id": "ruth-and-naomi-quiz-q9",
+                "prompt": "A helpful job takes time. Which choice is like Ruth’s steady care?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "Stop after the first small handful"
+                  },
+                  {
+                    "id": "b",
+                    "text": "Leave without telling anyone"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Keep working patiently, a little at a time"
+                  }
+                ],
+                "correct_option_id": "c",
+                "source_excerpt": "Her love was more than a promise: it became patient, useful work"
+              }
+            ],
+            "pass_score": 60,
+            "story_slug": "ruth-and-naomi"
+          }
+        }
+      ]
+    }
+  ]
+}

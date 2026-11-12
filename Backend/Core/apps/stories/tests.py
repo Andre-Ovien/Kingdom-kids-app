@@ -2,6 +2,8 @@ from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.db import IntegrityError, transaction
@@ -65,7 +67,7 @@ class StoryApiTests(TestCase):
         response = self.client.get(self.list_url)
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.data), 8)
+        self.assertEqual(len(response.data), 11)
         self.assertEqual(response.data[0]['slug'], 'david-and-goliath')
         self.assertNotIn('body', response.data[0])
         self.assertNotIn('narrations', response.data[0])
@@ -97,6 +99,9 @@ class StoryApiTests(TestCase):
                 'esther-speaks-up': (
                     'assets/images/stories/esther-speaks-up-v2.webp'
                 ),
+                'joseph-colorful-coat': 'assets/images/stories/joseph-colorful-coat-storybook-v1.webp',
+                'walls-of-jericho': 'assets/images/stories/walls-of-jericho-storybook-v1.webp',
+                'ruth-and-naomi': 'assets/images/stories/ruth-and-naomi-storybook-v1.webp',
             },
         )
         self.assertTrue(
@@ -109,7 +114,7 @@ class StoryApiTests(TestCase):
         self.assertTrue(response.data[0]['is_featured'])
         self.assertEqual(response.data[0]['estimated_read_seconds'], 120)
         self.assertEqual(NarratorVoice.objects.count(), 3)
-        self.assertEqual(StoryNarration.objects.count(), 24)
+        self.assertEqual(StoryNarration.objects.count(), 39)
 
     def test_detail_returns_body_and_safe_character_narration_metadata(self):
         narrator = NarratorVoice.objects.get(avatar_key='lion')
@@ -139,6 +144,7 @@ class StoryApiTests(TestCase):
     def test_detail_exposes_absolute_cached_round_one_sample_urls(self):
         with TemporaryDirectory() as media_root, override_settings(
             MEDIA_ROOT=media_root,
+            DEBUG=True,
         ):
             write_fake_round_one_samples(media_root)
             call_command('install_round_one_voice_samples', stdout=StringIO())
@@ -200,6 +206,7 @@ class StoryApiTests(TestCase):
         )
         self.assertIsNone(kai['sample_url'])
 
+    @override_settings(CONTENT_MEDIA_HOSTS=('media.example.test',))
     def test_missing_cached_sample_falls_back_to_hosted_sample_url(self):
         narrator = NarratorVoice.objects.get(avatar_key='lion')
         narrator.sample_audio.name = 'voice_auditions/missing.mp3'
@@ -268,6 +275,86 @@ class StoryApiTests(TestCase):
             self.client.get('/api/stories/hidden-draft/').status_code,
             404,
         )
+
+    def test_catalogue_rejects_unbounded_search_and_category_values(self):
+        self.assertEqual(
+            self.client.get(self.list_url, {'search': 'x' * 101}).status_code,
+            400,
+        )
+        self.assertEqual(
+            self.client.get(self.list_url, {'category': 'x' * 81}).status_code,
+            400,
+        )
+
+    @override_settings(CONTENT_MEDIA_HOSTS=('cdn.kingdom.test',))
+    def test_child_facing_media_requires_https_on_an_owned_host(self):
+        allowed = Story(
+            slug='allowed-media',
+            title='Allowed media',
+            category='Faith',
+            summary='Safe.',
+            body='Safe.',
+            cover_image_url='https://cdn.kingdom.test/story.webp',
+        )
+        allowed.full_clean()
+
+        allowed.cover_image_url = 'http://cdn.kingdom.test/story.webp'
+        with self.assertRaises(ValidationError):
+            allowed.full_clean()
+
+        allowed.cover_image_url = 'https://tracking.example/story.webp'
+        with self.assertRaises(ValidationError):
+            allowed.full_clean()
+
+        for unsafe_owned_url in (
+            'https://user:password@cdn.kingdom.test/story.webp',
+            'https://cdn.kingdom.test:8443/story.webp',
+            'https://cdn.kingdom.test/story.webp#hidden-target',
+        ):
+            with self.subTest(url=unsafe_owned_url):
+                allowed.cover_image_url = unsafe_owned_url
+                with self.assertRaises(ValidationError):
+                    allowed.full_clean()
+
+    def test_narrator_upload_rejects_a_spoofed_audio_extension(self):
+        narrator = NarratorVoice(
+            avatar_key='owl',
+            voice_key='owl-voice',
+            display_name='Ollie',
+            voice_description='Warm',
+            sample_audio=SimpleUploadedFile(
+                'not-really-audio.mp3',
+                b'this is not an audio file',
+                content_type='audio/mpeg',
+            ),
+        )
+
+        with self.assertRaises(ValidationError):
+            narrator.full_clean()
+
+    def test_unsafe_stored_media_is_never_serialized(self):
+        story = Story.objects.get(slug='david-and-goliath')
+        story.cover_image_url = 'https://tracking.example/story.webp'
+        story.save(update_fields=('cover_image_url',))
+        narration = StoryNarration.objects.get(
+            story=story,
+            narrator__avatar_key='lion',
+        )
+        narration.status = StoryNarration.Status.READY
+        narration.audio_url = 'https://tracking.example/story.mp3'
+        narration.save(update_fields=('status', 'audio_url'))
+
+        response = self.client.get('/api/stories/david-and-goliath/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.data['cover_image_url'])
+        kai = next(
+            item
+            for item in response.data['narrations']
+            if item['avatar_key'] == 'lion'
+        )
+        self.assertFalse(kai['audio_available'])
+        self.assertIsNone(kai['audio_url'])
 
     def test_story_and_narrator_pair_is_unique(self):
         story = Story.objects.get(slug='david-and-goliath')

@@ -1,6 +1,10 @@
 from django.urls import path
 
-from .views import KidActivityEventCreateView, KidProfileSummaryView
+from .views import (
+    KidActivityEventCreateView,
+    KidProfileSummaryView,
+    StreakPresentationClaimView,
+)
 
 
 app_name = 'progress'
@@ -15,5 +19,10 @@ urlpatterns = [
         'kid-profiles/<uuid:profile_id>/summary/',
         KidProfileSummaryView.as_view(),
         name='kid-profile-summary',
+    ),
+    path(
+        'kid-profiles/<uuid:profile_id>/streak-presentations/claim/',
+        StreakPresentationClaimView.as_view(),
+        name='streak-presentation-claim',
     ),
 ]
