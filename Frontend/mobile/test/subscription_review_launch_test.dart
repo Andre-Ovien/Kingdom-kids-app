@@ -227,10 +227,10 @@ void main() {
   testWidgets(
     'compile-defined one-off route shows only read-only saved-parent review',
     (tester) async {
-      FlutterSecureStorage.setMockInitialValues({
-        'kingdom_kids.auth_session': jsonEncode(_session.toJson()),
-        'kingdom_kids.selected_kid_id': _kid.id,
-      });
+      FlutterSecureStorage.setMockInitialValues({});
+      final scopedStore = SecureAuthSessionStore();
+      await scopedStore.writeSession(_session);
+      await scopedStore.writeSelectedKidId(_kid.id);
       await tester.pumpWidget(
         MaterialApp(
           onGenerateInitialRoutes: (_) => [
