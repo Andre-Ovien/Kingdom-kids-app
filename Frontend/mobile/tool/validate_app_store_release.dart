@@ -19,6 +19,14 @@ void validateAppStoreRelease(
       'Use the registered client App ID and team for App Store build inputs.',
     );
   }
+  if (value('APP_STORE_LEGAL_OPERATOR') != 'Kingdom Kids LLC' ||
+      value('APP_STORE_PRIVACY_CONTACT_EMAIL') != 'kingdomkidshq@gmail.com' ||
+      value('APP_STORE_KIDS_AGE_BAND') != '6-8' ||
+      value('APP_STORE_TARGET_AGE_RANGE') != '3-10') {
+    throw const ReleaseConfigurationException(
+      'Use the confirmed operator, privacy contact, and Kids audience metadata.',
+    );
+  }
   if (value('HOSTED_RETURN_SCHEME_ONLY_PREVIEW') != 'false' &&
       value('HOSTED_RETURN_SCHEME_ONLY_PREVIEW').isNotEmpty) {
     throw const ReleaseConfigurationException(

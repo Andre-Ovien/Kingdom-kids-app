@@ -7,13 +7,11 @@ export const siteConfig = Object.freeze({
 });
 
 export const privacyContact = Object.freeze({
-  email: 'privacy@kingdom-kids.app',
-  href: 'mailto:privacy@kingdom-kids.app',
-  isProvisional: true,
-  launchRequirement:
-    'This privacy inbox is provisional and must be provisioned, monitored, and tested before launch.',
+  email: 'kingdomkidshq@gmail.com',
+  href: 'mailto:kingdomkidshq@gmail.com',
+  isProvisional: false,
 });
 
 export const policyDates = Object.freeze({
-  privacyLastUpdated: '11 November 2026',
+  privacyLastUpdated: '12 November 2026',
 });

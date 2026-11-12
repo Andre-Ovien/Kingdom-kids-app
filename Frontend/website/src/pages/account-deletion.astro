@@ -317,13 +317,13 @@ const description =
             setStatus(
               requestStatus,
               'error',
-              'We couldn’t send the request right now. Try again later or email privacy@kingdom-kids.app.',
+              'We couldn’t send the request right now. Try again later or email kingdomkidshq@gmail.com.',
               true,
             );
           }
         } catch (error) {
           const message = error instanceof DOMException && error.name === 'AbortError'
-            ? 'The request took too long. Try again later or email privacy@kingdom-kids.app.'
+            ? 'The request took too long. Try again later or email kingdomkidshq@gmail.com.'
             : 'We couldn’t reach the service. Check your connection and try again.';
           setStatus(requestStatus, 'error', message, true);
         } finally {
@@ -404,7 +404,7 @@ const description =
             setStatus(
               confirmStatus,
               'error',
-              'We couldn’t complete the deletion right now. Try again later or email privacy@kingdom-kids.app.',
+              'We couldn’t complete the deletion right now. Try again later or email kingdomkidshq@gmail.com.',
               true,
             );
           }

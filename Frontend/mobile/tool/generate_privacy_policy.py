@@ -125,9 +125,6 @@ def generate_document(policy_source, config_source):
     substitutions = {
         '{privacyContact.href}': '"' + html.escape(href, quote=True) + '"',
         '{privacyContact.email}': html.escape(email),
-        '{privacyContact.launchRequirement}': html.escape(
-            config_string(config_source, 'launchRequirement'),
-        ),
     }
     for token, value in substitutions.items():
         markup = markup.replace(token, value)

@@ -35,10 +35,12 @@ void main() {
     await tester.tap(find.text('Open policy'));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('privacy-policy-screen')), findsOneWidget);
-    expect(find.text('Last updated: 11 November 2026'), findsOneWidget);
+    expect(find.text('Last updated: 12 November 2026'), findsOneWidget);
     expect(find.text('11. Contact'), findsOneWidget);
-    expect(find.textContaining('privacy@kingdom-kids.app'), findsOneWidget);
-    expect(find.textContaining('provisional'), findsOneWidget);
+    expect(find.textContaining('kingdomkidshq@gmail.com'), findsOneWidget);
+    expect(find.textContaining('Kingdom Kids LLC operates'), findsOneWidget);
+    expect(find.textContaining('privacy@kingdom-kids.app'), findsNothing);
+    expect(find.textContaining('provisional'), findsNothing);
     expect(tester.takeException(), isNull);
     await tester.tap(find.byKey(const Key('privacy-policy-back')));
     await tester.pumpAndSettle();

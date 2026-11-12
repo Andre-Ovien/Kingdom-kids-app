@@ -22,7 +22,7 @@ class CanonicalPrivacyPolicyTests(unittest.TestCase):
         self.policy = GENERATOR.POLICY.read_text()
         self.config = GENERATOR.CONFIG.read_text()
 
-    def test_every_policy_section_and_provisional_contact_survives(self):
+    def test_every_policy_section_and_confirmed_operator_contact_survives(self):
         document = GENERATOR.generate_document(self.policy, self.config)
         self.assertEqual(len(document['sections']), 11)
         self.assertEqual(len({s['id'] for s in document['sections']}), 11)
@@ -31,11 +31,15 @@ class CanonicalPrivacyPolicyTests(unittest.TestCase):
             'iOS and Android apps', 'prerecorded synthetic character narration',
             'Production vendors have not yet been named',
             'Production log and backup schedules are not yet finalized',
-            document['contact_email'], 'This privacy inbox is provisional',
+            'Kingdom Kids LLC operates Kingdom Kids', 'ages 3–10',
+            'kingdomkidshq@gmail.com',
         ]:
             self.assertIn(expected, text)
-        self.assertTrue(document['contact_is_provisional'])
-        self.assertEqual(document['last_updated'], '11 November 2026')
+        self.assertFalse(document['contact_is_provisional'])
+        self.assertEqual(document['contact_email'], 'kingdomkidshq@gmail.com')
+        self.assertNotIn('privacy@kingdom-kids.app', text)
+        self.assertNotIn('This privacy inbox is provisional', text)
+        self.assertEqual(document['last_updated'], '12 November 2026')
         self.assertEqual(document['canonical_url'], 'https://kingdom-kids.app/privacy/')
 
     def test_bundled_asset_is_exactly_current_deterministic_output(self):

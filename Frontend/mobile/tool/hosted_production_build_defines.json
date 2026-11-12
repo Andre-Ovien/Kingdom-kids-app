@@ -10,5 +10,9 @@
   "PAYMENT_API_BASE_URL": "https://kingdom-kids-checkout-staging.onrender.com/api",
   "PAYMENT_CHECKOUT_URL": "https://kingdom-kids-checkout-staging.onrender.com/parent/checkout/",
   "APP_STORE_BUNDLE_ID": "app.kingdom-kids.kingdomkids",
-  "APP_STORE_TEAM_ID": "GG228DP7G6"
+  "APP_STORE_TEAM_ID": "GG228DP7G6",
+  "APP_STORE_LEGAL_OPERATOR": "Kingdom Kids LLC",
+  "APP_STORE_PRIVACY_CONTACT_EMAIL": "kingdomkidshq@gmail.com",
+  "APP_STORE_KIDS_AGE_BAND": "6-8",
+  "APP_STORE_TARGET_AGE_RANGE": "3-10"
 }

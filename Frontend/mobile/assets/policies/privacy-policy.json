@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
   "title": "Privacy policy",
-  "last_updated": "11 November 2026",
+  "last_updated": "12 November 2026",
   "canonical_url": "https://kingdom-kids.app/privacy/",
-  "contact_email": "privacy@kingdom-kids.app",
-  "contact_is_provisional": true,
+  "contact_email": "kingdomkidshq@gmail.com",
+  "contact_is_provisional": false,
   "source_sha256": {
-    "privacy.astro": "5d3de183336dca9f728deba74e1acf37343ae83f9a51db372502719760985d82",
-    "site.ts": "dee3dfb3bd8c938acee118c4ae9cae65674915deb35a5519c0892d34dc9f0522"
+    "privacy.astro": "0dd9067785e5122b57b8303d4d2743c6dcdc523928e1603837d9ca77111767d2",
+    "site.ts": "791af7332056e4613994c55ee5542ed7c374c50888af4c5610d88568e93606af"
   },
   "sections": [
     {
@@ -16,7 +16,7 @@
       "blocks": [
         {
           "kind": "paragraph",
-          "text": "This policy applies to the Kingdom Kids website, iOS and Android apps, and supporting API. The app offers Bible stories, read-aloud features, games, and progress views for children, while a parent or guardian creates and manages the family account."
+          "text": "Kingdom Kids LLC operates Kingdom Kids. This policy applies to the Kingdom Kids website, iOS and Android apps, and supporting API. The app offers Bible stories, read-aloud features, games, and progress views for children ages 3–10, while a parent or guardian creates and manages the family account."
         },
         {
           "kind": "paragraph",
@@ -283,14 +283,10 @@
       "blocks": [
         {
           "kind": "paragraph",
-          "text": "Privacy questions or requests can be sent to privacy@kingdom-kids.app.",
+          "text": "Privacy questions or requests for Kingdom Kids LLC can be sent to kingdomkidshq@gmail.com.",
           "source_links": [
-            "mailto:privacy@kingdom-kids.app"
+            "mailto:kingdomkidshq@gmail.com"
           ]
-        },
-        {
-          "kind": "paragraph",
-          "text": "Pre-launch status: This privacy inbox is provisional and must be provisioned, monitored, and tested before launch."
         }
       ]
     }
