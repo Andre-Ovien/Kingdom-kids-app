@@ -5,6 +5,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import re
 import sys
 import shutil
 from tempfile import TemporaryDirectory
@@ -46,6 +47,100 @@ def sandbox_environment():
 
 
 class RenderStartupTests(unittest.TestCase):
+    def lookup_fixture(self, **changes):
+        data = dict(pk=41, is_active=True, email_verified_at=object(), is_staff=False,
+                    is_superuser=False, kid_profiles=SimpleNamespace(count=Mock(return_value=3)))
+        data.update(changes)
+        parent = SimpleNamespace(**data)
+        class Query(list):
+            def only(self, *fields): return self
+            def order_by(self, *fields): return self
+        manager = Mock()
+        manager.normalize_email.side_effect = lambda email: email.lower()
+        manager.filter.return_value = Query([parent])
+        return parent, SimpleNamespace(objects=manager), Query
+
+    @staticmethod
+    def lookup_email_validator(email):
+        if not re.fullmatch(r'[^\s<>@,;]+@[^\s<>@,;]+\.[^\s<>@,;]+', email):
+            raise ValueError('synthetic-private-validator-detail')
+
+    def test_parent_lookup_absent_performs_no_import_query_output_or_configuration_change(self):
+        values = sandbox_environment(); before = dict(values)
+        _, model, _ = self.lookup_fixture(); emit = Mock()
+        with patch.dict(sys.modules, {'django': None}):
+            startup.lookup_sandbox_test_parent(values, user_model=model, emit=emit)
+        self.assertEqual(values, before)
+        self.assertEqual(model.objects.method_calls, [])
+        emit.assert_not_called()
+
+    def test_parent_lookup_returns_only_numeric_receipt_and_never_enrolls_or_mutates(self):
+        values = sandbox_environment(); before_ids = values['SQUARE_SANDBOX_TEST_PARENT_IDS']
+        values['KK_SANDBOX_TEST_PARENT_LOOKUP_EMAIL'] = 'Synthetic.Parent@Example.Test'
+        parent, model, _ = self.lookup_fixture(); emit = Mock()
+        startup.lookup_sandbox_test_parent(values, user_model=model,
+            validate=self.lookup_email_validator, emit=emit)
+        model.objects.filter.assert_called_once_with(email='synthetic.parent@example.test',
+            is_active=True, email_verified_at__isnull=False, is_staff=False, is_superuser=False)
+        parent.kid_profiles.count.assert_called_once_with()
+        receipt = json.loads(emit.call_args.args[0])
+        self.assertEqual(receipt, {'sandbox_test_parent_lookup':'eligible_parent','parent_id':41,'profile_count':3})
+        self.assertNotIn('Synthetic.Parent', emit.call_args.args[0])
+        self.assertNotIn('KK_SANDBOX_TEST_PARENT_LOOKUP_EMAIL', values)
+        self.assertEqual(values['SQUARE_SANDBOX_TEST_PARENT_IDS'], before_ids)
+        self.assertEqual([call[0] for call in model.objects.method_calls], ['normalize_email', 'filter'])
+
+    def test_parent_lookup_rejects_invalid_email_unqualified_or_wrong_host_before_query(self):
+        variants = [('KK_SANDBOX_TEST_PARENT_LOOKUP_EMAIL', value) for value in (
+            '', None, 'not-an-email', 'one@example.test,two@example.test',
+            'one@example.test;two@example.test', 'Name <one@example.test>',
+            ' one@example.test', 'one@example.test\n', 'x'*255)]
+        variants += [('RENDER_SANDBOX_CHECKOUT_QUALIFICATION_ENABLED','false'),
+            ('RENDER_EXTERNAL_HOSTNAME','other.onrender.com'), ('SQUARE_ENVIRONMENT','production')]
+        for name, value in variants:
+            values=sandbox_environment(); values['KK_SANDBOX_TEST_PARENT_LOOKUP_EMAIL']='private-parent@example.test'
+            values[name]=value
+            _, model, _ = self.lookup_fixture(); emit=Mock()
+            with self.subTest(name=name, value=value), self.assertRaises(startup.StartupRejected) as caught:
+                startup.lookup_sandbox_test_parent(values, user_model=model,
+                    validate=self.lookup_email_validator, emit=emit)
+            model.objects.filter.assert_not_called(); emit.assert_not_called()
+            self.assertNotIn('KK_SANDBOX_TEST_PARENT_LOOKUP_EMAIL',values)
+            self.assertNotIn('private-parent',str(caught.exception))
+            self.assertNotIn('synthetic-private',str(caught.exception))
+
+    def test_parent_lookup_rejects_inactive_unverified_staff_superuser_zero_or_multiple_matches(self):
+        for changes in ({'is_active':False},{'email_verified_at':None},{'is_staff':True},
+                        {'is_superuser':True},{'pk':True},{'pk':0}):
+            values=sandbox_environment(); values['KK_SANDBOX_TEST_PARENT_LOOKUP_EMAIL']='private-parent@example.test'
+            parent, model, _=self.lookup_fixture(**changes); emit=Mock()
+            with self.subTest(changes=changes), self.assertRaises(startup.StartupRejected):
+                startup.lookup_sandbox_test_parent(values,user_model=model,
+                    validate=self.lookup_email_validator,emit=emit)
+            parent.kid_profiles.count.assert_not_called(); emit.assert_not_called()
+        for size in (0,2):
+            values=sandbox_environment(); values['KK_SANDBOX_TEST_PARENT_LOOKUP_EMAIL']='private-parent@example.test'
+            parent, model, Query=self.lookup_fixture(); model.objects.filter.return_value=Query([parent]*size)
+            with self.subTest(size=size), self.assertRaises(startup.StartupRejected):
+                startup.lookup_sandbox_test_parent(values,user_model=model,
+                    validate=self.lookup_email_validator,emit=Mock())
+            parent.kid_profiles.count.assert_not_called()
+
+    def test_parent_lookup_database_or_profile_error_is_sanitized_and_never_emits_receipt(self):
+        for stage in ('query','profile'):
+            values=sandbox_environment(); values['KK_SANDBOX_TEST_PARENT_LOOKUP_EMAIL']='private-parent@example.test'
+            parent, model, _=self.lookup_fixture(); emit=Mock()
+            if stage=='query': model.objects.filter.side_effect=RuntimeError('private-parent synthetic-password private-token')
+            else: parent.kid_profiles.count.side_effect=RuntimeError('private-parent synthetic-password private-token')
+            with self.assertRaises(startup.StartupRejected) as caught:
+                startup.lookup_sandbox_test_parent(values,user_model=model,
+                    validate=self.lookup_email_validator,emit=emit)
+            emit.assert_not_called()
+            self.assertNotIn('private-parent',str(caught.exception))
+            self.assertNotIn('synthetic-password',str(caught.exception))
+            self.assertNotIn('private-token',str(caught.exception))
+            self.assertNotIn('KK_SANDBOX_TEST_PARENT_LOOKUP_EMAIL',values)
+
     def test_exact_explicit_sandbox_qualification_preserves_existing_startup_validation(self):
         values = sandbox_environment()
         with patch.object(startup.os, 'open', side_effect=AssertionError('Unexpected file/credential read')):
@@ -237,8 +332,15 @@ class RenderStartupTests(unittest.TestCase):
                 self.fail('Must not migrate without ownership')
         connection.__exit__.assert_called_once()
 
-    def run_start(self,fail_migration=False,private_media=False,fail_bootstrap=None,private_family=False,sandbox_checkout=False):
+    def run_start(self,fail_migration=False,private_media=False,fail_bootstrap=None,private_family=False,sandbox_checkout=False,parent_lookup=False):
         events=[]
+        _, lookup_model, _ = self.lookup_fixture()
+        lookup_query = lookup_model.objects.filter.return_value
+        lookup_model.objects.filter.side_effect = lambda **kwargs: (events.append('parent_lookup_query'), lookup_query)[1]
+        original_lookup = startup.lookup_sandbox_test_parent
+        def lookup(values):
+            return original_lookup(values, user_model=lookup_model, validate=self.lookup_email_validator,
+                emit=lambda text, **kwargs: events.append('parent_lookup_receipt'))
         def command(name,**kwargs):
             events.append(name)
             if fail_migration and name=='migrate':raise RuntimeError('synthetic failure')
@@ -261,24 +363,29 @@ class RenderStartupTests(unittest.TestCase):
             values=self.private_environment() if private_media else environment()
             if sandbox_checkout:
                 values.update(sandbox_environment())
+            if parent_lookup:
+                values['KK_SANDBOX_TEST_PARENT_LOOKUP_EMAIL']='private-parent@example.test'
             if private_family:
                 values.update(RENDER_EXTERNAL_HOSTNAME='kingdom-kids-checkout-staging.onrender.com',
                     KK_TEST_FAMILY_IMPORT_ZLIB_B64='synthetic-private-payload',
                     KK_TEST_FAMILY_IMPORT_SHA256='synthetic-digest', KK_TEST_FAMILY_IMPORT_EMAIL='synthetic@example.test')
             with patch.dict(os.environ,values,clear=True),patch.dict(sys.modules,modules),patch.object(startup.os,'chdir'),\
                     patch.object(startup,'migration_lock',lock),\
+                    patch.object(startup,'lookup_sandbox_test_parent',side_effect=lookup),\
                     patch.object(startup,'control_socket_path',return_value='/tmp/fixture-private/control.sock'),\
-                    patch.object(startup.os,'execvp',side_effect=lambda *args:self.record_exec(events,args,private_family)):
+                    patch.object(startup.os,'execvp',side_effect=lambda *args:self.record_exec(events,args,private_family,parent_lookup)):
                 if fail_migration or fail_bootstrap:
                     with self.assertRaises(RuntimeError):startup.start()
                 else:startup.start()
         finally:sys.path[:]=old_path
         return events
 
-    def record_exec(self, events, args, private_family):
+    def record_exec(self, events, args, private_family, parent_lookup=False):
         if private_family:
             for key in ('KK_TEST_FAMILY_IMPORT_ZLIB_B64', 'KK_TEST_FAMILY_IMPORT_SHA256', 'KK_TEST_FAMILY_IMPORT_EMAIL'):
                 self.assertNotIn(key, os.environ)
+        if parent_lookup:
+            self.assertNotIn('KK_SANDBOX_TEST_PARENT_LOOKUP_EMAIL',os.environ)
         events.append(args)
 
     def test_explicit_family_import_runs_after_release_under_lock_and_secret_env_is_not_inherited(self):
@@ -303,6 +410,12 @@ class RenderStartupTests(unittest.TestCase):
         self.assertEqual(events[:7], ['setup', 'check', 'lock', 'migrate',
             'install_published_matching_release', 'unlock', 'close_connections'])
         self.assertEqual(events[7][0], 'gunicorn')
+
+    def test_optional_parent_lookup_follows_checks_and_bootstrap_then_strips_email_before_gunicorn(self):
+        events=self.run_start(sandbox_checkout=True,parent_lookup=True)
+        self.assertEqual(events[:9],['setup','check','lock','migrate','install_published_matching_release',
+            'unlock','parent_lookup_query','parent_lookup_receipt','close_connections'])
+        self.assertEqual(events[9][0],'gunicorn')
 
     def test_failed_migration_never_starts_server(self):
         self.assertEqual(self.run_start(True),['setup','check','lock','migrate'])

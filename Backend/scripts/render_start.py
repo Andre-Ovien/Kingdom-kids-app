@@ -127,6 +127,50 @@ def qualify_private_media(environ):
         raise StartupRejected('Private media credentials, approved map pin or HTTPS host configuration are incomplete.') from None
 
 
+def lookup_sandbox_test_parent(environ, *, user_model=None, validate=None, emit=None):
+    """Optional operator lookup: readonly receipt, never automatic enrollment.
+
+    Absent by default with no Django import/query. The temporary email is removed
+    even on rejection and is never included in a receipt or error message.
+    """
+    name = 'KK_SANDBOX_TEST_PARENT_LOOKUP_EMAIL'
+    if name not in environ:
+        return
+    email = environ.pop(name)
+    try:
+        if (environ.get('RENDER_SANDBOX_CHECKOUT_QUALIFICATION_ENABLED') != 'true'
+                or environ.get('RENDER_EXTERNAL_HOSTNAME') != SANDBOX_QUALIFICATION_HOST
+                or not isinstance(email, str) or not 3 <= len(email) <= 254
+                or email != email.strip() or any(ord(char) <= 32 or ord(char) == 127 for char in email)):
+            raise ValueError
+        qualify_sandbox_checkout(environ)
+        if validate is None:
+            from django.core.validators import validate_email
+            validate = validate_email
+        validate(email)
+        if user_model is None:
+            from django.contrib.auth import get_user_model
+            user_model = get_user_model()
+        normalized = user_model.objects.normalize_email(email)
+        matches = list(user_model.objects.filter(email=normalized, is_active=True,
+            email_verified_at__isnull=False, is_staff=False, is_superuser=False).only(
+                'pk', 'is_active', 'email_verified_at', 'is_staff', 'is_superuser').order_by('pk')[:2])
+        if len(matches) != 1:
+            raise ValueError
+        parent = matches[0]
+        if (type(parent.pk) is not int or parent.pk <= 0 or not parent.is_active
+                or not parent.email_verified_at or parent.is_staff or parent.is_superuser):
+            raise ValueError
+        count = parent.kid_profiles.count()
+        if type(count) is not int or count < 0:
+            raise ValueError
+        receipt = {'sandbox_test_parent_lookup': 'eligible_parent',
+                   'parent_id': parent.pk, 'profile_count': count}
+    except Exception:
+        raise StartupRejected('Sandbox test-parent lookup requires one eligible verified non-admin parent on the approved staging service.') from None
+    (emit or print)(json.dumps(receipt, sort_keys=True), flush=True)
+
+
 def prepare_environment(environ):
     """Validate only explicit staging inputs; no environment values enter errors."""
     if environ.get('DJANGO_DEBUG') != 'false':
@@ -242,6 +286,7 @@ def start():
             call_command('install_private_test_family', apply=True)
             for name in ('KK_TEST_FAMILY_IMPORT_ZLIB_B64', 'KK_TEST_FAMILY_IMPORT_SHA256', 'KK_TEST_FAMILY_IMPORT_EMAIL'):
                 os.environ.pop(name, None)
+    lookup_sandbox_test_parent(os.environ)
     connections.close_all()
     # One synchronous worker fits the Free instance and keeps DB usage bounded.
     # Access logs omit request URLs, which can contain query parameters.

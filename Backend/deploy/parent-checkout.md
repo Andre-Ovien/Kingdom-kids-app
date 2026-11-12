@@ -143,6 +143,25 @@ Before enrollment its account/profile APIs work normally and it has no checkout
 or plan-routing capability. A second plan test needs a separately enrolled test
 parent or a reviewed canonical cleanup; never force an overlapping payment.
 
+For an explicitly approved existing test parent whose numeric ID is not yet
+known, an operator may temporarily set the otherwise absent
+`KK_SANDBOX_TEST_PARENT_LOOKUP_EMAIL` to that single exact email. This read-only
+startup lookup is restricted to the exact fully qualified Sandbox staging
+service. After normal deployment checks and bootstrap it queries only the
+normalized exact account, requires exactly one active, verified non-staff,
+non-superuser parent, and prints a JSON receipt containing a numeric `parent_id`
+and `profile_count`. It never prints the email, signs in, resets a password,
+verifies an account, enrolls it, or writes account/access data. Missing/ineligible
+or ambiguous matches fail with a fixed sanitized startup error. With the
+variable absent it performs no lookup or database read.
+
+The lookup value is removed before Gunicorn inherits the environment. Remove the
+temporary variable from Render immediately after reading the receipt so future
+cold starts do not repeat it, then separately add only the approved numeric ID
+to `SQUARE_SANDBOX_TEST_PARENT_IDS`. Keep PostgreSQL's external-network block and
+the existing signing keys unchanged; this lookup does not require a paid shell
+or database ingress exception.
+
 Environment changes take effect in each restarted server/worker process. Removing
 an ID is not an instantaneous revocation across an old rolling deployment. Stop
 worker dispatch during withdrawal and retire old processes. A financial request
