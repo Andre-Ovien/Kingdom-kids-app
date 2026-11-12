@@ -1112,6 +1112,7 @@ void main() {
         {'SQUARE_SANDBOX_CHECKOUT_ENABLED': true},
         {'HOSTED_RETURN_SCHEME_ONLY_PREVIEW': true},
         {'SUBSCRIPTION_REVIEW_ID': 'local-preview'},
+        {'ONBOARDING_REVIEW_ID': 'local-onboarding'},
         {'PAYMENT_ENVIRONMENT': 'sandbox'},
         {'PRODUCTION_PAYMENT_FLOW_ENABLED': false},
         {'PAYMENT_CHECKOUT_URL': 'https://other.example.test/parent/checkout/'},

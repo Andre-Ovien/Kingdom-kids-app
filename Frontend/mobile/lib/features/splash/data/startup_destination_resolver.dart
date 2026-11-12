@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../../../app/router.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../subscription/data/hosted_access_routing.dart';
@@ -21,14 +23,37 @@ class StartupDestinationResolver implements SplashDestinationResolver {
   StartupDestinationResolver({
     AuthRepository? authRepository,
     FirstLaunchStore? firstLaunchStore,
+    OnboardingReviewStore? onboardingReviewStore,
+    this.onboardingReviewId = const String.fromEnvironment(
+      'ONBOARDING_REVIEW_ID',
+    ),
+    this.allowOnboardingReview = !kReleaseMode,
   }) : _authRepository = authRepository ?? AuthRepository(),
-       _firstLaunchStore = firstLaunchStore ?? SecureFirstLaunchStore();
+       _firstLaunchStore = firstLaunchStore ?? SecureFirstLaunchStore(),
+       _reviewStore = onboardingReviewStore ?? SecureOnboardingReviewStore();
 
   final AuthRepository _authRepository;
   final FirstLaunchStore _firstLaunchStore;
+  final OnboardingReviewStore _reviewStore;
+  final String onboardingReviewId;
+  final bool allowOnboardingReview;
 
   @override
   Future<StartupDestination> resolve() async {
+    // The real main.dart may replay the welcome once for a deliberate physical
+    // review build. This changes only routing and a separate marker; an owned
+    // session, selected child, pending purchase and server progress stay intact.
+    if (!kReleaseMode &&
+        allowOnboardingReview &&
+        RegExp(r'^[A-Za-z0-9_-]{1,80}$').hasMatch(onboardingReviewId)) {
+      try {
+        if (await _reviewStore.claim(onboardingReviewId)) {
+          return const StartupDestination(AppRoutes.onboarding);
+        }
+      } catch (_) {
+        // Locked review storage must retain the normal saved-session startup.
+      }
+    }
     bool returningInstallation;
     try {
       returningInstallation = await _firstLaunchStore.hasLaunchedBefore();

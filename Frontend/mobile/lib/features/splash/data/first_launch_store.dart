@@ -46,3 +46,23 @@ class MemoryFirstLaunchStore implements FirstLaunchStore {
     launched = true;
   }
 }
+
+/// An explicit development-review marker never changes auth or child data.
+abstract interface class OnboardingReviewStore {
+  Future<bool> claim(String reviewId);
+}
+
+class SecureOnboardingReviewStore implements OnboardingReviewStore {
+  SecureOnboardingReviewStore({FlutterSecureStorage? storage})
+    : _storage = storage ?? kingdomKidsSecureStorage;
+
+  static const markerKey = 'kingdom_kids.onboarding_review_consumed';
+  final FlutterSecureStorage _storage;
+
+  @override
+  Future<bool> claim(String reviewId) async {
+    if (await _storage.read(key: markerKey) == reviewId) return false;
+    await _storage.write(key: markerKey, value: reviewId);
+    return true;
+  }
+}

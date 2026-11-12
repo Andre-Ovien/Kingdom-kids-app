@@ -31,6 +31,11 @@ void validateAppStoreRelease(
       'Sandbox checkout must be disabled for App Store submission.',
     );
   }
+  if (value('ONBOARDING_REVIEW_ID').isNotEmpty) {
+    throw const ReleaseConfigurationException(
+      'Remove the local onboarding review override.',
+    );
+  }
   if (value('SUBSCRIPTION_REVIEW_ID').isNotEmpty) {
     throw const ReleaseConfigurationException(
       'Remove the local subscription review override.',

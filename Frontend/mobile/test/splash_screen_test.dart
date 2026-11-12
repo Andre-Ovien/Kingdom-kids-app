@@ -23,6 +23,66 @@ const _kai = KidProfile(
 
 void main() {
   group('startup destination', () {
+    test(
+      'one-time onboarding review preserves the family session and next startup',
+      () async {
+        final sessions = MemoryAuthSessionStore();
+        await sessions.writeSession(_session(profiles: const [_kai]));
+        await sessions.writeSelectedKidId(_kai.id);
+        final marker = _ReviewMarker();
+        final auth = _CountingStartupAuth(sessions);
+        final resolver = StartupDestinationResolver(
+          authRepository: auth,
+          firstLaunchStore: MemoryFirstLaunchStore(launched: true),
+          onboardingReviewStore: marker,
+          onboardingReviewId: 'physical-hosted-20261112',
+        );
+        expect((await resolver.resolve()).route, AppRoutes.onboarding);
+        expect(auth.restores, 0);
+        expect(auth.childReads, 0);
+        expect((await resolver.resolve()).route, AppRoutes.home);
+        expect((await sessions.readSession())!.parent.id, _parent.id);
+        expect((await sessions.readSession())!.profiles, const [_kai]);
+        expect(await sessions.readSelectedKidId(), _kai.id);
+        expect(marker.claims, 2);
+        final nextReview = StartupDestinationResolver(
+          authRepository: auth,
+          firstLaunchStore: MemoryFirstLaunchStore(launched: true),
+          onboardingReviewStore: marker,
+          onboardingReviewId: 'physical-hosted-20261112-next',
+        );
+        expect((await nextReview.resolve()).route, AppRoutes.onboarding);
+        expect((await nextReview.resolve()).route, AppRoutes.home);
+      },
+    );
+
+    test(
+      'disabled, invalid and unavailable review markers keep normal startup',
+      () async {
+        for (final scenario in [
+          (id: 'physical-hosted-20261112', allowed: false, fails: false),
+          (id: '', allowed: true, fails: false),
+          (id: 'invalid/id', allowed: true, fails: false),
+          (id: 'physical-hosted-20261112', allowed: true, fails: true),
+        ]) {
+          final sessions = MemoryAuthSessionStore();
+          await sessions.writeSession(_session(profiles: const [_kai]));
+          await sessions.writeSelectedKidId(_kai.id);
+          final marker = _ReviewMarker(fails: scenario.fails);
+          final resolver = StartupDestinationResolver(
+            authRepository: AuthRepository(sessionStore: sessions),
+            firstLaunchStore: MemoryFirstLaunchStore(launched: true),
+            onboardingReviewStore: marker,
+            onboardingReviewId: scenario.id,
+            allowOnboardingReview: scenario.allowed,
+          );
+          expect((await resolver.resolve()).route, AppRoutes.home);
+          expect(await sessions.readSelectedKidId(), _kai.id);
+          expect((await sessions.readSession())!.parent.id, _parent.id);
+        }
+      },
+    );
+
     for (final scenario in [
       (
         name: 'selected child',
@@ -585,5 +645,36 @@ class _FakeSplashVideoController implements SplashVideoController {
     if (hangPlaybackStart) {
       await Completer<void>().future;
     }
+  }
+}
+
+class _ReviewMarker implements OnboardingReviewStore {
+  _ReviewMarker({this.fails = false});
+  final bool fails;
+  int claims = 0;
+  String? consumed;
+  @override
+  Future<bool> claim(String reviewId) async {
+    claims++;
+    if (fails) throw StateError('Storage unavailable');
+    if (consumed == reviewId) return false;
+    consumed = reviewId;
+    return true;
+  }
+}
+
+class _CountingStartupAuth extends AuthRepository {
+  _CountingStartupAuth(AuthSessionStore store) : super(sessionStore: store);
+  int restores = 0, childReads = 0;
+  @override
+  Future<AuthSession?> restoreSession() {
+    restores++;
+    return super.restoreSession();
+  }
+
+  @override
+  Future<KidProfile?> currentKid() {
+    childReads++;
+    return super.currentKid();
   }
 }
