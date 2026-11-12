@@ -154,6 +154,19 @@ class AuthRepository {
     _signInGeneration,
   );
 
+  /// Capture identity and its sign-in generation in one serialized read.
+  Future<({String parentId, Object scope})?> captureParentAccessOwner() =>
+      _withSessionMutationLock(() async {
+        final session = await _sessionStore.readSession();
+        if (session == null || session.accessToken.isEmpty) {
+          paidContentAccessState.selectScope(null);
+          return null;
+        }
+        final scope = _parentAccessScope(session);
+        paidContentAccessState.selectScope(scope);
+        return (parentId: session.parent.id, scope: scope);
+      });
+
   /// Payment decisions belong to a backend/family/explicit sign-in, and may
   /// survive ordinary token rotation or a switch between that family's kids.
   Future<Object?> parentAccessScope() => _withSessionMutationLock(() async {

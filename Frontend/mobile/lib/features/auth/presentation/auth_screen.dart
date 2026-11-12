@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../app/router.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../privacy/presentation/privacy_policy_screen.dart';
+import '../../subscription/data/hosted_access_routing.dart';
 import '../data/auth_repository.dart';
 import '../domain/auth_requests.dart';
 import '../domain/auth_session.dart';
@@ -155,7 +156,7 @@ class _AuthScreenState extends State<AuthScreen>
       if (!_canPresentSubmission(generation, submittedMode)) {
         return;
       }
-      _continueToProfiles(session);
+      await _continueToProfiles(session);
     } on AppException catch (error) {
       if (_canPresentSubmission(generation, submittedMode) &&
           error.code == 'email_verification_required' &&
@@ -235,9 +236,16 @@ class _AuthScreenState extends State<AuthScreen>
     return true;
   }
 
-  void _continueToProfiles(AuthSession session) {
+  Future<void> _continueToProfiles(AuthSession session) async {
+    final routing = HostedAccessRouting(authRepository: _repository);
+    final plans = await routing.requiresPlans();
+    if (!await routing.isCurrentParent(session.parent.id) || !mounted) return;
     Navigator.of(context).pushNamedAndRemoveUntil(
-      session.hasProfiles ? AppRoutes.profilePicker : AppRoutes.kidProfileSetup,
+      plans
+          ? AppRoutes.subscription
+          : session.hasProfiles
+          ? AppRoutes.profilePicker
+          : AppRoutes.kidProfileSetup,
       (_) => false,
       arguments: session.profiles,
     );

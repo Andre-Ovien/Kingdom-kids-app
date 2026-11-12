@@ -1,5 +1,6 @@
 import '../../../app/router.dart';
 import '../../auth/data/auth_repository.dart';
+import '../../subscription/data/hosted_access_routing.dart';
 import 'first_launch_store.dart';
 
 class StartupDestination {
@@ -13,10 +14,9 @@ abstract interface class SplashDestinationResolver {
   Future<StartupDestination> resolve();
 }
 
-/// Chooses the first interactive screen entirely from local state.
-///
-/// Network refreshes happen on the destination screens. Keeping startup local
-/// prevents a poor connection from trapping a family on the splash screen.
+/// Chooses the first interactive screen from the saved family session.
+/// A qualified hosted-payment build checks access before child navigation;
+/// unavailable status keeps parent recovery and account controls reachable.
 class StartupDestinationResolver implements SplashDestinationResolver {
   StartupDestinationResolver({
     AuthRepository? authRepository,
@@ -54,6 +54,17 @@ class StartupDestinationResolver implements SplashDestinationResolver {
       // Upgrades and reinstalls may preserve a verified account while losing
       // this installation flag. The account is stronger returning evidence.
       if (!returningInstallation) await _markLaunchedIfPossible();
+
+      final accessRouting = HostedAccessRouting(
+        authRepository: _authRepository,
+      );
+      final requiresPlans = await accessRouting.requiresPlans();
+      if (!await accessRouting.isCurrentParent(session.parent.id)) {
+        return const StartupDestination(AppRoutes.login);
+      }
+      if (requiresPlans) {
+        return const StartupDestination(AppRoutes.subscription);
+      }
 
       final activeKid = await _authRepository.currentKid();
       if (activeKid != null) {

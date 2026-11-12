@@ -19,6 +19,12 @@ class SandboxCheckoutConfiguration {
     this.controlledLiveEnabled = const bool.fromEnvironment(
       'CONTROLLED_LIVE_PAYMENT_FLOW_ENABLED',
     ),
+    this.hostedSubscriptionsEnabled = const bool.fromEnvironment(
+      'SQUARE_HOSTED_SUBSCRIPTIONS_ENABLED',
+    ),
+    this.schemeOnlyPreview = const bool.fromEnvironment(
+      'HOSTED_RETURN_SCHEME_ONLY_PREVIEW',
+    ),
     this.paymentEnvironment = const String.fromEnvironment(
       'PAYMENT_ENVIRONMENT',
     ),
@@ -49,12 +55,15 @@ class SandboxCheckoutConfiguration {
   final String apiBaseUrl;
   final bool productionEnabled;
   final bool controlledLiveEnabled;
+  final bool hostedSubscriptionsEnabled;
+  final bool schemeOnlyPreview;
   final String paymentEnvironment;
   final String productionApiBaseUrl;
   final String productionCheckoutUrl;
 
   bool get isProductionEnabled =>
       productionEnabled &&
+      !(controlledLiveEnabled && hostedSubscriptionsEnabled) &&
       paymentEnvironment == 'production' &&
       apiBaseUrl == productionApiBaseUrl &&
       _approvedUrl(productionApiBaseUrl, '/api') &&
@@ -67,11 +76,14 @@ class SandboxCheckoutConfiguration {
 
   bool get isControlledProductionEnabled =>
       controlledLiveEnabled && isProductionEnabled;
+  bool get isHostedProductionEnabled =>
+      hostedSubscriptionsEnabled && isProductionEnabled;
 
   bool get isEnabled =>
       isProductionEnabled ||
       (!productionEnabled &&
           !controlledLiveEnabled &&
+          !hostedSubscriptionsEnabled &&
           (paymentEnvironment.isEmpty || paymentEnvironment == 'sandbox') &&
           enabled &&
           apiBaseUrl == approvedApiBaseUrl);

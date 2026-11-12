@@ -35,6 +35,7 @@ import '../features/subscription/data/subscription_review_launch.dart';
 import '../features/subscription/presentation/subscription_review_screen.dart';
 import '../features/subscription/presentation/subscription_parent_screen.dart';
 import '../features/subscription/presentation/subscription_screen.dart';
+import '../features/subscription/presentation/hosted_paid_route_boundary.dart';
 import '../features/videos/domain/video_story.dart';
 import '../features/videos/presentation/video_watch_screen.dart';
 import '../features/videos/presentation/videos_screen.dart';
@@ -221,6 +222,12 @@ class AppRouter {
             identityBound: true,
             child: destination,
           )
+        : const {
+            AppRoutes.profilePicker,
+            AppRoutes.kidProfileSetup,
+            AppRoutes.bible,
+          }.contains(settings.name)
+        ? HostedPaidRouteBoundary(child: destination)
         : destination;
 
     if (tabTransition != null && AppRoutes.isTabRoute(settings.name)) {

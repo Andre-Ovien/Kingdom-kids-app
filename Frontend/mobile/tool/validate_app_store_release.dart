@@ -13,6 +13,12 @@ void validateAppStoreRelease(
   required String approvedCheckoutUrl,
 }) {
   String value(String key) => defines[key]?.toString() ?? '';
+  if (value('HOSTED_RETURN_SCHEME_ONLY_PREVIEW') != 'false' &&
+      value('HOSTED_RETURN_SCHEME_ONLY_PREVIEW').isNotEmpty) {
+    throw const ReleaseConfigurationException(
+      'Scheme-only development returns are not an App Store release configuration.',
+    );
+  }
   if (value('CONTROLLED_LIVE_PAYMENT_FLOW_ENABLED') != 'false' &&
       value('CONTROLLED_LIVE_PAYMENT_FLOW_ENABLED').isNotEmpty) {
     throw const ReleaseConfigurationException(
@@ -37,6 +43,8 @@ void validateAppStoreRelease(
   final configuration = SandboxCheckoutConfiguration(
     apiBaseUrl: value('API_BASE_URL'),
     productionEnabled: value('PRODUCTION_PAYMENT_FLOW_ENABLED') == 'true',
+    hostedSubscriptionsEnabled:
+        value('SQUARE_HOSTED_SUBSCRIPTIONS_ENABLED') == 'true',
     paymentEnvironment: value('PAYMENT_ENVIRONMENT'),
     productionApiBaseUrl: value('PAYMENT_API_BASE_URL'),
     productionCheckoutUrl: value('PAYMENT_CHECKOUT_URL'),
@@ -44,10 +52,12 @@ void validateAppStoreRelease(
   if (!configuration.isProductionEnabled ||
       configuration.productionApiBaseUrl != approvedApiBaseUrl ||
       configuration.productionCheckoutUrl != approvedCheckoutUrl ||
-      configuration.productionApiBaseUrl ==
-          SandboxCheckoutConfiguration.approvedApiBaseUrl ||
-      configuration.productionCheckoutUrl ==
-          SandboxCheckoutConfiguration.checkoutUrl) {
+      (!configuration.isHostedProductionEnabled &&
+              configuration.productionApiBaseUrl ==
+                  SandboxCheckoutConfiguration.approvedApiBaseUrl ||
+          !configuration.isHostedProductionEnabled &&
+              configuration.productionCheckoutUrl ==
+                  SandboxCheckoutConfiguration.checkoutUrl)) {
     throw const ReleaseConfigurationException(
       'Use the explicitly approved production API and checkout configuration.',
     );

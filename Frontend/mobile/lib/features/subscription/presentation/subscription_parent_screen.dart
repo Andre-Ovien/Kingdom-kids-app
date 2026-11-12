@@ -6,6 +6,8 @@ import '../../auth/data/auth_repository.dart';
 import '../../auth/presentation/adult_gate.dart';
 import '../data/sandbox_checkout.dart';
 import 'subscription_screen.dart';
+import 'hosted_subscription_scope.dart';
+import 'hosted_subscription_parent_view.dart';
 
 /// Preserves the existing password gate, including its background lock. Only
 /// an explicitly opted-in payment configuration creates a coordinator.
@@ -37,7 +39,7 @@ class _SubscriptionParentScreenState extends State<SubscriptionParentScreen>
   void initState() {
     super.initState();
     final configuration = widget.configuration;
-    if (configuration.isEnabled) {
+    if (configuration.isEnabled && !configuration.isHostedProductionEnabled) {
       final repository =
           widget.accessRepository ??
           (_repository = AuthenticatedSandboxContentAccessRepository(
@@ -72,10 +74,20 @@ class _SubscriptionParentScreenState extends State<SubscriptionParentScreen>
   }
 
   @override
-  Widget build(BuildContext context) => AdultGate(
-    repository: widget.authRepository,
-    title: 'Subscription plans',
-    reason: 'Enter the parent password to view subscription plans.',
-    protectedBuilder: (_) => SubscriptionScreen(sandboxCheckout: _checkout),
-  );
+  Widget build(BuildContext context) {
+    if (widget.configuration.isHostedProductionEnabled) {
+      final controller = HostedSubscriptionScope.maybeOf(context);
+      return controller == null
+          ? const Scaffold(
+              body: Center(child: Text('Checkout is unavailable.')),
+            )
+          : HostedSubscriptionParentView(controller: controller);
+    }
+    return AdultGate(
+      repository: widget.authRepository,
+      title: 'Subscription plans',
+      reason: 'Enter the parent password to view subscription plans.',
+      protectedBuilder: (_) => SubscriptionScreen(sandboxCheckout: _checkout),
+    );
+  }
 }

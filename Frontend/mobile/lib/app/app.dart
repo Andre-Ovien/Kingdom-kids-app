@@ -7,6 +7,7 @@ import '../features/auth/data/auth_repository.dart';
 import '../features/splash/data/startup_destination_resolver.dart';
 import '../features/splash/presentation/splash_screen.dart';
 import '../features/subscription/data/parent_content_access_monitor.dart';
+import '../features/subscription/presentation/hosted_subscription_scope.dart';
 import '../shared/audio/app_audio_controller.dart';
 import '../shared/audio/app_audio_route_observer.dart';
 import '../shared/audio/app_audio_scope.dart';
@@ -108,9 +109,12 @@ class _KingdomKidsAppState extends State<KingdomKidsApp>
         ],
         onGenerateRoute: routeFactory,
         navigatorObservers: [appRouteObserver, _audioRoutes, _navigationRoutes],
-        builder: (context, child) => PersistentLiquidNavigationHost(
-          controller: _navigation,
-          child: child!,
+        builder: (context, child) => HostedSubscriptionScope(
+          navigatorKey: _navigatorKey,
+          child: PersistentLiquidNavigationHost(
+            controller: _navigation,
+            child: child!,
+          ),
         ),
       ),
     );

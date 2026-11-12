@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../features/auth/data/auth_repository.dart';
 import '../../core/network/feature_view_state_cache.dart';
 import '../../core/network/paid_content_access_state.dart';
+import '../../features/subscription/presentation/hosted_paid_route_boundary.dart';
 
 /// Carries same-identity display seeds and scroll/search/filter preferences.
 /// Screen repositories still perform their normal freshness checks.
@@ -108,12 +109,14 @@ class _ScopedFeaturePageState extends State<ScopedFeaturePage> {
     super.dispose();
   }
 
-  Widget _page(FeaturePagePreparation prepared) => FeatureViewMemory(
-    values: prepared.memory,
-    prevalidatedScope: prepared.scope,
-    child: KeyedSubtree(
-      key: ValueKey((prepared.scope, prepared.identityRevision)),
-      child: widget.child,
+  Widget _page(FeaturePagePreparation prepared) => HostedPaidRouteBoundary(
+    child: FeatureViewMemory(
+      values: prepared.memory,
+      prevalidatedScope: prepared.scope,
+      child: KeyedSubtree(
+        key: ValueKey((prepared.scope, prepared.identityRevision)),
+        child: widget.child,
+      ),
     ),
   );
 

@@ -46,6 +46,7 @@ class SandboxContentAccess {
     required String expectedParentId,
     String expectedEnvironment = 'sandbox',
     bool allowControlledProduction = false,
+    bool allowHostedProduction = false,
   }) {
     if (json['schema_version'] != 1 ||
         json['parent_id'] != expectedParentId ||
@@ -82,7 +83,13 @@ class SandboxContentAccess {
         checkout is Map &&
         checkout['state'] == 'available' &&
         (expectedEnvironment == 'production'
-            ? allowControlledProduction
+            ? allowHostedProduction
+                  ? !allowControlledProduction &&
+                        routing &&
+                        enforcement &&
+                        checkout['provider'] == 'square_hosted' &&
+                        checkout['reason_code'] == 'production_hosted'
+                  : allowControlledProduction
                   ? !routing &&
                         !enforcement &&
                         checkout['reason_code'] == 'production_controlled' &&
@@ -186,6 +193,7 @@ class AuthenticatedSandboxContentAccessRepository
         expectedParentId: origin.parent.id,
         expectedEnvironment: configuration.environment,
         allowControlledProduction: configuration.isControlledProductionEnabled,
+        allowHostedProduction: configuration.isHostedProductionEnabled,
       );
     });
     // withAccessToken protects request/retry ownership. A successful response
@@ -312,7 +320,20 @@ Future<bool> _openSystemBrowser(Uri uri) =>
 
 /// Lives outside AdultGate, whose protected child is disposed on background.
 /// Every return from the browser invalidates and rechecks the server snapshot.
-class SandboxCheckoutController extends ChangeNotifier {
+abstract class ParentCheckoutController extends ChangeNotifier {
+  SandboxCheckoutConfiguration get configuration;
+  SandboxContentAccess? get access;
+  bool get checking;
+  bool get busy;
+  String? get error;
+  bool get canOpen;
+  bool get canManage;
+  Future<bool> refresh();
+  Future<void> openCheckout({required SubscriptionBillingPeriod billingPeriod});
+  Future<void> openManagement();
+}
+
+class SandboxCheckoutController extends ParentCheckoutController {
   SandboxCheckoutController({
     this.configuration = const SandboxCheckoutConfiguration(),
     required SandboxContentAccessRepository repository,
@@ -323,6 +344,7 @@ class SandboxCheckoutController extends ChangeNotifier {
        _storefrontCountryProvider =
            storefrontCountryProvider ?? AppStoreStorefront.currentCountryCode;
 
+  @override
   final SandboxCheckoutConfiguration configuration;
   final SandboxContentAccessRepository _repository;
   final SandboxBrowserLauncher _launcher;
@@ -335,10 +357,15 @@ class SandboxCheckoutController extends ChangeNotifier {
   int _revision = 0;
   String? _error;
 
+  @override
   SandboxContentAccess? get access => _access;
+  @override
   bool get checking => _checking;
+  @override
   bool get busy => _checking || _opening;
+  @override
   String? get error => _error;
+  @override
   bool get canOpen =>
       !_disposed &&
       configuration.isEnabled &&
@@ -348,6 +375,7 @@ class SandboxCheckoutController extends ChangeNotifier {
       _access?.checkoutAvailable == true &&
       (!configuration.isProductionEnabled || _access?.handoffAvailable == true);
 
+  @override
   bool get canManage =>
       !_disposed &&
       configuration.isEnabled &&
@@ -371,6 +399,7 @@ class SandboxCheckoutController extends ChangeNotifier {
     return refresh();
   }
 
+  @override
   Future<bool> refresh() async {
     if (_disposed || !_foreground || !configuration.isEnabled) return false;
     final revision = ++_revision;
@@ -395,10 +424,12 @@ class SandboxCheckoutController extends ChangeNotifier {
     }
   }
 
+  @override
   Future<void> openCheckout({
     required SubscriptionBillingPeriod billingPeriod,
   }) => _openAction(billingPeriod: billingPeriod);
 
+  @override
   Future<void> openManagement() => _openAction(manage: true);
 
   Future<void> _openAction({

@@ -1110,6 +1110,7 @@ void main() {
       expect(() => validate(defines), returnsNormally);
       for (final change in <Map<String, dynamic>>[
         {'SQUARE_SANDBOX_CHECKOUT_ENABLED': true},
+        {'HOSTED_RETURN_SCHEME_ONLY_PREVIEW': true},
         {'SUBSCRIPTION_REVIEW_ID': 'local-preview'},
         {'PAYMENT_ENVIRONMENT': 'sandbox'},
         {'PRODUCTION_PAYMENT_FLOW_ENABLED': false},

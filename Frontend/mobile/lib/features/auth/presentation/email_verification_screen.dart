@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../subscription/data/hosted_access_routing.dart';
 
 import '../../../app/router.dart';
 import '../../../core/errors/app_exception.dart';
@@ -134,7 +135,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
         VerifyEmailRequest(challengeId: challengeId, code: code),
       );
       if (_challengeIsCurrent(challengeId)) {
-        _continueToProfiles(session);
+        await _continueToProfiles(session);
       }
     } on AppException catch (error) {
       if (_challengeIsCurrent(challengeId)) {
@@ -213,9 +214,16 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
       _pending.challengeId == challengeId &&
       (ModalRoute.of(context)?.isCurrent ?? true);
 
-  void _continueToProfiles(AuthSession session) {
+  Future<void> _continueToProfiles(AuthSession session) async {
+    final routing = HostedAccessRouting(authRepository: _repository);
+    final plans = await routing.requiresPlans();
+    if (!await routing.isCurrentParent(session.parent.id) || !mounted) return;
     Navigator.of(context).pushNamedAndRemoveUntil(
-      session.hasProfiles ? AppRoutes.profilePicker : AppRoutes.kidProfileSetup,
+      plans
+          ? AppRoutes.subscription
+          : session.hasProfiles
+          ? AppRoutes.profilePicker
+          : AppRoutes.kidProfileSetup,
       (_) => false,
       arguments: session.profiles,
     );

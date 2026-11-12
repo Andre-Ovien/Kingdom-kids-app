@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../app/router.dart';
 import '../../privacy/presentation/privacy_policy_screen.dart';
 import '../data/sandbox_checkout.dart';
+import '../data/hosted_subscription_controller.dart';
 import '../domain/subscription_plan.dart';
 
 const _blue = Color(0xFF1457FF);
@@ -39,7 +40,7 @@ class SubscriptionScreen extends StatefulWidget {
   final bool reviewMode;
   final DateTime? previewDate;
   final VoidCallback? onClose;
-  final SandboxCheckoutController? sandboxCheckout;
+  final ParentCheckoutController? sandboxCheckout;
   @override
   State<SubscriptionScreen> createState() => _SubscriptionScreenState();
 }
@@ -47,7 +48,7 @@ class SubscriptionScreen extends StatefulWidget {
 class _SubscriptionScreenState extends State<SubscriptionScreen> {
   SubscriptionBillingPeriod _period = SubscriptionBillingPeriod.monthly;
   late final DateTime _today = widget.previewDate ?? DateTime.now();
-  SandboxCheckoutController? get _checkout =>
+  ParentCheckoutController? get _checkout =>
       widget.reviewMode ? null : widget.sandboxCheckout;
   bool get _singlePeriod =>
       _checkout?.configuration.isControlledProductionEnabled == true;
@@ -80,6 +81,10 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
   String get _sandboxNotice {
     final checkout = _checkout!;
+    if (checkout is HostedSubscriptionController &&
+        checkout.persistentStatus != null) {
+      return checkout.persistentStatus!;
+    }
     if (checkout.checking) return 'Checking access…';
     if (checkout.error != null) return checkout.error!;
     if (checkout.access?.state == SandboxAccessState.paid) {

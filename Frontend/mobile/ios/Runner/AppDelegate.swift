@@ -19,6 +19,9 @@ import StoreKit
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+    CheckoutReturnLinkBridge.shared.register(
+      messenger: engineBridge.applicationRegistrar.messenger()
+    )
     storefrontChannel?.setMethodCallHandler(nil)
     let storefront = FlutterMethodChannel(
       name: "kingdom_kids/storefront",
@@ -52,6 +55,54 @@ import StoreKit
     sailingMotionHandler = handler
     sailingMotionChannel = channel
   }
+}
+
+/// Only transports non-auth checkout correlation. Dart validates every field
+/// and then uses the signed-in parent's API session to verify the purchase.
+final class CheckoutReturnLinkBridge: NSObject, FlutterStreamHandler {
+  static let shared = CheckoutReturnLinkBridge()
+  private var pending: String?
+  private var sink: FlutterEventSink?
+  private var methods: FlutterMethodChannel?
+  private var events: FlutterEventChannel?
+
+  func register(messenger: FlutterBinaryMessenger) {
+    methods?.setMethodCallHandler(nil)
+    events?.setStreamHandler(nil)
+    let methods = FlutterMethodChannel(name: "kingdom_kids/checkout_returns", binaryMessenger: messenger)
+    methods.setMethodCallHandler { [weak self] call, result in
+      guard call.method == "initialLink" else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      let value = self?.pending
+      self?.pending = nil
+      result(value)
+    }
+    self.methods = methods
+    let events = FlutterEventChannel(name: "kingdom_kids/checkout_return_events", binaryMessenger: messenger)
+    events.setStreamHandler(self)
+    self.events = events
+  }
+
+  func receive(_ url: URL) {
+    guard let parts = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return }
+    let https = parts.scheme == "https" && parts.host == "kingdom-kids.app" && parts.percentEncodedPath == "/payments/return/"
+    let fallback = parts.scheme == "kingdomkids" && parts.host == "payments" && parts.percentEncodedPath == "/return/"
+    guard https || fallback, url.absoluteString.count <= 1024 else { return }
+    if let sink = sink { sink(url.absoluteString) }
+    else { pending = url.absoluteString }
+  }
+
+  func onListen(withArguments arguments: Any?, eventSink: @escaping FlutterEventSink) -> FlutterError? {
+    sink = eventSink
+    if let value = pending {
+      pending = nil
+      eventSink(value)
+    }
+    return nil
+  }
+  func onCancel(withArguments arguments: Any?) -> FlutterError? { sink = nil; return nil }
 }
 
 /// A single Core Motion session, stopped whenever the game unsubscribes or
