@@ -47,6 +47,8 @@ void main() {
     await Future.wait([first, second]);
     await cache.fetch('https://cdn.test/cover.webp');
     expect(requests, 1);
+    expect(cache.peek('https://cdn.test/cover.webp')?.bytes, [1, 2, 3]);
+    expect(cache.peek('https://cdn.test/cover.webp?signature=private'), isNull);
   });
 
   test(
@@ -200,6 +202,33 @@ void main() {
       );
       await cache.fetch('https://cdn.test/public.webp');
       expect(requests, 5);
+    },
+  );
+
+  test(
+    'scoped display peek rejects another scope, source, generation or expired entry',
+    () async {
+      var now = DateTime.utc(2026, 11, 12, 10);
+      final expiry = now.add(const Duration(seconds: 30));
+      final cache = _cache(() {}, now: () => now);
+      final source =
+          'https://cdn.test/cover.webp?signature=private&expires_at=${expiry.millisecondsSinceEpoch ~/ 1000}';
+      await cache.fetchScoped(source, scope: 'family-child-avatar');
+      expect(cache.peekScoped(source, scope: 'family-child-avatar'), isNotNull);
+      expect(
+        cache.peekScoped(source, scope: 'another-family-child-avatar'),
+        isNull,
+      );
+      expect(
+        cache.peekScoped('$source&issued=2', scope: 'family-child-avatar'),
+        isNull,
+      );
+      now = expiry.subtract(const Duration(seconds: 10));
+      expect(cache.peekScoped(source, scope: 'family-child-avatar'), isNull);
+      now = now.subtract(const Duration(seconds: 1));
+      await cache.fetchScoped(source, scope: 'family-child-avatar');
+      featureReadCache.invalidate();
+      expect(cache.peekScoped(source, scope: 'family-child-avatar'), isNull);
     },
   );
 

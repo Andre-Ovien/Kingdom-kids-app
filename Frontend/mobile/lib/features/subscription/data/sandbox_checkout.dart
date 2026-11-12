@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../auth/data/auth_repository.dart';
+import '../domain/subscription_plan.dart';
 
 /// Deliberately fixed to the isolated test deployment. Neither the API nor a
 /// provider response can supply a browser destination or carry a login token.
@@ -23,6 +24,16 @@ class SandboxCheckoutConfiguration {
       'https://kingdom-kids-checkout-staging.onrender.com/api';
   static const checkoutUrl =
       'https://kingdom-kids-checkout-staging.onrender.com/parent/checkout/';
+
+  static Uri checkoutUri(SubscriptionBillingPeriod billingPeriod) =>
+      Uri.parse(checkoutUrl).replace(
+        queryParameters: {
+          'plan': switch (billingPeriod) {
+            SubscriptionBillingPeriod.monthly => 'monthly',
+            SubscriptionBillingPeriod.yearly => 'yearly',
+          },
+        },
+      );
 
   final bool enabled;
   final String apiBaseUrl;
@@ -206,6 +217,7 @@ class SandboxCheckoutController extends ChangeNotifier {
       configuration.isEnabled &&
       _foreground &&
       !busy &&
+      _access?.state != SandboxAccessState.paid &&
       _access?.checkoutAvailable == true;
 
   void background() {
@@ -246,7 +258,9 @@ class SandboxCheckoutController extends ChangeNotifier {
     }
   }
 
-  Future<void> openCheckout() async {
+  Future<void> openCheckout({
+    required SubscriptionBillingPeriod billingPeriod,
+  }) async {
     if (!canOpen) return;
     _opening = true;
     _notify();
@@ -257,6 +271,7 @@ class SandboxCheckoutController extends ChangeNotifier {
         _revision != preflightRevision ||
         _disposed ||
         !_foreground ||
+        _access?.state == SandboxAccessState.paid ||
         _access?.checkoutAvailable != true) {
       _opening = false;
       _notify();
@@ -264,7 +279,7 @@ class SandboxCheckoutController extends ChangeNotifier {
     }
     try {
       final launched = await _launcher(
-        Uri.parse(SandboxCheckoutConfiguration.checkoutUrl),
+        SandboxCheckoutConfiguration.checkoutUri(billingPeriod),
       );
       if (!_disposed && _foreground && !launched) {
         _error = 'The browser could not open. Try again.';

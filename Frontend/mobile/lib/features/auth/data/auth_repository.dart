@@ -3,6 +3,7 @@ import 'dart:collection';
 
 import '../../../core/errors/app_exception.dart';
 import '../../../core/network/feature_read_cache.dart';
+import '../../../core/network/feature_view_state_cache.dart';
 import '../domain/auth_requests.dart';
 import '../domain/auth_session.dart';
 import '../domain/email_verification.dart';
@@ -69,7 +70,7 @@ class AuthRepository {
         return;
       }
       await _sessionStore.clear();
-      invalidateFeatureReads();
+      _invalidateFeatureIdentity();
     });
   }
 
@@ -213,6 +214,22 @@ class AuthRepository {
   void invalidateFeatureReads({bool includeMedia = true}) =>
       featureReadCache.invalidate(includeMedia: includeMedia);
 
+  /// Refreshes one denied/expired media record without invalidating unrelated
+  /// content or an active narration download for this same family.
+  Future<T> withFreshFeatureRead<T>(
+    Future<T> Function(String token) operation,
+  ) async {
+    final scope = await featureCacheScope();
+    final result = await withAccessToken(operation);
+    if (scope != await featureCacheScope()) throw _accountChangedException;
+    return result;
+  }
+
+  void _invalidateFeatureIdentity() {
+    invalidateFeatureReads();
+    featureViewStateCache.clearIdentity();
+  }
+
   Future<AuthSession> refreshSession() async {
     final session = await _requiredSession();
     return _refreshSessionFrom(session);
@@ -311,7 +328,7 @@ class AuthRepository {
       }
 
       await _sessionStore.clearSelectedKidId();
-      invalidateFeatureReads();
+      _invalidateFeatureIdentity();
       return null;
     });
   }
@@ -387,7 +404,6 @@ class AuthRepository {
       );
     }
     final profile = _ownedProfile(backendProfile, originatingParentId);
-    invalidateFeatureReads();
 
     await _updateSession((activeSession) {
       var replaced = false;
@@ -409,6 +425,7 @@ class AuthRepository {
         profiles: List<KidProfile>.unmodifiable(profiles),
       );
     }, expectedParentId: originatingParentId);
+    _invalidateFeatureIdentity();
     return profile;
   }
 
@@ -472,7 +489,7 @@ class AuthRepository {
         );
       }
       if (await _sessionStore.readSelectedKidId() != profileId) {
-        invalidateFeatureReads();
+        _invalidateFeatureIdentity();
       }
       await _sessionStore.writeSelectedKidId(profileId);
     });
@@ -506,7 +523,7 @@ class AuthRepository {
         if (current == null ||
             (session != null && current.parent.id == session.parent.id)) {
           await _sessionStore.clear();
-          invalidateFeatureReads();
+          _invalidateFeatureIdentity();
         }
       });
     }
@@ -569,7 +586,7 @@ class AuthRepository {
         return current;
       }
       await _sessionStore.clear();
-      invalidateFeatureReads();
+      _invalidateFeatureIdentity();
       return null;
     });
   }
@@ -594,7 +611,7 @@ class AuthRepository {
           return current;
         }
         await _sessionStore.clear();
-        invalidateFeatureReads();
+        _invalidateFeatureIdentity();
         return null;
       });
       if (replacement != null) {
@@ -652,7 +669,7 @@ class AuthRepository {
     return _withSessionMutationLock(() async {
       await _sessionStore.writeSession(session);
       _signInGeneration += 1;
-      invalidateFeatureReads();
+      _invalidateFeatureIdentity();
     });
   }
 
@@ -676,7 +693,7 @@ class AuthRepository {
     return _withSessionMutationLock(() async {
       final current = await _requiredSession();
       _requireExpectedParent(current, expectedParentId);
-      invalidateFeatureReads();
+      _invalidateFeatureIdentity();
       await _sessionStore.writeSelectedKidId(kidId);
     });
   }
@@ -688,7 +705,7 @@ class AuthRepository {
         _requireExpectedParent(current, expectedParentId);
       }
       await _sessionStore.clear();
-      invalidateFeatureReads();
+      _invalidateFeatureIdentity();
     });
   }
 

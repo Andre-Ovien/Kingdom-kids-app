@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../shared/widgets/scoped_feature_page.dart';
+import '../core/network/feature_view_state_cache.dart';
 
 import '../features/auth/presentation/auth_screen.dart';
 import '../features/auth/domain/email_verification.dart';
@@ -78,9 +79,10 @@ class AppRoutes {
 }
 
 class TabRouteTransition {
-  const TabRouteTransition({required this.fromRoute});
+  const TabRouteTransition({required this.fromRoute, this.preparation});
 
   final String fromRoute;
+  final FeaturePagePreparation? preparation;
 }
 
 class AppRouter {
@@ -199,8 +201,24 @@ class AppRouter {
       _ => const HomeScreen(),
     };
 
+    final detailKey = switch (destination) {
+      GameDetailScreen(:final game) => '${AppRoutes.gameDetail}/${game.slug}',
+      StoryDetailScreen(:final story) =>
+        '${AppRoutes.storyDetail}/${story.slug}',
+      _ => null,
+    };
     final screen = AppRoutes.isTabRoute(settings.name)
-        ? ScopedFeaturePage(route: settings.name!, child: destination)
+        ? ScopedFeaturePage(
+            route: settings.name!,
+            preparation: tabTransition?.preparation,
+            child: destination,
+          )
+        : detailKey != null
+        ? ScopedFeaturePage(
+            route: detailKey,
+            identityBound: true,
+            child: destination,
+          )
         : destination;
 
     if (tabTransition != null && AppRoutes.isTabRoute(settings.name)) {

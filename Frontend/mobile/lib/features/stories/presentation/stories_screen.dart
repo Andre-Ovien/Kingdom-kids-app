@@ -35,6 +35,7 @@ class _StoriesScreenState extends State<StoriesScreen> {
   String? _errorMessage;
   bool _isLoading = true;
   Map<String, Object?>? _viewMemory;
+  Object? _viewScope;
   FeatureScrollController? _scrollController;
 
   @override
@@ -53,10 +54,19 @@ class _StoriesScreenState extends State<StoriesScreen> {
     super.didChangeDependencies();
     if (_scrollController != null) return;
     _viewMemory = FeatureViewMemory.maybeOf(context);
+    _viewScope = FeatureViewMemory.scopeOf(context);
+    final stories = _viewScope == null ? null : _viewMemory?['stories'];
+    if (stories is List<StoryDetail>) {
+      _stories = stories;
+      _activeProfile = _viewMemory?['profile'] as KidProfile?;
+    }
     _query = _viewMemory?['query'] as String? ?? '';
     _category = _viewMemory?['category'] as String? ?? 'All';
     _searchController.text = _query;
-    _scrollController = FeatureScrollController(_viewMemory);
+    _scrollController = FeatureScrollController(
+      _viewMemory,
+      contentReady: stories is List<StoryDetail>,
+    );
   }
 
   @override
@@ -76,6 +86,7 @@ class _StoriesScreenState extends State<StoriesScreen> {
       final profile = await _authRepository.currentKid();
       if (mounted) {
         setState(() => _activeProfile = profile);
+        if (_viewScope != null) _viewMemory?['profile'] = profile;
       }
     } catch (_) {
       // Story discovery can continue even when the profile badge is absent.
@@ -97,6 +108,7 @@ class _StoriesScreenState extends State<StoriesScreen> {
           _category = 'All';
         }
       });
+      if (_viewScope != null) _viewMemory?['stories'] = stories;
       _scrollController?.restoreAfterLoad();
     } on AppException catch (error) {
       if (mounted && returnToSignInIfSessionExpired(context, error)) {

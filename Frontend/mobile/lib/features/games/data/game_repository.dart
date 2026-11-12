@@ -89,6 +89,17 @@ class RemoteGameRepository implements GameRepository {
     return submission;
   }
 
+  Future<MiniGame> fetchFreshGame(
+    String slug, {
+    required String profileId,
+  }) async {
+    final child = await _requireCurrentProfile(profileId);
+    return _authRepository.withFreshFeatureRead((token) async {
+      await _requireCurrentProfile(child);
+      return _api.fetchGame(slug, token, profileId: child);
+    });
+  }
+
   Future<String> _requireCurrentProfile(String requestedProfileId) async {
     final normalized = requestedProfileId.trim();
     if (normalized.isEmpty) {

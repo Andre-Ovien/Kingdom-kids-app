@@ -37,6 +37,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isSwitching = false;
   bool _requiresSignIn = false;
   Map<String, Object?>? _viewMemory;
+  Object? _viewScope;
   FeatureScrollController? _scrollController;
 
   @override
@@ -44,7 +45,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.didChangeDependencies();
     if (_scrollController != null) return;
     _viewMemory = FeatureViewMemory.maybeOf(context);
-    _scrollController = FeatureScrollController(_viewMemory);
+    _viewScope = FeatureViewMemory.scopeOf(context);
+    if (_viewScope != null) {
+      _summary = _viewMemory?['summary'] as ProfileProgressSummary?;
+      _activeProfile = _viewMemory?['profile'] as KidProfile?;
+      _profiles = _viewMemory?['profiles'] as List<KidProfile>? ?? const [];
+    }
+    _scrollController = FeatureScrollController(
+      _viewMemory,
+      contentReady: _summary != null,
+    );
   }
 
   @override
@@ -118,6 +128,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _requiresSignIn = false;
         _errorMessage = null;
       });
+      if (_viewScope != null) {
+        _viewMemory?.addAll({
+          'summary': summary,
+          'profile': profile,
+          'profiles': profiles,
+        });
+      }
       _scrollController?.restoreAfterLoad();
     } on AppException catch (error) {
       if (mounted && returnToSignInIfSessionExpired(context, error)) return;
@@ -257,7 +274,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         children: [
                           _ProfileTopBar(profile: _activeProfile),
                           const SizedBox(height: 22),
-                          if (_isLoading)
+                          if (_isLoading && _summary == null)
                             const _ProfileLoadingState()
                           else if (_requiresSignIn)
                             _ProfileSignedOutState(onSignIn: _goToSignIn)

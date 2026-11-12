@@ -12,11 +12,17 @@ class FetchedContentMedia {
     required this.bytes,
     required this.finalUri,
     this.contentType,
+    this.sourceUri,
+    this.cacheScope,
+    this.cacheGeneration,
   });
 
   final Uint8List bytes;
   final Uri finalUri;
   final String? contentType;
+  final Uri? sourceUri;
+  final Object? cacheScope;
+  final int? cacheGeneration;
 }
 
 abstract interface class ContentMediaFetcher {
@@ -56,6 +62,7 @@ final class HttpContentMediaFetcher implements ContentMediaFetcher {
     }
 
     var currentUri = _validatedUri(source, code: 'untrusted_media_uri');
+    final sourceUri = currentUri;
     final visited = <String>{currentUri.toString()};
     var redirectsFollowed = 0;
 
@@ -125,6 +132,7 @@ final class HttpContentMediaFetcher implements ContentMediaFetcher {
         bytes: bytes,
         finalUri: responseUri,
         contentType: _contentType(response.headers['content-type']),
+        sourceUri: sourceUri,
       );
     }
   }
@@ -217,6 +225,32 @@ final class CachedContentMediaFetcher implements ContentMediaFetcher {
   int _retainedBytes = 0;
   int _scopedGeneration = -1;
 
+  /// Public queryless display seed. Private URLs never fall back to this key.
+  FetchedContentMedia? peek(Object? source) {
+    final trusted = policy.sanitize(source);
+    if (trusted == null || Uri.parse(trusted).hasQuery) return null;
+    return _peek(trusted);
+  }
+
+  /// Synchronous display seed for a scope already validated by navigation.
+  /// This never authenticates a caller or falls back to a public/other scope.
+  FetchedContentMedia? peekScoped(Object? source, {required Object scope}) {
+    final trusted = policy.sanitize(source);
+    if (trusted == null) return null;
+    final generation = featureReadCache.mediaGeneration;
+    return _peek((scope, generation, trusted));
+  }
+
+  FetchedContentMedia? _peek(Object key) {
+    final cached = _entries.remove(key);
+    if (cached == null) return null;
+    _retainedBytes -= cached.media.bytes.length;
+    if (!_now().isBefore(cached.expiresAt)) return null;
+    _entries[key] = cached;
+    _retainedBytes += cached.media.bytes.length;
+    return cached.media;
+  }
+
   @override
   Future<FetchedContentMedia> fetch(Object? source) {
     final key = policy.sanitize(source);
@@ -254,6 +288,7 @@ final class CachedContentMediaFetcher implements ContentMediaFetcher {
       trusted,
       key: (scope, generation, trusted),
       scopedGeneration: generation,
+      cacheScope: scope,
       sharePending: expiry == null || _now().isBefore(expiry),
     );
     if (generation != featureReadCache.mediaGeneration) {
@@ -266,6 +301,7 @@ final class CachedContentMediaFetcher implements ContentMediaFetcher {
     String source, {
     required Object key,
     int? scopedGeneration,
+    Object? cacheScope,
     bool sharePending = true,
   }) {
     final cached = _entries.remove(key);
@@ -281,8 +317,16 @@ final class CachedContentMediaFetcher implements ContentMediaFetcher {
     if (pending != null) return pending;
 
     Future<FetchedContentMedia> loadAndStore() async {
-      final media = await Future<FetchedContentMedia>.sync(
+      final downloaded = await Future<FetchedContentMedia>.sync(
         () => fetcher.fetch(source),
+      );
+      final media = FetchedContentMedia(
+        bytes: downloaded.bytes,
+        finalUri: downloaded.finalUri,
+        contentType: downloaded.contentType,
+        sourceUri: Uri.parse(source),
+        cacheScope: cacheScope,
+        cacheGeneration: scopedGeneration,
       );
       var expiry = _now().add(maxAge);
       final providerExpiry = featureMediaExpiry([

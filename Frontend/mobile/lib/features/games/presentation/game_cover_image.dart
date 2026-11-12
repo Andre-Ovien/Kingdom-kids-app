@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/media/content_media_fetcher.dart';
 import '../../../core/media/content_media_image.dart';
+import '../../../shared/widgets/scoped_feature_page.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../auth/data/media_access_scope.dart';
 import '../data/game_repository.dart';
@@ -76,11 +77,15 @@ class _GameCoverImageState extends State<GameCoverImage> {
         widget.gameRepository ?? RemoteGameRepository(authRepository: auth);
     _refreshSource = () async {
       final identity = await scope.requireCurrent();
-      auth.invalidateFeatureReads();
-      final fresh = await repository.fetchGame(
-        original.slug,
-        profileId: identity.childId,
-      );
+      final fresh = repository is RemoteGameRepository
+          ? await repository.fetchFreshGame(
+              original.slug,
+              profileId: identity.childId,
+            )
+          : await repository.fetchGame(
+              original.slug,
+              profileId: identity.childId,
+            );
       await scope.requireCurrent();
       if (!mounted ||
           original.id.isEmpty ||
@@ -97,6 +102,7 @@ class _GameCoverImageState extends State<GameCoverImage> {
   @override
   Widget build(BuildContext context) {
     final game = widget.game, borderRadius = widget.borderRadius;
+    final scope = FeatureViewMemory.scopeOf(context);
     final asset = game.coverAssetKey.trim().isNotEmpty
         ? game.coverAssetKey
         : game.imageAsset;
@@ -114,6 +120,16 @@ class _GameCoverImageState extends State<GameCoverImage> {
         mediaPolicy: widget.mediaPolicy,
         mediaFetcher: widget.mediaFetcher ?? _scopedFetcher,
         sourceRefresher: _refreshSource,
+        initialMedia: _scopedFetcher != null && scope != null
+            ? defaultContentMediaFetcher.peekScoped(
+                game.coverImageUrl,
+                scope: scope,
+              )
+            : widget.mediaFetcher == null &&
+                  identical(widget.mediaPolicy, AppConfig.contentMediaPolicy)
+            ? defaultContentMediaFetcher.peek(game.coverImageUrl)
+            : null,
+        mediaScope: scope,
         fit: widget.fit,
         alignment: widget.game.imageAlignment,
         loadingBuilder: (_) => placeholder,

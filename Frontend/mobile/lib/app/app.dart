@@ -11,6 +11,7 @@ import '../shared/audio/app_audio_route_observer.dart';
 import '../shared/audio/app_audio_scope.dart';
 import '../shared/widgets/liquid_navigation_controller.dart';
 import '../shared/widgets/persistent_liquid_navigation_host.dart';
+import '../shared/widgets/scoped_feature_page.dart';
 import 'app_route_observer.dart';
 import 'router.dart';
 import 'theme.dart';
@@ -52,6 +53,7 @@ class _KingdomKidsAppState extends State<KingdomKidsApp>
       navigatorKey: _navigatorKey,
       onAcceptedSelection: () {},
       loadProfile: AuthRepository().currentKid,
+      prepareTab: ScopedFeaturePage.prepare,
     );
     _navigationRoutes = LiquidNavigationObserver(_navigation);
     WidgetsBinding.instance.addObserver(this);

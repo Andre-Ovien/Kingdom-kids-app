@@ -66,6 +66,13 @@ class RemoteStoryRepository implements StoryRepository {
       progressIndependent: true,
     );
   }
+
+  Future<StoryDetail> fetchFreshStory(String slug) {
+    if (!isStoryAvailable(slug)) return fetchStory(slug);
+    return _authRepository.withFreshFeatureRead(
+      (token) => _api.fetchStory(slug, token),
+    );
+  }
 }
 
 Iterable<String?> _storyMedia(StoryDetail story) sync* {

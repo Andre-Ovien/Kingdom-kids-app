@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/media/content_media_fetcher.dart';
 import '../../../core/media/content_media_image.dart';
+import '../../../shared/widgets/scoped_feature_page.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../auth/data/media_access_scope.dart';
 import '../data/story_repository.dart';
@@ -76,8 +77,9 @@ class _StoryCoverImageState extends State<StoryCoverImage> {
         widget.storyRepository ?? RemoteStoryRepository(authRepository: auth);
     _refreshSource = () async {
       await scope.requireCurrent();
-      auth.invalidateFeatureReads();
-      final fresh = await repository.fetchStory(original.slug);
+      final fresh = repository is RemoteStoryRepository
+          ? await repository.fetchFreshStory(original.slug)
+          : await repository.fetchStory(original.slug);
       await scope.requireCurrent();
       if (!mounted ||
           original.id.isEmpty ||
@@ -96,11 +98,22 @@ class _StoryCoverImageState extends State<StoryCoverImage> {
     final story = widget.story,
         fit = widget.fit,
         borderRadius = widget.borderRadius;
+    final scope = FeatureViewMemory.scopeOf(context);
     final image = ContentMediaImage(
       source: story.coverImageUrl,
       mediaPolicy: widget.mediaPolicy,
       mediaFetcher: widget.mediaFetcher ?? _scopedFetcher,
       sourceRefresher: _refreshSource,
+      initialMedia: _scopedFetcher != null && scope != null
+          ? defaultContentMediaFetcher.peekScoped(
+              story.coverImageUrl,
+              scope: scope,
+            )
+          : widget.mediaFetcher == null &&
+                identical(widget.mediaPolicy, AppConfig.contentMediaPolicy)
+          ? defaultContentMediaFetcher.peek(story.coverImageUrl)
+          : null,
+      mediaScope: scope,
       fit: fit,
       alignment: story.imageAlignment,
       loadingBuilder: (_) => const _CoverPlaceholder(isLoading: true),

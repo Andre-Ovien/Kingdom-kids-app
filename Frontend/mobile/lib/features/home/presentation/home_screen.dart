@@ -100,6 +100,7 @@ class _HomeScreenState extends State<HomeScreen>
   bool _appIsActive = true;
   ModalRoute<dynamic>? _observedRoute;
   Map<String, Object?>? _viewMemory;
+  Object? _viewScope;
   FeatureScrollController? _scrollController;
 
   @override
@@ -135,8 +136,24 @@ class _HomeScreenState extends State<HomeScreen>
     super.didChangeDependencies();
     if (_scrollController == null) {
       _viewMemory = FeatureViewMemory.maybeOf(context);
+      _viewScope = FeatureViewMemory.scopeOf(context);
+      final stories = _viewScope == null ? null : _viewMemory?['stories'];
+      if (stories is List<StoryDetail>) {
+        _stories = stories;
+        _activeProfile = _viewMemory?['profile'] as KidProfile?;
+        _bookmarks =
+            _viewMemory?['bookmarks'] as List<StoryReadingBookmark>? ??
+            const [];
+        _currentStreakDays = _viewMemory?['streakDays'] as int?;
+        _recentStreakDays =
+            _viewMemory?['streakWeek'] as List<StreakDay>? ?? const [];
+        _streakLocalDate = _viewMemory?['streakDate'] as DateTime?;
+      }
       _selectedCategory = _viewMemory?['category'] as String? ?? 'All';
-      _scrollController = FeatureScrollController(_viewMemory);
+      _scrollController = FeatureScrollController(
+        _viewMemory,
+        contentReady: stories is List<StoryDetail>,
+      );
     }
     final route = ModalRoute.of(context);
     if (identical(route, _observedRoute)) return;
@@ -298,6 +315,7 @@ class _HomeScreenState extends State<HomeScreen>
         });
       }
       unawaited(_loadBookmarks(profile));
+      if (_viewScope != null) _viewMemory?['profile'] = profile;
       if (profile == null) return;
       await _presentMilestone();
       if (!mounted || _activeProfile?.id != profile.id) return;
@@ -343,6 +361,7 @@ class _HomeScreenState extends State<HomeScreen>
         return;
       }
       setState(() => _bookmarks = bookmarks);
+      if (_viewScope != null) _viewMemory?['bookmarks'] = bookmarks;
     } catch (_) {
       // Optional local reading history must never block the Home catalogue.
       if (mounted && generation == _bookmarkLoadGeneration) {
@@ -526,6 +545,13 @@ class _HomeScreenState extends State<HomeScreen>
         _recentStreakDays = summary.streakWeek?.days ?? const [];
         _streakLocalDate = summary.streakWeek?.localDate;
       });
+      if (_viewScope != null) {
+        _viewMemory?.addAll({
+          'streakDays': _currentStreakDays,
+          'streakWeek': _recentStreakDays,
+          'streakDate': _streakLocalDate,
+        });
+      }
     } on AppException catch (error) {
       if (mounted &&
           generation == _streakSummaryGeneration &&
@@ -686,6 +712,7 @@ class _HomeScreenState extends State<HomeScreen>
           _selectedCategory = 'All';
         }
       });
+      if (_viewScope != null) _viewMemory?['stories'] = stories;
       _scrollController?.restoreAfterLoad();
     } catch (error) {
       if (!mounted) return;
@@ -775,9 +802,9 @@ class _HomeScreenState extends State<HomeScreen>
                             onPlay: () => _openTab(context, AppRoutes.games),
                           ),
                           const SizedBox(height: 27),
-                          if (_isLoadingStories)
+                          if (_isLoadingStories && _stories.isEmpty)
                             const _StoriesLoadingState()
-                          else if (_storiesError != null)
+                          else if (_storiesError != null && _stories.isEmpty)
                             _StoriesErrorState(onRetry: _loadStories)
                           else if (_stories.isEmpty)
                             const _StoriesEmptyState()

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../app/router.dart';
 import '../../../core/errors/app_exception.dart';
+import '../../../shared/widgets/scoped_feature_page.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../auth/domain/kid_profile.dart';
 import '../../auth/presentation/session_expiry_navigation.dart';
@@ -35,6 +36,23 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
   bool _loading = true;
   bool _played = false;
   bool _allowPop = false;
+  Map<String, Object?>? _viewMemory;
+  Object? _viewScope;
+  bool _seeded = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_seeded) return;
+    _seeded = true;
+    _viewMemory = FeatureViewMemory.maybeOf(context);
+    _viewScope = FeatureViewMemory.scopeOf(context);
+    final game = _viewScope == null ? null : _viewMemory?['game'];
+    if (game is MiniGame && game.slug == widget.game.slug) {
+      _game = game;
+      _profile = _viewMemory?['profile'] as KidProfile?;
+    }
+  }
 
   @override
   void initState() {
@@ -68,6 +86,9 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
           _profile = profile;
           _game = game;
         });
+        if (_viewScope != null) {
+          _viewMemory?.addAll({'game': game, 'profile': profile});
+        }
       }
     } on AppException catch (error) {
       if (mounted && returnToSignInIfSessionExpired(context, error)) return;
@@ -231,7 +252,7 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
                           height: 1.48,
                         ),
                       ),
-                      if (_loading) ...[
+                      if (_loading && !hasPlayableDetail) ...[
                         const SizedBox(height: 19),
                         const LinearProgressIndicator(
                           key: Key('game-detail-loading'),

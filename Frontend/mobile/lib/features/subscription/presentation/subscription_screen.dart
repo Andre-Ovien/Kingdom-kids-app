@@ -80,6 +80,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     final checkout = _checkout!;
     if (checkout.checking) return 'Sandbox test · Checking access…';
     if (checkout.error != null) return 'Sandbox test · ${checkout.error}';
+    if (checkout.access?.state == SandboxAccessState.paid) {
+      return 'Sandbox test · Access active. Paid access confirmed. No additional payment is needed.';
+    }
     final state = switch (checkout.access?.state) {
       SandboxAccessState.paid => 'Paid access confirmed.',
       SandboxAccessState.unpaid => 'No active paid access.',
@@ -143,7 +146,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
             const SizedBox(height: 14),
             Text(
               _checkout != null
-                  ? 'Sandbox test only. Your browser opens a separate parent sign-in. Use the same parent account as this app. Choose your plan and confirm exact dates and the billing timezone there. Return to the app and unlock this page to check server-confirmed access. A browser result does not confirm payment in the app.'
+                  ? 'Test mode · No real charges. Continue to secure card payment in your browser. Sign in with the same parent account if asked.'
                   : 'Checkout is not available yet. Exact dates and the billing timezone must come from the confirmed server quote before a purchase. No payment can be made on this screen.',
               style: _type(14, height: 1.5),
             ),
@@ -328,7 +331,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                         child: FilledButton(
                           key: const Key('subscription-parent-continue'),
                           onPressed: _checkout?.canOpen == true
-                              ? _checkout!.openCheckout
+                              ? () => _checkout!.openCheckout(
+                                  billingPeriod: _period,
+                                )
                               : null,
                           style: FilledButton.styleFrom(
                             disabledBackgroundColor: _blue,
@@ -362,7 +367,10 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                                   _checkout != null
                                       ? _checkout!.busy
                                             ? 'Checking sandbox…'
-                                            : 'Open sandbox checkout'
+                                            : _checkout!.access?.state ==
+                                                  SandboxAccessState.paid
+                                            ? 'Access active · Sandbox'
+                                            : 'Proceed · Sandbox'
                                       : 'Checkout unavailable',
                                   textAlign: TextAlign.center,
                                   style: _type(

@@ -53,6 +53,7 @@ class _GamesScreenState extends State<GamesScreen> {
   final _searchController = TextEditingController();
   late FeatureScrollController _scrollController;
   Map<String, Object?>? _viewMemory;
+  Object? _viewScope;
   bool _viewRestored = false;
   late final AuthRepository _authRepository;
   late final GameRepository _repository;
@@ -80,11 +81,20 @@ class _GamesScreenState extends State<GamesScreen> {
     if (_viewRestored) return;
     _viewRestored = true;
     _viewMemory = FeatureViewMemory.maybeOf(context);
+    _viewScope = FeatureViewMemory.scopeOf(context);
+    final savedGames = _viewScope == null ? null : _viewMemory?['games'];
+    if (savedGames is List<MiniGame>) {
+      _games = savedGames;
+      _activeProfile = _viewMemory?['profile'] as KidProfile?;
+    }
     _query = _viewMemory?['query'] as String? ?? '';
     _searchController.text = _query;
     _filter = _viewMemory?['filter'] as GameCategory?;
     _showSearch = _viewMemory?['search'] as bool? ?? false;
-    _scrollController = FeatureScrollController(_viewMemory);
+    _scrollController = FeatureScrollController(
+      _viewMemory,
+      contentReady: savedGames is List<MiniGame>,
+    );
   }
 
   @override
@@ -135,6 +145,9 @@ class _GamesScreenState extends State<GamesScreen> {
             _filter = null;
           }
         });
+        if (_viewScope != null) {
+          _viewMemory?.addAll({'games': _games, 'profile': profile});
+        }
         _scrollController.restoreAfterLoad();
       }
     } on AppException catch (error) {
@@ -180,11 +193,21 @@ class _GamesScreenState extends State<GamesScreen> {
     final refreshed = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         settings: const RouteSettings(name: AppRoutes.gameDetail),
-        builder: (_) => GameDetailScreen(
-          game: game,
-          repository: _repository,
-          authRepository: _authRepository,
-        ),
+        builder: (_) {
+          final detail = GameDetailScreen(
+            game: game,
+            repository: _repository,
+            authRepository: _authRepository,
+          );
+          return _viewScope == null
+              ? detail
+              : ScopedFeaturePage(
+                  route: '${AppRoutes.gameDetail}/${game.slug}',
+                  identityBound: true,
+                  authRepository: _authRepository,
+                  child: detail,
+                );
+        },
       ),
     );
     if (refreshed != true || !mounted) return;

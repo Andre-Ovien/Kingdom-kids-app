@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
+import '../../../shared/widgets/scoped_feature_page.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
@@ -70,6 +71,9 @@ class _StoryDetailScreenState extends State<StoryDetailScreen>
   ParentSettings? _readerSettings;
   String? _syncMessage;
   late bool _isLoading;
+  Map<String, Object?>? _viewMemory;
+  Object? _viewScope;
+  bool _seeded = false;
 
   @override
   void initState() {
@@ -129,6 +133,17 @@ class _StoryDetailScreenState extends State<StoryDetailScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (!_seeded) {
+      _seeded = true;
+      _viewMemory = FeatureViewMemory.maybeOf(context);
+      _viewScope = FeatureViewMemory.scopeOf(context);
+      final story = _viewScope == null ? null : _viewMemory?['story'];
+      if (story is StoryDetail &&
+          story.slug == widget.story.slug &&
+          isStoryAvailable(story.slug)) {
+        _story = story;
+      }
+    }
     final route = ModalRoute.of(context);
     if (!identical(route, _observedRoute)) {
       if (_observedRoute != null) appRouteObserver.unsubscribe(this);
@@ -360,6 +375,7 @@ class _StoryDetailScreenState extends State<StoryDetailScreen>
               ? 'This story adventure is still being prepared. Please check back soon.'
               : null;
         });
+        if (_viewScope != null) _viewMemory?['story'] = story;
       }
     } on AppException catch (error) {
       if (_story.body.isEmpty &&

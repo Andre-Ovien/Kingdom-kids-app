@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
 import '../../app/router.dart';
+import '../../core/network/feature_view_state_cache.dart';
 import '../../features/auth/domain/kid_profile.dart';
 
 /// State belonging to the app, rather than any of the replaceable tab routes.
@@ -12,6 +13,7 @@ class LiquidNavigationController extends ChangeNotifier {
     required this.navigatorKey,
     required this.onAcceptedSelection,
     required Future<KidProfile?> Function() loadProfile,
+    this.prepareTab,
   }) : _loadProfile = loadProfile;
 
   static const mainRoutes = [
@@ -24,6 +26,7 @@ class LiquidNavigationController extends ChangeNotifier {
   final GlobalKey<NavigatorState> navigatorKey;
   final VoidCallback onAcceptedSelection;
   final Future<KidProfile?> Function() _loadProfile;
+  final Future<FeaturePagePreparation> Function(String route)? prepareTab;
   String _selectedRoute = AppRoutes.home;
   KidProfile? _profile;
   bool _visible = false;
@@ -32,6 +35,7 @@ class LiquidNavigationController extends ChangeNotifier {
   bool _disposed = false;
   int _routeGeneration = 0;
   int _profileGeneration = 0;
+  int _selectionRequest = 0;
   Animation<double>? _routeAnimation;
 
   String get selectedRoute => _selectedRoute;
@@ -50,20 +54,50 @@ class LiquidNavigationController extends ChangeNotifier {
       return false;
     }
     _requestPending = true;
+    final selectionRequest = ++_selectionRequest;
     final generation = _routeGeneration;
     try {
-      unawaited(
-        navigator.pushReplacementNamed<void, void>(
-          route,
-          arguments: TabRouteTransition(fromRoute: _selectedRoute),
-        ),
-      );
+      Future<void> navigate() async {
+        final preparation = await prepareTab?.call(route);
+        if (_disposed ||
+            !_visible ||
+            generation != _routeGeneration ||
+            (preparation != null && !preparation.isCurrent)) {
+          if (selectionRequest == _selectionRequest) _requestPending = false;
+          return;
+        }
+        unawaited(
+          navigator.pushReplacementNamed<void, void>(
+            route,
+            arguments: TabRouteTransition(
+              fromRoute: _selectedRoute,
+              preparation: preparation,
+            ),
+          ),
+        );
+      }
+
+      if (prepareTab == null) {
+        unawaited(
+          navigator.pushReplacementNamed<void, void>(
+            route,
+            arguments: TabRouteTransition(fromRoute: _selectedRoute),
+          ),
+        );
+      } else {
+        unawaited(
+          navigate().catchError((Object _) {
+            if (selectionRequest == _selectionRequest) _requestPending = false;
+          }),
+        );
+      }
       onAcceptedSelection();
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (_disposed) return;
         // The observer reconciles the authoritative route. Keep input guarded
         // while pages glide; release immediately for a reduced-motion snap.
-        if (_routeGeneration >= generation &&
+        if (selectionRequest == _selectionRequest &&
+            _routeGeneration > generation &&
             (_routeAnimation == null ||
                 _routeAnimation!.status == AnimationStatus.completed)) {
           _requestPending = false;
@@ -71,7 +105,7 @@ class LiquidNavigationController extends ChangeNotifier {
       });
       return true;
     } catch (_) {
-      _requestPending = false;
+      if (selectionRequest == _selectionRequest) _requestPending = false;
       rethrow;
     }
   }
@@ -177,6 +211,7 @@ class LiquidNavigationController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _selectionRequest++;
     _routeAnimation?.removeStatusListener(_transitionStatusChanged);
     _profileGeneration++;
     super.dispose();

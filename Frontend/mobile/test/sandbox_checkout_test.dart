@@ -13,6 +13,7 @@ import 'package:mobile/features/auth/domain/auth_session.dart';
 import 'package:mobile/features/auth/domain/kid_profile.dart';
 import 'package:mobile/features/auth/domain/parent_account.dart';
 import 'package:mobile/features/subscription/data/sandbox_checkout.dart';
+import 'package:mobile/features/subscription/domain/subscription_plan.dart';
 import 'package:mobile/features/subscription/presentation/subscription_parent_screen.dart';
 import 'package:mobile/features/subscription/presentation/subscription_screen.dart';
 
@@ -118,6 +119,22 @@ void main() {
       );
     }
   });
+
+  test(
+    'checkout destination accepts only the selected plan enum at the fixed origin',
+    () {
+      for (final period in SubscriptionBillingPeriod.values) {
+        final uri = SandboxCheckoutConfiguration.checkoutUri(period);
+        expect(uri.scheme, 'https');
+        expect(uri.host, 'kingdom-kids-checkout-staging.onrender.com');
+        expect(uri.path, '/parent/checkout/');
+        expect(uri.userInfo, isEmpty);
+        expect(uri.hasFragment, isFalse);
+        expect(uri.queryParameters, {'plan': period.name});
+        expect(uri.queryParametersAll.values, everyElement(hasLength(1)));
+      }
+    },
+  );
 
   test(
     'wrong identity, environment, schema and invalid paid proof fail closed',
@@ -267,16 +284,18 @@ void main() {
       final first = controller.refresh();
       repository.requests.single.complete(_access());
       await first;
-      final opening = controller.openCheckout();
+      final opening = controller.openCheckout(
+        billingPeriod: SubscriptionBillingPeriod.monthly,
+      );
       expect(launches, isEmpty);
       repository.requests.last.complete(_access());
       await opening;
       expect(
         launches.single.toString(),
-        SandboxCheckoutConfiguration.checkoutUrl,
+        '${SandboxCheckoutConfiguration.checkoutUrl}?plan=monthly',
       );
       expect(launches.single.userInfo, isEmpty);
-      expect(launches.single.hasQuery, isFalse);
+      expect(launches.single.queryParameters, {'plan': 'monthly'});
       expect(launches.single.hasFragment, isFalse);
       expect(controller.access?.state, SandboxAccessState.unpaid);
     },
@@ -310,6 +329,105 @@ void main() {
     },
   );
 
+  test(
+    'paid access disables Proceed and a newly paid preflight cannot launch',
+    () async {
+      final repository = _ControlledRepository();
+      var launches = 0;
+      final controller = SandboxCheckoutController(
+        configuration: _configuration,
+        repository: repository,
+        launcher: (_) async {
+          launches++;
+          return true;
+        },
+      );
+      addTearDown(controller.dispose);
+      final initial = controller.refresh();
+      repository.requests.single.complete(_access());
+      await initial;
+      expect(controller.canOpen, isTrue);
+      final opening = controller.openCheckout(
+        billingPeriod: SubscriptionBillingPeriod.yearly,
+      );
+      repository.requests.last.complete(
+        _access(state: SandboxAccessState.paid),
+      );
+      await opening;
+      expect(launches, 0);
+      expect(controller.canOpen, isFalse);
+      final reads = repository.requests.length;
+      await controller.openCheckout(
+        billingPeriod: SubscriptionBillingPeriod.monthly,
+      );
+      expect(repository.requests.length, reads);
+      expect(launches, 0);
+    },
+  );
+
+  testWidgets(
+    'Proceed passes the native monthly and yearly choices without changing the plan UI',
+    (tester) async {
+      final launches = <Uri>[];
+      final controller = SandboxCheckoutController(
+        configuration: _configuration,
+        repository: _ImmediateRepository(),
+        launcher: (uri) async {
+          launches.add(uri);
+          return true;
+        },
+      );
+      addTearDown(controller.dispose);
+      await controller.refresh();
+      await tester.pumpWidget(
+        MaterialApp(home: SubscriptionScreen(sandboxCheckout: controller)),
+      );
+      await tester.tap(find.byKey(const Key('subscription-parent-continue')));
+      await tester.pumpAndSettle();
+      expect(launches.single.queryParameters, {'plan': 'monthly'});
+      await tester.ensureVisible(find.byKey(const Key('subscription-yearly')));
+      await tester.tap(find.byKey(const Key('subscription-yearly')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('subscription-parent-continue')));
+      await tester.pumpAndSettle();
+      expect(launches.last.queryParameters, {'plan': 'yearly'});
+      expect(find.text('Proceed · Sandbox'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'active sandbox access has no financial Proceed and parent settings remain reachable',
+    (tester) async {
+      final controller = SandboxCheckoutController(
+        configuration: _configuration,
+        repository: _ImmediateRepository()..state = SandboxAccessState.paid,
+        launcher: (_) async =>
+            fail('Paid access must not open another payment.'),
+      );
+      addTearDown(controller.dispose);
+      await controller.refresh();
+      await tester.pumpWidget(
+        MaterialApp(home: SubscriptionScreen(sandboxCheckout: controller)),
+      );
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.byKey(const Key('subscription-parent-continue')),
+            )
+            .onPressed,
+        isNull,
+      );
+      expect(find.textContaining('Access active.'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('subscription-billing-details')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Parent account settings'));
+      expect(
+        find.text('Parent account settings').hitTestable(),
+        findsOneWidget,
+      );
+    },
+  );
+
   testWidgets('platform launch requests an external system browser', (
     tester,
   ) async {
@@ -333,11 +451,16 @@ void main() {
     );
     addTearDown(controller.dispose);
     await controller.refresh();
-    await controller.openCheckout();
+    await controller.openCheckout(
+      billingPeriod: SubscriptionBillingPeriod.yearly,
+    );
     expect(calls, hasLength(1));
     expect(calls.single.method, 'launch');
     final arguments = calls.single.arguments as Map;
-    expect(arguments['url'], SandboxCheckoutConfiguration.checkoutUrl);
+    expect(
+      arguments['url'],
+      '${SandboxCheckoutConfiguration.checkoutUrl}?plan=yearly',
+    );
     expect(arguments['useSafariVC'], isFalse);
     expect(arguments['useWebView'], isFalse);
     expect(arguments['headers'], isEmpty);
@@ -360,7 +483,9 @@ void main() {
       final first = controller.refresh();
       repository.requests.single.complete(_access());
       await first;
-      final opening = controller.openCheckout();
+      final opening = controller.openCheckout(
+        billingPeriod: SubscriptionBillingPeriod.monthly,
+      );
       final oldPreflight = repository.requests.last;
       controller.background();
       final resumed = controller.resume();

@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../config/app_config.dart';
+import '../network/feature_read_cache.dart';
 import 'content_media_fetcher.dart';
 
 /// Renders remote image bytes only after the shared media fetch path has
@@ -15,12 +16,19 @@ class ContentMediaImage extends StatefulWidget {
     required this.errorBuilder,
     this.mediaFetcher,
     this.sourceRefresher,
+    this.initialMedia,
+    this.mediaScope,
     super.key,
   });
 
   final Object? source;
   final ContentMediaPolicy mediaPolicy;
   final ContentMediaFetcher? mediaFetcher;
+
+  /// Supply only a fresh [CachedContentMediaFetcher.peekScoped] result for
+  /// this exact source and the same prevalidated [mediaScope].
+  final FetchedContentMedia? initialMedia;
+  final Object? mediaScope;
 
   /// Re-fetches authorized metadata for this exact story/game, never an
   /// arbitrary media endpoint. Called at most once for an expired/denied link.
@@ -38,6 +46,12 @@ class _ContentMediaImageState extends State<ContentMediaImage> {
   Future<FetchedContentMedia>? _media;
   HttpContentMediaFetcher? _ownedFetcher;
   int _generation = 0;
+  FetchedContentMedia? _retainedMedia;
+  String? _configuredSource;
+  Object? _configuredScope;
+  ContentMediaPolicy? _configuredPolicy;
+  int _retainedMediaGeneration = -1;
+  bool _failed = false;
 
   @override
   void initState() {
@@ -51,7 +65,10 @@ class _ContentMediaImageState extends State<ContentMediaImage> {
     if (oldWidget.source?.toString() != widget.source?.toString() ||
         !_samePolicy(oldWidget.mediaPolicy, widget.mediaPolicy) ||
         !identical(oldWidget.mediaFetcher, widget.mediaFetcher) ||
-        !identical(oldWidget.sourceRefresher, widget.sourceRefresher)) {
+        !identical(oldWidget.sourceRefresher, widget.sourceRefresher) ||
+        !identical(oldWidget.initialMedia, widget.initialMedia) ||
+        oldWidget.mediaScope != widget.mediaScope ||
+        _retainedMediaGeneration != featureReadCache.mediaGeneration) {
       _configureFetch();
     }
   }
@@ -62,8 +79,25 @@ class _ContentMediaImageState extends State<ContentMediaImage> {
     _ownedFetcher = null;
 
     final sanitized = widget.mediaPolicy.sanitize(widget.source);
+    final sameIdentity =
+        sanitized != null &&
+        sanitized == _configuredSource &&
+        _configuredScope == widget.mediaScope &&
+        _configuredPolicy != null &&
+        _samePolicy(_configuredPolicy!, widget.mediaPolicy) &&
+        _retainedMediaGeneration == featureReadCache.mediaGeneration;
+    if (!sameIdentity) _failed = false;
+    final previous = sameIdentity ? _usableMedia(_retainedMedia) : null;
+    _retainedMedia = _failed
+        ? null
+        : _usableMedia(widget.initialMedia) ?? previous;
+    _configuredSource = sanitized;
+    _configuredScope = widget.mediaScope;
+    _configuredPolicy = widget.mediaPolicy;
+    _retainedMediaGeneration = featureReadCache.mediaGeneration;
     if (sanitized == null) {
       _media = null;
+      _retainedMedia = null;
       return;
     }
 
@@ -83,6 +117,26 @@ class _ContentMediaImageState extends State<ContentMediaImage> {
       widget.sourceRefresher,
       generation,
     );
+  }
+
+  FetchedContentMedia? _usableMedia(FetchedContentMedia? media) {
+    if (media == null || widget.mediaPolicy.sanitize(media.finalUri) == null) {
+      return null;
+    }
+    final source = widget.mediaPolicy.sanitize(widget.source);
+    if (source == null || media.sourceUri != Uri.parse(source)) return null;
+    if (Uri.parse(source).hasQuery ||
+        media.finalUri.hasQuery ||
+        media.cacheScope != null) {
+      if (widget.mediaScope == null ||
+          media.cacheScope != widget.mediaScope ||
+          media.cacheGeneration != featureReadCache.mediaGeneration) {
+        return null;
+      }
+    }
+    final expiry = featureMediaExpiry([source, media.finalUri.toString()]);
+    if (expiry != null && !DateTime.now().isBefore(expiry)) return null;
+    return media;
   }
 
   Future<FetchedContentMedia> _fetchWithRefresh(
@@ -135,14 +189,23 @@ class _ContentMediaImageState extends State<ContentMediaImage> {
     }
 
     return FutureBuilder<FetchedContentMedia>(
+      key: ValueKey(_generation),
       future: media,
+      initialData: _retainedMedia,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
+          _retainedMedia = null;
+          _failed = true;
           return widget.errorBuilder(context);
         }
         final fetched = snapshot.data;
         if (fetched == null) {
           return widget.loadingBuilder(context);
+        }
+        if (snapshot.connectionState == ConnectionState.done) {
+          _retainedMedia = fetched;
+          _retainedMediaGeneration = featureReadCache.mediaGeneration;
+          _failed = false;
         }
         return LayoutBuilder(
           builder: (context, constraints) {

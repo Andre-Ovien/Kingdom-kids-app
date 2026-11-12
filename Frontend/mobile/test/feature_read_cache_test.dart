@@ -315,6 +315,41 @@ void main() {
   );
 
   test(
+    'authorized media metadata recovery bypasses stale models without invalidating active audio',
+    () async {
+      final store = await _store();
+      final auth = AuthRepository(sessionStore: store);
+      var reads = 0;
+      final repository = RemoteStoryRepository(
+        authRepository: auth,
+        api: HttpStoryApi(
+          baseUrl: 'https://first.test/api',
+          client: MockClient((_) async {
+            reads++;
+            return http.Response(
+              jsonEncode({
+                'id': 'story-1',
+                'slug': 'ruth-and-naomi',
+                'title': 'Edition $reads',
+                'body': 'Same story.',
+              }),
+              200,
+            );
+          }),
+        ),
+      );
+      await repository.fetchStory('ruth-and-naomi');
+      await repository.fetchStory('ruth-and-naomi');
+      expect(reads, 1);
+      final generation = featureReadCache.mediaGeneration;
+      final fresh = await repository.fetchFreshStory('ruth-and-naomi');
+      expect(fresh.title, 'Edition 2');
+      expect(reads, 2);
+      expect(featureReadCache.mediaGeneration, generation);
+    },
+  );
+
+  test(
     'delayed reads cannot publish to another child or survive a mutation as current',
     () async {
       final store = await _store();

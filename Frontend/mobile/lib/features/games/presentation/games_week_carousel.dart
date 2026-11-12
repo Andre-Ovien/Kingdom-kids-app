@@ -341,7 +341,7 @@ class _GamesWeekCarouselState extends State<GamesWeekCarousel>
                     transitionProgress: transition,
                     countdownProgress: _clock.value,
                     showCountdown: _pool.length > 1 && _motionAllowed,
-                    loading: widget.loading,
+                    loading: widget.loading && current == null,
                     onTap: current == null || _transitioning || widget.loading
                         ? null
                         : () => _play(current),
