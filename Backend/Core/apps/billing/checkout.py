@@ -62,6 +62,8 @@ def _check_parent(parent, password):
 @sensitive_variables()
 def reserve_checkout(*, parent, password, disclosure_version, accepted, mode='direct',
                      billing_timezone='', disclosure_sha256='', billing_period='monthly'):
+    from .configuration import require_sandbox_test_parent
+    require_sandbox_test_parent(parent)
     if mode != 'payments':
         raise CheckoutRejected('Historical automatic-subscription checkout is retired and read-only.')
     config = checkout_configuration(terms=True)

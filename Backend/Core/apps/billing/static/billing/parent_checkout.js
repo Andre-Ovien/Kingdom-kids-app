@@ -117,7 +117,7 @@ export class PurchaseFlow {
 function attachPage() {
   const $ = (id) => document.getElementById(id);
   const runtime = JSON.parse($('checkout-runtime').textContent);
-  let access = '', flow = null, card = null, busy = false, generation = 0, selectedPeriod = 'monthly';
+  let access = '', signedInEmail = '', flow = null, card = null, busy = false, generation = 0, selectedPeriod = 'monthly';
   let cardMount = null, mountSerial = 0;
   const active = (value) => { if (generation !== value || !access) throw new Refused(); };
   const message = (value) => { $('message').textContent = value; };
@@ -233,6 +233,8 @@ function attachPage() {
     $('renewal-label').textContent = period === 'yearly' ? 'Renew on your yearly anniversary' : 'Renew every 30 days';
     $('pay').textContent = 'Pay $' + (p.amount / 100).toFixed(2) + ' & start';
     $('login-form').hidden = Boolean(access);
+    $('account-identity').hidden = !access;
+    $('account-identity').textContent = access ? 'Signed in as ' + signedInEmail + '. Use this same parent account in Kingdom Kids.' : '';
     $('sign-out').hidden = !access; $('recovery').hidden = !flow?.intent && !flow?.reserveAttempted;
     $('retry-access').hidden = !access || Boolean(flow?.intent) ||
       (flow?.access?.access_state !== 'unknown' && flow?.access?.checkout?.state === 'available');
@@ -264,8 +266,10 @@ function attachPage() {
     try {
       const result = await api('/api/accounts/login/', 'POST', { email: $('email').value.trim(), password });
       if (generation !== scope || typeof result.access !== 'string' || result.access.length > 16384 ||
-          !result.user?.id || result.user.email_verified !== true) throw new Refused();
+          !result.user?.id || result.user.email_verified !== true ||
+          typeof result.user.email !== 'string' || !result.user.email || result.user.email.length > 254) throw new Refused();
       access = result.access;
+      signedInEmail = result.user.email;
       flow = new PurchaseFlow({ api: async (...args) => { active(scope); const value = await api(...args); active(scope); return value; },
         parent: String(result.user.id), canCharge: () => {
           active(scope); return $('consent').checked && document.visibilityState === 'visible';
@@ -279,6 +283,7 @@ function attachPage() {
           active(scope);
           if (result.status !== 'OK') throw new Refused(); return result.token; } });
       flow.period = selectedPeriod;
+      update();
       await refresh();
       if (flow.access.checkout.state === 'available') await quote(flow.period);
     } finally { password = ''; }
@@ -310,7 +315,7 @@ function attachPage() {
     message('Future renewals are stopped. Already-paid access keeps its original end.');
   });
   function clear() {
-    generation++; access = ''; flow = null; busy = false;
+    generation++; access = ''; signedInEmail = ''; flow = null; busy = false;
     $('card-container').replaceChildren(); cardMount = null;
     for (const input of document.querySelectorAll('input')) { if (input.type === 'checkbox') input.checked = false;
       else input.value = input.id === 'country' ? 'US' : ''; }

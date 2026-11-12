@@ -18,6 +18,7 @@ from .test_checkout import make_parent
 
 @override_settings(PARENT_CONTENT_ACCESS_STATUS_ENABLED=True,
                    PARENT_CHECKOUT_SANDBOX_ENABLED=False,
+                   SQUARE_SANDBOX_TEST_PARENT_IDS=','.join(str(value) for value in range(1, 101)),
                    PAID_CONTENT_ENTITLEMENT_ENVIRONMENT='sandbox',
                    PAID_CONTENT_ENFORCEMENT_ENABLED=False)
 class ParentAccessTests(TestCase):

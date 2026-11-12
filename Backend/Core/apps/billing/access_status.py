@@ -11,6 +11,7 @@ from rest_framework.views import APIView
 
 from .models import SquareBillingTerm, SquareCheckoutIntent
 from .permissions import verified_paid_coverage_until
+from .configuration import sandbox_parent_allowed
 
 
 def _base(parent, now):
@@ -71,6 +72,10 @@ def parent_content_access(parent, *, at=None):
     if (environment not in {'sandbox', 'production'} or not parent.is_authenticated
             or not parent.is_active or not parent.is_email_verified):
         return result
+    if environment == 'sandbox' and not sandbox_parent_allowed(parent):
+        result['reason_code'] = 'not_enrolled'
+        result['checkout']['reason_code'] = 'not_enrolled'
+        return result
     try:
         end = verified_paid_coverage_until(parent, environment=environment, at=now)
         if end is not None:
@@ -88,7 +93,9 @@ def parent_content_access(parent, *, at=None):
             else:
                 result.update(access_state='unpaid', reason_code='no_active_proof')
         from .parent_checkout_web import checkout_capability
-        result['checkout'] = checkout_capability()
+        result['checkout'] = checkout_capability(parent)
+        result['parent_plan_routing_enabled'] = bool(environment == 'sandbox'
+            and result['checkout']['state'] == 'available')
     except (DatabaseError, ValueError):
         result = _base(parent, now)
         result['reason_code'] = 'temporarily_unavailable'

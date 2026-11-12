@@ -23,6 +23,8 @@ from .tests import CONFIG
 
 
 CHECKOUT_CONFIG = {**CONFIG, 'SQUARE_SANDBOX_CHECKOUT_ENABLED': True,
+    # Explicitly enrolled synthetic IDs in the isolated test database only.
+    'SQUARE_SANDBOX_TEST_PARENT_IDS': ','.join(str(value) for value in range(1, 101)),
     'SQUARE_SANDBOX_CANCELLATION_ENABLED': True,
     'SQUARE_SANDBOX_TERM_BILLING_ENABLED': True, 'SQUARE_SANDBOX_TERM_RECONCILIATION_ENABLED': True,
     'SQUARE_SANDBOX_RECONCILIATION_ENABLED': True, 'SQUARE_SANDBOX_LOCATION_ID': 'location-test',
@@ -104,7 +106,11 @@ class FixtureSquare:
 
 
 def make_parent(label='one'):
-    return User.objects.create_user(email=f'square-{label}@example.test', password=PASSWORD,
+    # Keep fixture enrollment explicit and independent of PostgreSQL sequences,
+    # which advance even when a Django TestCase rolls back its inserted users.
+    used = set(User.objects.values_list('pk', flat=True))
+    identifier = next(value for value in range(1, 101) if value not in used)
+    return User.objects.create_user(id=identifier, email=f'square-{label}@example.test', password=PASSWORD,
                                     email_verified_at=timezone.now())
 
 

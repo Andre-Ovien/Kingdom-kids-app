@@ -29,7 +29,7 @@ async function fixture(mode) {
   const el=(id)=>elements.get(id);
   for(const id of ['monthly','yearly','pay','restart','recover','check','retry-access','stop-renewals','sign-out','login','message',
     'checkout-runtime','plan-name','price','unit','plan-badge','coverage','renewal-label','login-form','recovery',
-    'complete','payment-area','payment-title','agreement','consent','card-container','contact','access-date',
+    'complete','payment-area','payment-title','agreement','consent','card-container','contact','access-date','account-identity',
     'terms','login-password','email','purchase-password','given-name','family-name','billing-email','address','city','region','postal','country']) {
     staticIds.add(id); new Element(id);
   }
@@ -65,7 +65,7 @@ async function fixture(mode) {
       };
     }};}}},
     fetch:async(path)=>{
-      if(path==='/api/accounts/login/') {loginCount++;return response({access:'synthetic-memory-'+loginCount,user:{id:'synthetic-parent-'+loginCount,email_verified:true}});}
+      if(path==='/api/accounts/login/') {loginCount++;return response({access:'synthetic-memory-'+loginCount,user:{id:'synthetic-parent-'+loginCount,email:'parent-'+loginCount+'@example.test',email_verified:true}});}
       if(path==='/api/billing/content-access/') {accessReads++; if(mode==='stale_401'&&accessReads===2)return oldAccess.promise;
         return response({schema_version:1,parent_id:'synthetic-parent-'+loginCount,environment:'sandbox',access_state:'unpaid',
           evaluated_at:'2026-11-12T00:00:00Z',access_until:null,checkout:{state:'available'},purchase_recovery:null});}
@@ -79,10 +79,13 @@ async function fixture(mode) {
   const settle=async()=>{await later();await later();};
   const login=async()=>{el('email').value='synthetic@example.test';el('login-password').value='synthetic-password';
     el('login-form').handlers.submit({preventDefault(){}});await settle();};
-  const signout=async()=>{el('sign-out').onclick();await settle();};
+  const signout=async()=>{el('sign-out').onclick();await settle();assert.equal(el('account-identity').hidden,true);assert.equal(el('account-identity').textContent,'');};
   await login();assert.equal(created,1);
+  assert.equal(el('account-identity').hidden,false);
+  assert.ok(el('account-identity').textContent.includes('parent-1@example.test'));
   if(mode==='rejected_destroy') {
     assert.deepEqual(frames(),[1]);await signout();assert.deepEqual(frames(),[]);await login();assert.deepEqual(frames(),[2]);
+    assert.ok(el('account-identity').textContent.includes('parent-2@example.test'));
     return {old_frame_removed_synchronously:true,new_parent_has_only_new_frame:true,sdk_destroy_rejected:true};
   }
   if(mode==='late_attach') {

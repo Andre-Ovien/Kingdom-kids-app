@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from django.views.decorators.debug import sensitive_variables
 
 from .configuration import SquareConfigurationError, SquareDisabled, square_configuration
-from .configuration import checkout_configuration, configured_client
+from .configuration import checkout_configuration, configured_client, require_sandbox_test_parent
 from .checkout import (CheckoutBusy, CheckoutConflict, CheckoutRejected, checkout_status,
                        confirm_direct_checkout, public_terms, reserve_checkout)
 from .client import SquareClientError
@@ -65,11 +65,17 @@ class SquareCheckoutBase(APIView):
     permission_classes = (IsAuthenticated,)
     throttle_classes = (ScopedRateThrottle, UserRateThrottle)
     throttle_scope = 'billing_checkout'
+    requires_sandbox_enrollment = True
 
     def initial(self, request, *args, **kwargs):
         if not getattr(settings, 'SQUARE_SANDBOX_TERM_BILLING_ENABLED', False):
             raise NotFound()
         super().initial(request, *args, **kwargs)
+        if self.requires_sandbox_enrollment:
+            try:
+                require_sandbox_test_parent(request.user)
+            except SquareDisabled:
+                raise NotFound() from None
 
     def finalize_response(self, request, response, *args, **kwargs):
         response = super().finalize_response(request, response, *args, **kwargs)
@@ -114,6 +120,7 @@ class SquareCheckoutIntentsView(SquareCheckoutBase):
 
 class SquareCheckoutStatusView(SquareCheckoutBase):
     throttle_scope = 'billing_status'
+    requires_sandbox_enrollment = False
 
     def get(self, request, intent_id):
         try:
@@ -159,6 +166,7 @@ class SquareCheckoutPrepareCardView(SquareCheckoutBase):
 
 
 class SquareCheckoutCancelView(SquareCheckoutBase):
+    requires_sandbox_enrollment = False
     @sensitive_variables()
     def post(self, request, intent_id):
         try:

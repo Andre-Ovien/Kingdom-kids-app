@@ -1,6 +1,7 @@
 """Disabled-by-default, sandbox-only backend configuration."""
 from dataclasses import dataclass, field
 from datetime import date
+import re
 from urllib.parse import urlsplit
 
 from django.conf import settings
@@ -13,6 +14,38 @@ class SquareDisabled(Exception):
 
 class SquareConfigurationError(Exception):
     pass
+
+
+def sandbox_test_parent_ids():
+    """Bounded operator enrollment, independent of signup or client claims."""
+    raw = getattr(settings, 'SQUARE_SANDBOX_TEST_PARENT_IDS', '')
+    if not isinstance(raw, str) or len(raw) > 2100:
+        raise SquareConfigurationError('Invalid Sandbox test-parent enrollment.')
+    if not raw.strip():
+        return frozenset()
+    values = raw.split(',')
+    if len(values) > 100:
+        raise SquareConfigurationError('Invalid Sandbox test-parent enrollment.')
+    result = set()
+    for value in values:
+        value = value.strip()
+        if not re.fullmatch(r'[1-9][0-9]{0,18}', value) or int(value) > 9223372036854775807:
+            raise SquareConfigurationError('Invalid Sandbox test-parent enrollment.')
+        result.add(int(value))
+    return frozenset(result)
+
+
+def sandbox_parent_allowed(parent):
+    try:
+        return bool(parent is not None and parent.is_authenticated and parent.is_active
+                    and parent.is_email_verified and parent.pk in sandbox_test_parent_ids())
+    except SquareConfigurationError:
+        return False
+
+
+def require_sandbox_test_parent(parent):
+    if not sandbox_parent_allowed(parent):
+        raise SquareDisabled('Sandbox test parent is not enrolled.')
 
 
 @dataclass(frozen=True)

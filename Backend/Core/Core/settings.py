@@ -172,6 +172,9 @@ SQUARE_SANDBOX_HTTP_TRANSPORT_ENABLED = env_flag('SQUARE_SANDBOX_HTTP_TRANSPORT_
 # Tests/operators may instead inject a callable directly in trusted settings.
 # Strings/env import paths are deliberately not interpreted.
 SQUARE_SANDBOX_TRANSPORT_FACTORY = None
+# Explicitly enroll verified synthetic parents on shared staging. Blank denies
+# all new financial work; registration/verification never enrolls an account.
+SQUARE_SANDBOX_TEST_PARENT_IDS = os.environ.get('SQUARE_SANDBOX_TEST_PARENT_IDS', '')
 
 # Parent website qualification only. No mobile checkout or paid-routing change.
 PARENT_CHECKOUT_SANDBOX_ENABLED = env_flag('PARENT_CHECKOUT_SANDBOX_ENABLED', False)

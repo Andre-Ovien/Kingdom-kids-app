@@ -10,7 +10,8 @@ from django.views.decorators.debug import sensitive_variables
 from django.views.decorators.http import require_GET
 
 from .configuration import (SquareConfigurationError, SquareDisabled,
-                            checkout_configuration, provider_identifier)
+                            checkout_configuration, provider_identifier,
+                            sandbox_parent_allowed, sandbox_test_parent_ids)
 
 
 class ParentCheckoutUnavailable(ValueError):
@@ -43,6 +44,8 @@ def public_checkout_configuration():
             or settings.PAID_CONTENT_ENTITLEMENT_ENVIRONMENT != 'sandbox'):
         raise ParentCheckoutUnavailable
     config = checkout_configuration(terms=True)
+    if not sandbox_test_parent_ids():
+        raise ParentCheckoutUnavailable
     application_id = getattr(settings, 'SQUARE_SANDBOX_APPLICATION_ID', '')
     if not isinstance(application_id, str) or not re.fullmatch(r'sandbox-[A-Za-z0-9_-]{8,160}', application_id):
         raise ParentCheckoutUnavailable
@@ -54,7 +57,9 @@ def public_checkout_configuration():
 
 
 @sensitive_variables()
-def checkout_capability():
+def checkout_capability(parent):
+    if not sandbox_parent_allowed(parent):
+        return {'state': 'unavailable', 'reason_code': 'not_enrolled'}
     try:
         public_checkout_configuration()
     except (ParentCheckoutUnavailable, SquareDisabled, SquareConfigurationError):

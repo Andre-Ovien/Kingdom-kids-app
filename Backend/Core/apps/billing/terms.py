@@ -17,7 +17,8 @@ from django.views.decorators.debug import sensitive_variables
 from .checkout import (CheckoutBusy, CheckoutConflict, CheckoutRejected, _check_parent, acquire_intent,
                        checkpoint, fingerprint, public_terms, release_intent, reserve_checkout)
 from .client import SquareClientError
-from .configuration import SquareDisabled, checkout_configuration, configured_client, provider_identifier
+from .configuration import (SquareDisabled, checkout_configuration, configured_client, provider_identifier,
+                            require_sandbox_test_parent, sandbox_parent_allowed, sandbox_test_parent_ids)
 from .models import (ParentContentEntitlement, SquareBillingTerm, SquareCheckoutIntent,
                      SquareContentAgreement, SquareSubscriptionIdentity, SquarePaymentCardBinding)
 from .plans import ALL_CONTENT_FEATURE
@@ -109,6 +110,7 @@ def term_disclosure(billing_timezone, *, billing_period='monthly', at=None):
 @sensitive_variables()
 def reserve_term_checkout(*, parent, password, disclosure_version, disclosure_sha256, accepted,
                           billing_period='monthly', client=None):
+    require_sandbox_test_parent(parent)
     config = term_configuration()
     client = client or configured_client()
     zone = verify_payment_location(client, config)
@@ -162,6 +164,7 @@ def _new_term(agreement, start, *, buyer_present=False, verification_token=None,
 @sensitive_variables()
 def confirm_term_checkout(*, parent, intent_id, password, source_id=None, verification_token=None,
                            postal_code='94103', charge_source_id=None, client=None, prepare_only=False):
+    require_sandbox_test_parent(parent)
     config = term_configuration(); client = client or configured_client()
     intent, _ = acquire_intent(parent=parent, intent_id=intent_id, password=password, terms=True)
     try:
@@ -298,6 +301,7 @@ def _claim_term(term_id, *, for_dispatch, for_card_storage=False):
         if term.processing_lease and term.lease_until and term.lease_until > now:
             raise CheckoutBusy('This term is already being processed.')
         if (for_dispatch or for_card_storage) and (parent is None or not parent.is_active or not parent.email_verified_at
+                or not sandbox_parent_allowed(parent)
                 or agreement.parent_id != parent_id or not agreement.renewals_enabled
                 or not plan.purchasable
                 or (for_dispatch and now < term.request_not_before)):
@@ -361,6 +365,7 @@ def _authorize_dispatch(term):
         current = SquareBillingTerm.objects.select_for_update().get(pk=term.pk)
         now = timezone.now()
         if (parent is None or agreement.parent_id != parent_id or not parent.is_active
+                or not sandbox_parent_allowed(parent)
                 or not parent.email_verified_at or not agreement.renewals_enabled
                 or not term_plan_for_policy(agreement.policy_id).purchasable
                 or now < current.request_not_before
@@ -493,7 +498,7 @@ def _commit_payment(term, observed, order_id):
             current.state, current.outcome_code = 'paid', 'exact_term_payment_verified'
             if not plan.purchasable:
                 current.outcome_code = 'historical_policy_readonly_no_new_grant'
-            if plan.purchasable and parent is not None and parent.is_active and parent.email_verified_at and agreement.parent_id == parent_id:
+            if plan.purchasable and sandbox_parent_allowed(parent) and agreement.parent_id == parent_id:
                 if existing and (existing.parent_id != parent.pk or existing.valid_from != current.valid_from
                                  or existing.valid_until != current.valid_until):
                     raise CheckoutRejected('A payment proof cannot move parent or covered term.')
@@ -611,6 +616,7 @@ def _lock_card_mandate(term):
     current = SquareBillingTerm.objects.select_for_update().get(pk=term.pk)
     now = timezone.now()
     if (parent is None or not parent.is_active or not parent.email_verified_at
+            or not sandbox_parent_allowed(parent)
             or agreement.parent_id != parent.pk or not agreement.renewals_enabled
             or current.processing_lease != term.processing_lease or not current.lease_until
             or current.lease_until <= now or current.state != 'paid' or current.revoked_at
@@ -720,6 +726,7 @@ def restart_unpaid_checkout(*, parent, intent_id, password, disclosure_version, 
     must first have fresh canonical FAILED/CANCELED proof, no activation and no
     grant. This retains its immutable failed history and requires new consent.
     """
+    require_sandbox_test_parent(parent)
     config = term_configuration(); client = client or configured_client()
     quote = term_disclosure(verify_payment_location(client, config), billing_period=billing_period)
     if accepted is not True or disclosure_version != quote['disclosure_version'] or disclosure_sha256 != quote['disclosure_sha256']:
@@ -767,6 +774,7 @@ def prepare_due_term(*, agreement_id):
     expired = False
     with transaction.atomic():
         parent = get_user_model().objects.select_for_update().get(pk=initial.parent_id)
+        require_sandbox_test_parent(parent)
         agreement = SquareContentAgreement.objects.select_for_update().get(pk=agreement_id)
         now = timezone.now()
         if (not agreement.renewals_enabled or agreement.activated_at is None or agreement.parent_id != parent.pk
@@ -791,15 +799,20 @@ def process_due_terms(*, limit=10, client=None):
     term_configuration()
     if type(limit) is not int or not 1 <= limit <= 20:
         raise ValueError('Term batch limit must be between1 and20.')
+    allowed_parents = sandbox_test_parent_ids()
+    if not allowed_parents:
+        return []
     client = client or configured_client()
     now = timezone.now()
     identifiers = list(SquareBillingTerm.objects.filter(buyer_present=False,
         agreement__policy_id__in=ACTIVE_POLICY_IDS, agreement__renewals_enabled=True, agreement__activated_at__isnull=False,
+        agreement__parent_id__in=allowed_parents,
         agreement__parent__is_active=True, agreement__parent__email_verified_at__isnull=False,
         request_not_before__lte=now, state__in=('reserved', 'uncertain', 'payment_pending')).filter(
             Q(next_attempt_at__isnull=True) | Q(next_attempt_at__lte=now)).order_by('request_not_before').values_list('pk', flat=True)[:limit])
     remaining = limit - len(identifiers)
     due = list(SquareContentAgreement.objects.filter(policy_id__in=ACTIVE_POLICY_IDS, renewals_enabled=True, activated_at__isnull=False,
+        parent_id__in=allowed_parents,
         parent__is_active=True, parent__email_verified_at__isnull=False,
         next_term_start__lte=now).order_by('next_term_start').values_list('pk', flat=True)[:remaining])
     for agreement_id in due:
