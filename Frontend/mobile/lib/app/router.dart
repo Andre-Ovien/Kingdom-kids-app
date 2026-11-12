@@ -205,6 +205,8 @@ class AppRouter {
       GameDetailScreen(:final game) => '${AppRoutes.gameDetail}/${game.slug}',
       StoryDetailScreen(:final story) =>
         '${AppRoutes.storyDetail}/${story.slug}',
+      ReadAlongScreen(:final story) =>
+        '${AppRoutes.storyReadAlong}/${story.slug}',
       _ => null,
     };
     final screen = AppRoutes.isTabRoute(settings.name)

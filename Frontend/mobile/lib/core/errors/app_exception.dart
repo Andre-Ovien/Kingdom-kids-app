@@ -18,6 +18,9 @@ class AppException implements Exception {
   /// error page, status code, or stack trace never reaches a child.
   String get userMessage {
     final normalizedCode = code?.trim().toLowerCase();
+    if (statusCode == 403 && normalizedCode == 'subscription_required') {
+      return 'A parent needs to check your access.';
+    }
     if (normalizedCode == 'invalid_credentials') {
       return 'That email or password did not match our records.';
     }

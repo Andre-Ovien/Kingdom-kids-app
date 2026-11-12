@@ -57,6 +57,7 @@ class StoryNarrationMetadataRefresher {
         code: 'active_kid_changed',
       );
     }
+    await authRepository.requireNoContentDenial();
   }
 
   Future<void> validateScope() async {

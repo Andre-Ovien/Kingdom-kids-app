@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../features/auth/data/auth_repository.dart';
 import '../../core/network/feature_view_state_cache.dart';
+import '../../core/network/paid_content_access_state.dart';
 
 /// Carries same-identity display seeds and scroll/search/filter preferences.
 /// Screen repositories still perform their normal freshness checks.
@@ -69,10 +70,15 @@ class _ScopedFeaturePageState extends State<ScopedFeaturePage> {
   void initState() {
     super.initState();
     featureViewStateCache.addListener(_identityChanged);
+    paidContentAccessState.addListener(_accessChanged);
     _prepared =
         widget.preparation ??
         featureViewStateCache.knownPreparation(widget.route);
     if (_prepared?.isCurrent != true) _pending = _resolve();
+  }
+
+  void _accessChanged() {
+    if (mounted) setState(() {});
   }
 
   void _identityChanged() {
@@ -98,6 +104,7 @@ class _ScopedFeaturePageState extends State<ScopedFeaturePage> {
   @override
   void dispose() {
     featureViewStateCache.removeListener(_identityChanged);
+    paidContentAccessState.removeListener(_accessChanged);
     super.dispose();
   }
 
@@ -112,6 +119,32 @@ class _ScopedFeaturePageState extends State<ScopedFeaturePage> {
 
   @override
   Widget build(BuildContext context) {
+    if (paidContentAccessState.isDenied) {
+      return Scaffold(
+        key: const Key('paid-content-parent-help'),
+        appBar: AppBar(title: const Text('For parents')),
+        body: SafeArea(
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('A parent needs to check your access.'),
+                TextButton(
+                  onPressed: () =>
+                      Navigator.of(context).pushNamed('/parent/subscription'),
+                  child: const Text('Subscription plans'),
+                ),
+                TextButton(
+                  onPressed: () =>
+                      Navigator.of(context).pushNamed('/parental-controls'),
+                  child: const Text('Parent account settings'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
     if (_identityRevoked) {
       return Scaffold(
         body: SafeArea(

@@ -4,6 +4,7 @@ import 'dart:collection';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/network/feature_read_cache.dart';
 import '../../../core/network/feature_view_state_cache.dart';
+import '../../../core/network/paid_content_access_state.dart';
 import '../domain/auth_requests.dart';
 import '../domain/auth_session.dart';
 import '../domain/email_verification.dart';
@@ -147,11 +148,48 @@ class AuthRepository {
 
   Future<AuthSession?> restoreSession() => _sessionStore.readSession();
 
+  Object _parentAccessScope(AuthSession session) => (
+    _api is HttpAuthApi ? _api.baseUrl : _api,
+    session.parent.id,
+    _signInGeneration,
+  );
+
+  /// Payment decisions belong to a backend/family/explicit sign-in, and may
+  /// survive ordinary token rotation or a switch between that family's kids.
+  Future<Object?> parentAccessScope() => _withSessionMutationLock(() async {
+    final session = await _sessionStore.readSession();
+    final scope = session == null || session.accessToken.isEmpty
+        ? null
+        : _parentAccessScope(session);
+    paidContentAccessState.selectScope(scope);
+    return scope;
+  });
+
+  /// Cached private media cannot continue after a confirmed content denial.
+  /// Unknown status remains separate; ordinary media ownership checks still
+  /// run before and after this narrow check.
+  Future<void> requireNoContentDenial() async {
+    final session = await restoreSession();
+    if (session == null) return;
+    paidContentAccessState.selectScope(_parentAccessScope(session));
+    if (paidContentAccessState.isDenied) {
+      throw const AppException(
+        'A parent needs to check your access.',
+        code: 'subscription_required',
+        statusCode: 403,
+      );
+    }
+  }
+
   /// Stable across token rotation, separate for every explicit sign-in, backend,
   /// family, child and avatar. UI state stores only non-sensitive preferences.
   Future<Object?> featureCacheScope() => _withSessionMutationLock(() async {
     final session = await _sessionStore.readSession();
-    if (session == null || session.accessToken.isEmpty) return null;
+    if (session == null || session.accessToken.isEmpty) {
+      paidContentAccessState.selectScope(null);
+      return null;
+    }
+    paidContentAccessState.selectScope(_parentAccessScope(session));
     final childId = await _sessionStore.readSelectedKidId();
     final child = session.profiles
         .where((profile) => profile.id == childId)
@@ -244,10 +282,20 @@ class AuthRepository {
     Future<T> Function(String accessToken) operation,
   ) async {
     final originatingSession = await _requiredSession();
-    return _withAuthenticatedSession(
-      (session) => operation(session.accessToken),
-      expectedParentId: originatingSession.parent.id,
-    );
+    final scope = _parentAccessScope(originatingSession);
+    try {
+      return await _withAuthenticatedSession(
+        (session) => operation(session.accessToken),
+        expectedParentId: originatingSession.parent.id,
+      );
+    } on AppException catch (error) {
+      if (error.statusCode == 403 &&
+          error.code == 'subscription_required' &&
+          scope == await parentAccessScope()) {
+        paidContentAccessState.deny(scope);
+      }
+      rethrow;
+    }
   }
 
   Future<ParentAccount?> currentParent() async {

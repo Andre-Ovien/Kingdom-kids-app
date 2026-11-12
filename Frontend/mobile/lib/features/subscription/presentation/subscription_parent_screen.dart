@@ -8,7 +8,7 @@ import '../data/sandbox_checkout.dart';
 import 'subscription_screen.dart';
 
 /// Preserves the existing password gate, including its background lock. Only
-/// the explicitly opted-in staging build creates a checkout coordinator.
+/// an explicitly opted-in payment configuration creates a coordinator.
 class SubscriptionParentScreen extends StatefulWidget {
   const SubscriptionParentScreen({
     super.key,

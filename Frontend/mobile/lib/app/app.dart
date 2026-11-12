@@ -6,6 +6,7 @@ import '../core/constants/app_constants.dart';
 import '../features/auth/data/auth_repository.dart';
 import '../features/splash/data/startup_destination_resolver.dart';
 import '../features/splash/presentation/splash_screen.dart';
+import '../features/subscription/data/parent_content_access_monitor.dart';
 import '../shared/audio/app_audio_controller.dart';
 import '../shared/audio/app_audio_route_observer.dart';
 import '../shared/audio/app_audio_scope.dart';
@@ -42,10 +43,13 @@ class _KingdomKidsAppState extends State<KingdomKidsApp>
   final _navigatorKey = GlobalKey<NavigatorState>();
   late final LiquidNavigationController _navigation;
   late final LiquidNavigationObserver _navigationRoutes;
+  late final ParentContentAccessMonitor _contentAccess;
 
   @override
   void initState() {
     super.initState();
+    _contentAccess = ParentContentAccessMonitor();
+    unawaited(_contentAccess.refresh());
     _ownsAudio = widget.audioController == null;
     _audio = widget.audioController ?? AppAudioController();
     _audioRoutes = AppAudioRouteObserver(_audio);
@@ -67,11 +71,13 @@ class _KingdomKidsAppState extends State<KingdomKidsApp>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _audio.setForeground(state == AppLifecycleState.resumed);
+    if (state == AppLifecycleState.resumed) unawaited(_contentAccess.refresh());
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _contentAccess.dispose();
     _navigation.dispose();
     _audio.setForeground(false);
     if (_ownsAudio) _audio.dispose();

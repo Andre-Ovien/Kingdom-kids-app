@@ -113,11 +113,16 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
     final changed = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         settings: const RouteSettings(name: '/games/play'),
-        builder: (_) => GamePlayScreen(
-          game: _game,
-          profile: profile,
-          repository: _repository,
+        builder: (_) => ScopedFeaturePage(
+          route: '/games/play/${_game.slug}',
+          identityBound: true,
           authRepository: _authRepository,
+          child: GamePlayScreen(
+            game: _game,
+            profile: profile,
+            repository: _repository,
+            authRepository: _authRepository,
+          ),
         ),
       ),
     );

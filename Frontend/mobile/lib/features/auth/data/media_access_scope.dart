@@ -50,6 +50,7 @@ class MediaAccessScope {
         code: 'active_kid_changed',
       );
     }
+    await authRepository.requireNoContentDenial();
     return origin;
   }
 }

@@ -224,3 +224,30 @@ Before uploading an Android App Bundle:
    `https://kingdom-kids.app/account-deletion/`, then make the Play Console
    target-audience, Data safety, content-rating, and deletion declarations
    match the production vendors and behavior exactly.
+
+## iOS App Store release gate
+
+Production payments remain off by default. Live keys do not select the mobile
+environment. Before an App Store build, the release owner must approve exact
+HTTPS API and checkout URLs, qualify the deployed purchase/manage handoff and
+server access enforcement, complete the Kids/privacy/support disclosures, and
+select United States only in App Store Connect. The native production link
+guard also requires the current App Store storefront to be `USA`.
+
+Keep public build definitions in a reviewed JSON file. Use
+`PRODUCTION_PAYMENT_FLOW_ENABLED=true`, `PAYMENT_ENVIRONMENT=production`,
+`PAYMENT_API_BASE_URL` equal to `API_BASE_URL`, and same-origin
+`PAYMENT_CHECKOUT_URL` ending in `/parent/checkout/`. Disable
+`SQUARE_SANDBOX_CHECKOUT_ENABLED` and remove
+`SUBSCRIPTION_REVIEW_ID`. Validate the same JSON intended for Flutter's
+`--dart-define-from-file`:
+
+```sh
+dart run tool/validate_app_store_release.dart \
+  <public-defines.json> <approved-api-url> <approved-checkout-url>
+```
+
+This checks build inputs; it does not certify App Store territory, legal
+readiness, backend qualification, or signing. The existing explicit Sandbox
+configuration remains separate. The detailed audit and source evidence are in
+`output/mobile-app-store-readiness-20261112/` at the repository root.

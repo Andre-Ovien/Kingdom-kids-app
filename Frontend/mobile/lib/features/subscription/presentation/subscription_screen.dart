@@ -398,6 +398,17 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                                 style: _type(11, color: _muted),
                               ),
                             ),
+                          if (_checkout?.access?.managementAvailable == true)
+                            TextButton(
+                              key: const Key('subscription-manage'),
+                              onPressed: _checkout!.canManage
+                                  ? _checkout!.openManagement
+                                  : null,
+                              child: Text(
+                                'Manage subscription',
+                                style: _type(11, color: _muted),
+                              ),
+                            ),
                           TextButton(
                             key: const Key('subscription-billing-details'),
                             onPressed: _details,

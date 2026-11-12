@@ -2,11 +2,13 @@ import Flutter
 import CoreMotion
 import UIKit
 import UserNotifications
+import StoreKit
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   private var sailingMotionChannel: FlutterEventChannel?
   private var sailingMotionHandler: SailingMotionStreamHandler?
+  private var storefrontChannel: FlutterMethodChannel?
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
@@ -17,6 +19,22 @@ import UserNotifications
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+    storefrontChannel?.setMethodCallHandler(nil)
+    let storefront = FlutterMethodChannel(
+      name: "kingdom_kids/storefront",
+      binaryMessenger: engineBridge.applicationRegistrar.messenger()
+    )
+    storefront.setMethodCallHandler { call, result in
+      guard call.method == "currentCountryCode" else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      Task { @MainActor in
+        let current = await Storefront.current
+        result(current?.countryCode)
+      }
+    }
+    storefrontChannel = storefront
     engineBridge.applicationRegistrar.register(
       LiquidNavigationViewFactory(
         messenger: engineBridge.applicationRegistrar.messenger()
