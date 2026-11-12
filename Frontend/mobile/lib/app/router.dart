@@ -31,6 +31,7 @@ import '../features/stories/presentation/story_detail_screen.dart';
 import '../features/stories/presentation/stories_screen.dart';
 import '../features/subscription/data/subscription_review_launch.dart';
 import '../features/subscription/presentation/subscription_review_screen.dart';
+import '../features/subscription/presentation/subscription_parent_screen.dart';
 import '../features/subscription/presentation/subscription_screen.dart';
 import '../features/videos/domain/video_story.dart';
 import '../features/videos/presentation/video_watch_screen.dart';
@@ -179,11 +180,7 @@ class AppRouter {
         reason: 'Enter the parent password to open parent settings.',
         protectedBuilder: (_) => const ParentalControlsScreen(),
       ),
-      AppRoutes.subscription => AdultGate(
-        title: 'Subscription plans',
-        reason: 'Enter the parent password to view subscription plans.',
-        protectedBuilder: (_) => const SubscriptionScreen(),
-      ),
+      AppRoutes.subscription => const SubscriptionParentScreen(),
       AppRoutes.subscriptionReview =>
         !kReleaseMode &&
                 subscriptionReviewBuildId.isNotEmpty &&

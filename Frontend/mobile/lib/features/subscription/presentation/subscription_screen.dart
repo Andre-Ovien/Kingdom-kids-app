@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../app/router.dart';
 import '../../privacy/presentation/privacy_policy_screen.dart';
+import '../data/sandbox_checkout.dart';
 import '../domain/subscription_plan.dart';
 
 const _blue = Color(0xFF1457FF);
@@ -25,18 +26,20 @@ TextStyle _type(
   letterSpacing: spacing,
 );
 
-/// Approved plan information. There is intentionally no financial client or
-/// enabled purchase action until the provider and release flow are qualified.
+/// Approved plan information. Checkout remains disabled in normal builds and
+/// previews. The isolated sandbox route may supply a server-backed test action.
 class SubscriptionScreen extends StatefulWidget {
   const SubscriptionScreen({
     super.key,
     this.reviewMode = false,
     this.previewDate,
     this.onClose,
+    this.sandboxCheckout,
   });
   final bool reviewMode;
   final DateTime? previewDate;
   final VoidCallback? onClose;
+  final SandboxCheckoutController? sandboxCheckout;
   @override
   State<SubscriptionScreen> createState() => _SubscriptionScreenState();
 }
@@ -44,6 +47,61 @@ class SubscriptionScreen extends StatefulWidget {
 class _SubscriptionScreenState extends State<SubscriptionScreen> {
   SubscriptionBillingPeriod _period = SubscriptionBillingPeriod.monthly;
   late final DateTime _today = widget.previewDate ?? DateTime.now();
+  SandboxCheckoutController? get _checkout =>
+      widget.reviewMode ? null : widget.sandboxCheckout;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkout?.addListener(_checkoutChanged);
+  }
+
+  @override
+  void didUpdateWidget(covariant SubscriptionScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final oldCheckout = oldWidget.reviewMode ? null : oldWidget.sandboxCheckout;
+    if (oldCheckout != _checkout) {
+      oldCheckout?.removeListener(_checkoutChanged);
+      _checkout?.addListener(_checkoutChanged);
+    }
+  }
+
+  @override
+  void dispose() {
+    _checkout?.removeListener(_checkoutChanged);
+    super.dispose();
+  }
+
+  void _checkoutChanged() {
+    if (mounted) setState(() {});
+  }
+
+  String get _sandboxNotice {
+    final checkout = _checkout!;
+    if (checkout.checking) return 'Sandbox test · Checking access…';
+    if (checkout.error != null) return 'Sandbox test · ${checkout.error}';
+    final state = switch (checkout.access?.state) {
+      SandboxAccessState.paid => 'Paid access confirmed.',
+      SandboxAccessState.unpaid => 'No active paid access.',
+      _ => 'Access status unknown.',
+    };
+    final capability = checkout.access?.checkoutAvailable == true
+        ? 'Test payments only.'
+        : 'Checkout unavailable.';
+    return 'Sandbox test · $state $capability';
+  }
+
+  Widget _footer(Widget child) => _checkout == null
+      ? child
+      : ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(context).height * .6,
+          ),
+          child: SingleChildScrollView(
+            key: const Key('subscription-sandbox-actions'),
+            child: child,
+          ),
+        );
 
   void _close() {
     if (widget.onClose != null) {
@@ -84,7 +142,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
             ),
             const SizedBox(height: 14),
             Text(
-              'Checkout is not available yet. Exact dates and the billing timezone must come from the confirmed server quote before a purchase. No payment can be made on this screen.',
+              _checkout != null
+                  ? 'Sandbox test only. Your browser opens a separate parent sign-in. Use the same parent account as this app. Choose your plan and confirm exact dates and the billing timezone there. Return to the app and unlock this page to check server-confirmed access. A browser result does not confirm payment in the app.'
+                  : 'Checkout is not available yet. Exact dates and the billing timezone must come from the confirmed server quote before a purchase. No payment can be made on this screen.',
               style: _type(14, height: 1.5),
             ),
             const SizedBox(height: 16),
@@ -237,98 +297,123 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                   ),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      widget.reviewMode
-                          ? 'Preview only · Example dates · No payment can be made.'
-                          : 'Checkout is not configured yet. No payment can be made.',
-                      key: Key(
-                        widget.reviewMode
-                            ? 'subscription-review-notice'
-                            : 'subscription-unavailable-notice',
-                      ),
-                      textAlign: TextAlign.center,
-                      style: _type(11, color: _muted, height: 1.35),
-                    ),
-                    const SizedBox(height: 8),
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(
-                        minWidth: double.infinity,
-                        minHeight: 54,
-                      ),
-                      child: FilledButton(
-                        key: const Key('subscription-parent-continue'),
-                        onPressed: null,
-                        style: FilledButton.styleFrom(
-                          disabledBackgroundColor: _blue,
-                          disabledForegroundColor: Colors.white,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 13,
-                          ),
-                          shape: const StadiumBorder(),
-                          textStyle: _type(
-                            15,
-                            color: Colors.white,
-                            weight: FontWeight.w700,
-                          ),
+              _footer(
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _checkout != null
+                            ? _sandboxNotice
+                            : widget.reviewMode
+                            ? 'Preview only · Example dates · No payment can be made.'
+                            : 'Checkout is not configured yet. No payment can be made.',
+                        key: Key(
+                          _checkout != null
+                              ? 'subscription-sandbox-notice'
+                              : widget.reviewMode
+                              ? 'subscription-review-notice'
+                              : 'subscription-unavailable-notice',
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.lock_outline_rounded,
-                              size: 17,
-                              color: Colors.white,
+                        textAlign: TextAlign.center,
+                        style: _type(11, color: _muted, height: 1.35),
+                      ),
+                      const SizedBox(height: 8),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          minWidth: double.infinity,
+                          minHeight: 54,
+                        ),
+                        child: FilledButton(
+                          key: const Key('subscription-parent-continue'),
+                          onPressed: _checkout?.canOpen == true
+                              ? _checkout!.openCheckout
+                              : null,
+                          style: FilledButton.styleFrom(
+                            disabledBackgroundColor: _blue,
+                            disabledForegroundColor: Colors.white,
+                            backgroundColor: _blue,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 13,
                             ),
-                            const SizedBox(width: 8),
-                            Flexible(
-                              child: Text(
-                                'Checkout unavailable',
-                                textAlign: TextAlign.center,
-                                style: _type(
-                                  15,
-                                  color: Colors.white,
-                                  weight: FontWeight.w700,
+                            shape: const StadiumBorder(),
+                            textStyle: _type(
+                              15,
+                              color: Colors.white,
+                              weight: FontWeight.w700,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.lock_outline_rounded,
+                                size: 17,
+                                color: Colors.white,
+                              ),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  _checkout != null
+                                      ? _checkout!.busy
+                                            ? 'Checking sandbox…'
+                                            : 'Open sandbox checkout'
+                                      : 'Checkout unavailable',
+                                  textAlign: TextAlign.center,
+                                  style: _type(
+                                    15,
+                                    color: Colors.white,
+                                    weight: FontWeight.w700,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                    Wrap(
-                      alignment: WrapAlignment.center,
-                      children: [
-                        TextButton(
-                          key: const Key('subscription-billing-details'),
-                          onPressed: _details,
-                          child: Text(
-                            'Billing details',
-                            style: _type(11, color: _muted),
-                          ),
-                        ),
-                        TextButton(
-                          key: const Key('subscription-privacy-policy'),
-                          onPressed: () => Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) => const PrivacyPolicyScreen(),
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        children: [
+                          if (_checkout != null)
+                            TextButton(
+                              key: const Key('subscription-check-access'),
+                              onPressed: _checkout!.busy
+                                  ? null
+                                  : _checkout!.refresh,
+                              child: Text(
+                                'Check access',
+                                style: _type(11, color: _muted),
+                              ),
+                            ),
+                          TextButton(
+                            key: const Key('subscription-billing-details'),
+                            onPressed: _details,
+                            child: Text(
+                              'Billing details',
+                              style: _type(11, color: _muted),
                             ),
                           ),
-                          child: Text(
-                            'Privacy Policy',
-                            style: _type(11, color: _muted),
+                          TextButton(
+                            key: const Key('subscription-privacy-policy'),
+                            onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => const PrivacyPolicyScreen(),
+                              ),
+                            ),
+                            child: Text(
+                              'Privacy Policy',
+                              style: _type(11, color: _muted),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
