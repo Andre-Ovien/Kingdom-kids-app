@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mobile/app/app.dart';
 import 'package:mobile/app/router.dart';
 import 'package:mobile/features/auth/data/auth_repository.dart';
 import 'package:mobile/features/auth/data/auth_session_store.dart';
@@ -272,29 +271,28 @@ void main() {
     ) async {
       final video = _FakeSplashVideoController(failInitialization: true);
       await tester.pumpWidget(
-        KingdomKidsApp(
-          initialRoute: AppRoutes.splash,
-          splashDestinationResolver: const _FixedResolver(
-            StartupDestination(AppRoutes.home),
-          ),
-          splashVideoControllerFactory: () => video,
+        _testApp(
+          destination: const StartupDestination(AppRoutes.home),
+          video: video,
+          displayDuration: const Duration(seconds: 6),
+          returningDisplayDuration: const Duration(milliseconds: 1800),
         ),
       );
       await tester.pump();
 
       expect(find.byKey(const Key('cinematic-splash-screen')), findsOneWidget);
-      expect(find.text('Hey, explorer!'), findsNothing);
+      expect(find.text('destination:${AppRoutes.home}'), findsNothing);
       expect(video.initializeCount, 0);
 
       await tester.pump(const Duration(milliseconds: 1799));
       expect(find.byKey(const Key('cinematic-splash-screen')), findsOneWidget);
-      expect(find.text('Hey, explorer!'), findsNothing);
+      expect(find.text('destination:${AppRoutes.home}'), findsNothing);
 
       await tester.pump(const Duration(milliseconds: 1));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 350));
 
-      expect(find.text('Hey, explorer!'), findsOneWidget);
+      expect(find.text('destination:${AppRoutes.home}'), findsOneWidget);
     });
 
     testWidgets('keeps the full 10.5-second arrival for onboarding', (
@@ -469,28 +467,35 @@ void main() {
       await tester.pump();
     });
 
-    testWidgets('caps a stalled destination lookup at the short budget', (
-      tester,
-    ) async {
-      final video = _FakeSplashVideoController(failInitialization: true);
-      await tester.pumpWidget(
-        _testApp(
-          resolver: _NeverResolver(),
-          video: video,
-          displayDuration: const Duration(milliseconds: 60),
-          destinationResolutionTimeout: const Duration(seconds: 1),
-        ),
-      );
+    testWidgets(
+      'keeps unresolved startup behind splash after minimum display',
+      (tester) async {
+        final video = _FakeSplashVideoController(failInitialization: true);
+        await tester.pumpWidget(
+          _testApp(
+            resolver: _NeverResolver(),
+            video: video,
+            displayDuration: const Duration(milliseconds: 60),
+          ),
+        );
 
-      await tester.pump(const Duration(milliseconds: 59));
-      expect(find.byKey(const Key('cinematic-splash-screen')), findsOneWidget);
-      expect(video.initializeCount, 0);
+        await tester.pump(const Duration(milliseconds: 59));
+        expect(
+          find.byKey(const Key('cinematic-splash-screen')),
+          findsOneWidget,
+        );
+        expect(video.initializeCount, 0);
 
-      await tester.pump(const Duration(milliseconds: 1));
-      await tester.pump();
+        await tester.pump(const Duration(milliseconds: 1));
+        await tester.pump();
 
-      expect(find.text('destination:${AppRoutes.login}'), findsOneWidget);
-    });
+        expect(
+          find.byKey(const Key('cinematic-splash-screen')),
+          findsOneWidget,
+        );
+        expect(find.text('destination:${AppRoutes.login}'), findsNothing);
+      },
+    );
   });
 }
 
@@ -520,7 +525,6 @@ Widget _testApp({
   Duration? returningDisplayDuration,
   Duration reducedMotionDisplayDuration = Duration.zero,
   Duration videoInitializationTimeout = const Duration(milliseconds: 20),
-  Duration destinationResolutionTimeout = const Duration(seconds: 1),
   bool disableAnimations = false,
 }) {
   return MaterialApp(
@@ -549,7 +553,6 @@ Widget _testApp({
                 returningDisplayDuration ?? displayDuration,
             reducedMotionDisplayDuration: reducedMotionDisplayDuration,
             videoInitializationTimeout: videoInitializationTimeout,
-            destinationResolutionTimeout: destinationResolutionTimeout,
           ),
         );
       }

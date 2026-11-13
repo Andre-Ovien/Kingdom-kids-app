@@ -22,6 +22,7 @@ abstract interface class SplashDestinationResolver {
 class StartupDestinationResolver implements SplashDestinationResolver {
   StartupDestinationResolver({
     AuthRepository? authRepository,
+    HostedAccessRouting? accessRouting,
     FirstLaunchStore? firstLaunchStore,
     OnboardingReviewStore? onboardingReviewStore,
     this.onboardingReviewId = const String.fromEnvironment(
@@ -29,10 +30,12 @@ class StartupDestinationResolver implements SplashDestinationResolver {
     ),
     this.allowOnboardingReview = !kReleaseMode,
   }) : _authRepository = authRepository ?? AuthRepository(),
+       _accessRouting = accessRouting,
        _firstLaunchStore = firstLaunchStore ?? SecureFirstLaunchStore(),
        _reviewStore = onboardingReviewStore ?? SecureOnboardingReviewStore();
 
   final AuthRepository _authRepository;
+  final HostedAccessRouting? _accessRouting;
   final FirstLaunchStore _firstLaunchStore;
   final OnboardingReviewStore _reviewStore;
   final String onboardingReviewId;
@@ -80,9 +83,9 @@ class StartupDestinationResolver implements SplashDestinationResolver {
       // this installation flag. The account is stronger returning evidence.
       if (!returningInstallation) await _markLaunchedIfPossible();
 
-      final accessRouting = HostedAccessRouting(
-        authRepository: _authRepository,
-      );
+      final accessRouting =
+          _accessRouting ??
+          HostedAccessRouting(authRepository: _authRepository);
       final requiresPlans = await accessRouting.requiresPlans();
       if (!await accessRouting.isCurrentParent(session.parent.id)) {
         return const StartupDestination(AppRoutes.login);

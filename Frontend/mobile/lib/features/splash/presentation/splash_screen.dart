@@ -72,7 +72,6 @@ class SplashScreen extends StatefulWidget {
     this.returningDisplayDuration = const Duration(milliseconds: 1800),
     this.reducedMotionDisplayDuration = const Duration(milliseconds: 900),
     this.videoInitializationTimeout = const Duration(milliseconds: 1200),
-    this.destinationResolutionTimeout = const Duration(seconds: 5),
   });
 
   final SplashDestinationResolver destinationResolver;
@@ -86,7 +85,6 @@ class SplashScreen extends StatefulWidget {
 
   final Duration reducedMotionDisplayDuration;
   final Duration videoInitializationTimeout;
-  final Duration destinationResolutionTimeout;
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -120,12 +118,7 @@ class _SplashScreenState extends State<SplashScreen> {
     );
 
     try {
-      final destination = await _resolveDestination(
-        timeout: _shorterDuration(
-          widget.destinationResolutionTimeout,
-          shortDisplayDuration,
-        ),
-      );
+      final destination = await _resolveDestination();
 
       if (reduceMotion || destination.route != AppRoutes.onboarding) {
         posterDisplayTimer.cancel();
@@ -151,11 +144,13 @@ class _SplashScreenState extends State<SplashScreen> {
     }
   }
 
-  Future<StartupDestination> _resolveDestination({
-    required Duration timeout,
-  }) async {
+  Future<StartupDestination> _resolveDestination() async {
     try {
-      return await widget.destinationResolver.resolve().timeout(timeout);
+      // This screen owns the minimum branded display, not an authentication
+      // deadline. The resolver's bounded access request can safely choose plans
+      // on an outage after restoring the parent; timing it out here would turn
+      // that valid saved session into a misleading sign-in screen.
+      return await widget.destinationResolver.resolve();
     } catch (_) {
       return const StartupDestination(AppRoutes.login);
     }
@@ -172,10 +167,6 @@ class _SplashScreenState extends State<SplashScreen> {
         arguments: destination.arguments,
       ),
     );
-  }
-
-  Duration _shorterDuration(Duration first, Duration second) {
-    return first <= second ? first : second;
   }
 
   Future<bool> _prepareVideo() async {
