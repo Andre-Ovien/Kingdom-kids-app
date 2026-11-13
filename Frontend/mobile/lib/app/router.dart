@@ -32,6 +32,7 @@ import '../features/stories/presentation/read_along_screen.dart';
 import '../features/stories/presentation/story_detail_screen.dart';
 import '../features/stories/presentation/stories_screen.dart';
 import '../features/subscription/data/subscription_review_launch.dart';
+import '../features/subscription/data/hosted_startup_access_recovery.dart';
 import '../features/subscription/presentation/subscription_review_screen.dart';
 import '../features/subscription/presentation/subscription_parent_screen.dart';
 import '../features/subscription/presentation/subscription_screen.dart';
@@ -187,7 +188,11 @@ class AppRouter {
         reason: 'Enter the parent password to open parent settings.',
         protectedBuilder: (_) => const ParentalControlsScreen(),
       ),
-      AppRoutes.subscription => const SubscriptionParentScreen(),
+      AppRoutes.subscription => SubscriptionParentScreen(
+        startupRecovery: settings.arguments is HostedStartupAccessRecovery
+            ? settings.arguments! as HostedStartupAccessRecovery
+            : null,
+      ),
       AppRoutes.subscriptionRequired => const SubscriptionParentScreen(),
       AppRoutes.privacy => const PrivacyPolicyScreen(),
       AppRoutes.subscriptionReview =>

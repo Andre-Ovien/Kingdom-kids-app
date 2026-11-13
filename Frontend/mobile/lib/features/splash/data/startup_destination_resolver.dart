@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../../../app/router.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../subscription/data/hosted_access_routing.dart';
+import '../../subscription/data/hosted_startup_access_recovery.dart';
 import 'first_launch_store.dart';
 
 class StartupDestination {
@@ -86,12 +87,34 @@ class StartupDestinationResolver implements SplashDestinationResolver {
       final accessRouting =
           _accessRouting ??
           HostedAccessRouting(authRepository: _authRepository);
+      final origin = accessRouting.configuration.isHostedProductionEnabled
+          ? await _authRepository.captureParentAccessOwner()
+          : null;
+      if (accessRouting.configuration.isHostedProductionEnabled &&
+          (origin == null || origin.parentId != session.parent.id)) {
+        return const StartupDestination(AppRoutes.login);
+      }
       final requiresPlans = await accessRouting.requiresPlans();
       if (!await accessRouting.isCurrentParent(session.parent.id)) {
         return const StartupDestination(AppRoutes.login);
       }
+      if (origin != null) {
+        final current = await _authRepository.captureParentAccessOwner();
+        if (current?.scope != origin.scope ||
+            current?.parentId != origin.parentId) {
+          return const StartupDestination(AppRoutes.login);
+        }
+      }
       if (requiresPlans) {
-        return const StartupDestination(AppRoutes.subscription);
+        return StartupDestination(
+          AppRoutes.subscription,
+          arguments: origin == null
+              ? null
+              : HostedStartupAccessRecovery(
+                  parentId: origin.parentId,
+                  ownerScope: origin.scope,
+                ),
+        );
       }
 
       final activeKid = await _authRepository.currentKid();

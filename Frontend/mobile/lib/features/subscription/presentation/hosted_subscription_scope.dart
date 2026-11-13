@@ -62,6 +62,7 @@ class _HostedSubscriptionScopeState extends State<HostedSubscriptionScope>
   late final AuthRepository _auth;
   StreamSubscription<String>? _links;
   Timer? _returnTimer;
+  Timer? _startupRetryTimer;
   int _notice = 0, _success = 0;
   String? _message;
   bool _returnVisible = false,
@@ -117,7 +118,11 @@ class _HostedSubscriptionScopeState extends State<HostedSubscriptionScope>
 
   Future<void> _start() async {
     try {
+      final owner = await _auth.captureParentAccessOwner();
       await _controller!.refresh();
+      if (owner != null) {
+        _scheduleStartupRetry(owner.parentId, owner.scope, 0);
+      }
       final initial =
           await (widget.initialReturn ??
               _methods.invokeMethod<String>('initialLink'));
@@ -125,6 +130,46 @@ class _HostedSubscriptionScopeState extends State<HostedSubscriptionScope>
     } catch (_) {
       /* Resume and authenticated status remain available. */
     }
+  }
+
+  bool get _startupNeedsRetry {
+    final controller = _controller;
+    return controller != null &&
+        !controller.canBrowse &&
+        !controller.hasConfirmedUnpaid &&
+        !controller.busy &&
+        controller.pending == null &&
+        controller.state == HostedFlowState.idle &&
+        controller.isAuthorizationCurrent(controller.authorizationRevision);
+  }
+
+  void _scheduleStartupRetry(String parentId, Object scope, int index) {
+    const delays = [Duration(seconds: 1), Duration(seconds: 3)];
+    if (!mounted || index >= delays.length || !_startupNeedsRetry) return;
+    _startupRetryTimer?.cancel();
+    _startupRetryTimer = Timer(delays[index], () async {
+      _startupRetryTimer = null;
+      final lifecycle = WidgetsBinding.instance.lifecycleState;
+      if (!mounted ||
+          (lifecycle != null && lifecycle != AppLifecycleState.resumed) ||
+          !_startupNeedsRetry) {
+        return;
+      }
+      try {
+        final current = await _auth.captureParentAccessOwner();
+        if (!mounted ||
+            current?.parentId != parentId ||
+            current?.scope != scope ||
+            _controller?.ownerScope != scope ||
+            !_startupNeedsRetry) {
+          return;
+        }
+        await _controller!.refresh();
+        if (mounted) _scheduleStartupRetry(parentId, scope, index + 1);
+      } catch (_) {
+        // Recovery never changes identity or manufactures access proof.
+      }
+    });
   }
 
   Future<void> _receive(String value) async {
@@ -239,12 +284,15 @@ class _HostedSubscriptionScopeState extends State<HostedSubscriptionScope>
     if (state == AppLifecycleState.resumed) {
       unawaited(_controller?.resume());
     } else {
+      _startupRetryTimer?.cancel();
+      _startupRetryTimer = null;
       _controller?.background();
     }
   }
 
   @override
   void dispose() {
+    _startupRetryTimer?.cancel();
     _returnTimer?.cancel();
     unawaited(_links?.cancel());
     WidgetsBinding.instance.removeObserver(this);
