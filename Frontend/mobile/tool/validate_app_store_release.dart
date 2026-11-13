@@ -21,7 +21,7 @@ void validateAppStoreRelease(
   }
   if (value('APP_STORE_LEGAL_OPERATOR') != 'Kingdom Kids LLC' ||
       value('APP_STORE_PRIVACY_CONTACT_EMAIL') != 'kingdomkidshq@gmail.com' ||
-      value('APP_STORE_KIDS_AGE_BAND') != '6-8' ||
+      value('APP_STORE_KIDS_AGE_BAND') != '9-11' ||
       value('APP_STORE_TARGET_AGE_RANGE') != '3-10') {
     throw const ReleaseConfigurationException(
       'Use the confirmed operator, privacy contact, and Kids audience metadata.',
